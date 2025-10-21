@@ -1,0 +1,92 @@
+{
+  "name": "epilepsy",
+  "title": "Protection Épilepsie",
+  "description": "Prévient les crises d'épilepsie en bloquant les animations et flashs",
+  "version": "1.0.0",
+  "author": "Accessibility Modular Plugin",
+  "category": "cognitive",
+  "icon": "⚡",
+  "enabled": true,
+  "priority": 5,
+  "rgaa_criteria": [
+    "13.8",
+    "13.17"
+  ],
+  "wcag_criteria": [
+    "2.3.1",
+    "2.3.2",
+    "2.3.3"
+  ],
+  "conformity_level": "AAA",
+  "features": [
+    {
+      "id": "stop_animations",
+      "label": "Arrêter toutes les animations",
+      "type": "checkbox",
+      "default": false,
+      "description": "Désactive les animations CSS et JavaScript"
+    },
+    {
+      "id": "stop_gifs",
+      "label": "Arrêter les GIFs animés",
+      "type": "checkbox",
+      "default": false,
+      "description": "Fige les GIFs sur la première image"
+    },
+    {
+      "id": "stop_videos",
+      "label": "Arrêter les vidéos automatiques",
+      "type": "checkbox",
+      "default": false,
+      "description": "Met en pause les vidéos en autoplay"
+    },
+    {
+      "id": "remove_parallax",
+      "label": "Supprimer les effets parallax",
+      "type": "checkbox",
+      "default": false,
+      "description": "Désactive les effets de défilement parallaxe"
+    },
+    {
+      "id": "reduce_motion",
+      "label": "Réduire tous les mouvements",
+      "type": "checkbox",
+      "default": false,
+      "description": "Active le mode réduction de mouvement globale"
+    },
+    {
+      "id": "block_flashing",
+      "label": "Bloquer les flashs rapides",
+      "type": "checkbox",
+      "default": false,
+      "description": "Détecte et bloque les changements rapides de luminosité"
+    }
+  ],
+  "cookies": [
+    "acc_epilepsy_stop_animations",
+    "acc_epilepsy_stop_gifs",
+    "acc_epilepsy_stop_videos",
+    "acc_epilepsy_remove_parallax",
+    "acc_epilepsy_reduce_motion",
+    "acc_epilepsy_block_flashing"
+  ],
+  "dependencies": [],
+  "external_resources": [],
+  "performance": {
+    "weight": "12KB",
+    "execution_time": "< 20ms",
+    "browser_compatibility": "IE11+"
+  },
+  "accessibility": {
+    "keyboard_navigation": true,
+    "screen_reader_support": true,
+    "aria_labels": true,
+    "focus_management": true
+  },
+  "safety_level": "critical",
+  "medical_compliance": {
+    "photosensitive_epilepsy": true,
+    "vestibular_disorders": true,
+    "motion_sensitivity": true
+  }
+}
