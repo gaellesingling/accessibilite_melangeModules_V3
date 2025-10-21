@@ -333,6 +333,8 @@
   const VISUAL_FILTER_ORDER = ['colorblind', 'brightness'];
   const visualFilterComponents = new Map();
   let visualFilterStyleElement = null;
+  const NIGHT_MODE_MEDIA_SELECTOR = 'img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player';
+  let nightModeMediaContainers = new Map();
 
   function ensureVisualFilterStyleElement(){
     if(visualFilterStyleElement && visualFilterStyleElement.isConnected){ return visualFilterStyleElement; }
@@ -390,6 +392,60 @@
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 
+  function updateNightModeMediaExemptions(active){
+    if(!document.body){
+      if(!active && nightModeMediaContainers.size){
+        nightModeMediaContainers.forEach((previousValue, element) => {
+          if(!element){ return; }
+          if(previousValue === null){
+            element.removeAttribute('data-a11y-night-media-exempt');
+          } else {
+            element.setAttribute('data-a11y-night-media-exempt', previousValue);
+          }
+        });
+        nightModeMediaContainers.clear();
+      }
+      return;
+    }
+    if(!active){
+      nightModeMediaContainers.forEach((previousValue, element) => {
+        if(!element || !element.isConnected){ return; }
+        if(previousValue === null){
+          element.removeAttribute('data-a11y-night-media-exempt');
+        } else {
+          element.setAttribute('data-a11y-night-media-exempt', previousValue);
+        }
+      });
+      nightModeMediaContainers.clear();
+      return;
+    }
+    const nextMap = new Map();
+    const containers = document.querySelectorAll('body > :not([data-a11y-filter-exempt])');
+    containers.forEach(container => {
+      if(!container || !container.isConnected){ return; }
+      if(!container.querySelector(NIGHT_MODE_MEDIA_SELECTOR)){ return; }
+      const previousValue = nightModeMediaContainers.has(container)
+        ? nightModeMediaContainers.get(container)
+        : (container.hasAttribute('data-a11y-night-media-exempt')
+          ? container.getAttribute('data-a11y-night-media-exempt')
+          : null);
+      if(!nextMap.has(container)){
+        nextMap.set(container, previousValue);
+      }
+      container.setAttribute('data-a11y-night-media-exempt', 'true');
+    });
+    nightModeMediaContainers.forEach((previousValue, element) => {
+      if(nextMap.has(element)){ return; }
+      if(!element || !element.isConnected){ return; }
+      if(previousValue === null){
+        element.removeAttribute('data-a11y-night-media-exempt');
+      } else {
+        element.setAttribute('data-a11y-night-media-exempt', previousValue);
+      }
+    });
+    nightModeMediaContainers = nextMap;
+  }
+
   function updateVisualFilterStyles(){
     const combined = composeVisualFilterValue();
     if(!visualFilterStyleElement && !combined){
@@ -398,6 +454,7 @@
     const styleEl = ensureVisualFilterStyleElement();
     const filterValue = combined || 'none';
     const shouldDarkenDocument = brightnessActive && normalizeBrightnessMode(brightnessSettings.mode) === 'night';
+    updateNightModeMediaExemptions(shouldDarkenDocument);
     let nightDocumentBackground = '#181b22';
     let nightOverlayBackground = 'rgba(24, 27, 33, 0.72)';
     if(shouldDarkenDocument){
@@ -431,9 +488,14 @@
       nightDocumentBackground = rgbToHex(blendedDoc[0], blendedDoc[1], blendedDoc[2]);
       nightOverlayBackground = `rgba(${blendedOverlay.join(', ')}, ${overlayOpacity.toFixed(3)})`;
     }
+    const filteredSelector = 'body > :not([data-a11y-filter-exempt]):not([data-a11y-night-media-exempt])';
+    const mediaExemptSelector = 'body > [data-a11y-night-media-exempt]';
+    const mediaElementsSelector = `:is(${NIGHT_MODE_MEDIA_SELECTOR})`;
     const rules = [
       `body { --a11y-visual-filter: ${filterValue}; }`,
-      `body > :not([data-a11y-filter-exempt]) { filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
+      `${filteredSelector} { filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
+      `${mediaExemptSelector} { filter: none !important; }`,
+      `${mediaExemptSelector} ${mediaElementsSelector} { filter: none !important; }`,
       `#a11y-overlay { --a11y-visual-filter: ${filterValue}; filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
     ];
     if(shouldDarkenDocument){
@@ -441,8 +503,9 @@
         `html[data-a11y-luminosite-reglages="on"] { background-color: ${nightDocumentBackground}; color-scheme: dark; }`,
         `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; }`,
         `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; background: ${nightOverlayBackground}; }`,
-        `html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) :is(img, picture, video, canvas, svg, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }`,
-        `html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, picture, video, canvas, svg, iframe, embed, object) { filter: none !important; }`
+        `html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) ${mediaElementsSelector} { filter: none !important; }`,
+        `html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] ${mediaElementsSelector} { filter: none !important; }`,
+        `@supports selector(:has(*)) { html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]):has(${mediaElementsSelector}) { filter: none !important; } }`
       );
     }
     styleEl.textContent = rules.join('\n');
