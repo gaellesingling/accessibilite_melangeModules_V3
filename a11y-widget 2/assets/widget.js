@@ -359,6 +359,37 @@
     return ordered.join(' ').trim();
   }
 
+  function clampNumber(value, min, max){
+    const numeric = Number(value);
+    if(!Number.isFinite(numeric)){ return min; }
+    return Math.min(max, Math.max(min, numeric));
+  }
+
+  function mixChannel(base, target, amount){
+    const normalized = clampNumber(amount, 0, 1);
+    return Math.round(base + (target - base) * normalized);
+  }
+
+  function mixColor(base, target, amount){
+    if(!Array.isArray(base) || !Array.isArray(target) || base.length !== 3 || target.length !== 3){
+      return Array.isArray(base) ? base.slice(0, 3) : [0, 0, 0];
+    }
+    const normalized = clampNumber(amount, 0, 1);
+    return [
+      mixChannel(base[0], target[0], normalized),
+      mixChannel(base[1], target[1], normalized),
+      mixChannel(base[2], target[2], normalized),
+    ];
+  }
+
+  function rgbToHex(r, g, b){
+    const toHex = component => {
+      const clamped = Math.round(Math.min(255, Math.max(0, Number(component) || 0)));
+      return clamped.toString(16).padStart(2, '0');
+    };
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
   function updateVisualFilterStyles(){
     const combined = composeVisualFilterValue();
     if(!visualFilterStyleElement && !combined){
@@ -367,6 +398,39 @@
     const styleEl = ensureVisualFilterStyleElement();
     const filterValue = combined || 'none';
     const shouldDarkenDocument = brightnessActive && normalizeBrightnessMode(brightnessSettings.mode) === 'night';
+    let nightDocumentBackground = '#181b22';
+    let nightOverlayBackground = 'rgba(24, 27, 33, 0.72)';
+    if(shouldDarkenDocument){
+      const brightnessLevel = clampBrightnessLevel(brightnessSettings.brightness);
+      const contrastLevel = clampBrightnessContrast(brightnessSettings.contrast);
+      const brightnessRatio = brightnessLevel / 100;
+      const contrastRatio = contrastLevel / 100;
+      const lightenAmount = brightnessRatio > 1 ? clampNumber((brightnessRatio - 1) / 0.5, 0, 1) : 0;
+      const darkenAmount = brightnessRatio < 1 ? clampNumber((1 - brightnessRatio) / 0.5, 0, 1) : 0;
+      const baseDocRgb = [24, 27, 34];
+      const lighterDocRgb = [34, 38, 46];
+      const darkerDocRgb = [14, 16, 22];
+      const baseOverlayRgb = [24, 27, 33];
+      const lighterOverlayRgb = [32, 35, 41];
+      const darkerOverlayRgb = [12, 15, 20];
+      const blendedDoc = lightenAmount ? mixColor(baseDocRgb, lighterDocRgb, lightenAmount)
+        : darkenAmount ? mixColor(baseDocRgb, darkerDocRgb, darkenAmount)
+          : baseDocRgb;
+      const blendedOverlay = lightenAmount ? mixColor(baseOverlayRgb, lighterOverlayRgb, lightenAmount)
+        : darkenAmount ? mixColor(baseOverlayRgb, darkerOverlayRgb, darkenAmount)
+          : baseOverlayRgb;
+      const overlayOpacityBase = 0.68;
+      const overlayOpacity = clampNumber(
+        overlayOpacityBase
+          + (darkenAmount * 0.2)
+          - (lightenAmount * 0.22)
+          - ((contrastRatio - 1) * 0.12),
+        0.35,
+        0.9
+      );
+      nightDocumentBackground = rgbToHex(blendedDoc[0], blendedDoc[1], blendedDoc[2]);
+      nightOverlayBackground = `rgba(${blendedOverlay.join(', ')}, ${overlayOpacity.toFixed(3)})`;
+    }
     const rules = [
       `body { --a11y-visual-filter: ${filterValue}; }`,
       `body > :not([data-a11y-filter-exempt]) { filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
@@ -374,9 +438,9 @@
     ];
     if(shouldDarkenDocument){
       rules.push(
-        `html[data-a11y-luminosite-reglages="on"] { background-color: #171a20; color-scheme: dark; }`,
+        `html[data-a11y-luminosite-reglages="on"] { background-color: ${nightDocumentBackground}; color-scheme: dark; }`,
         `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; }`,
-        `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; }`,
+        `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; background: ${nightOverlayBackground}; }`,
         `html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) :is(img, picture, video, canvas, svg, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }`,
         `html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, picture, video, canvas, svg, iframe, embed, object) { filter: none !important; }`
       );

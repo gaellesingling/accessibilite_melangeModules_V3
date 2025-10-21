@@ -696,7 +696,7 @@
 }
 
 html[data-a11y-luminosite-reglages="on"] {
-  background-color: #171a20;
+  background-color: #181b22;
   color-scheme: dark;
 }
 
@@ -714,9 +714,9 @@ html[data-a11y-luminosite-reglages="on"]::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: rgba(27, 30, 36, 0.72);
+  background: rgba(24, 27, 33, 0.72);
   opacity: 0;
-  transition: opacity 0.3s ease, background-color 0.3s ease;
+  transition: opacity 0.3s ease, background 0.3s ease;
   z-index: calc(var(--a11y-z-overlay) - 1);
 }
 
@@ -1254,7 +1254,7 @@ html[data-a11y-luminosite-reglages="on"] #a11y-overlay {
 }
 
 #a11y-overlay.acc-mode-night {
-  background-color: rgba(27, 30, 36, 0.68);
+  background-color: rgba(24, 27, 33, 0.68);
   filter: invert(1) hue-rotate(180deg);
 }
 
