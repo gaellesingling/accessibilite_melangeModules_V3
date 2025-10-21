@@ -1044,16 +1044,17 @@
   color: var(--a11y-text-subtle);
 }
 .a11y-card--colorblind .a11y-subfeatures {
-  gap: 18px;
+  gap: 14px;
 }
 .a11y-colorblind-item {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
-  padding: 16px;
+  padding: 14px 16px;
   border-radius: var(--a11y-radius);
   border: 1px solid var(--a11y-border);
   background: var(--a11y-surface);
+  box-sizing: border-box;
 }
 .a11y-colorblind-item__header {
   display: flex;
