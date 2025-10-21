@@ -78,62 +78,53 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'vision-placeholder',
                     'label'       => __( 'Exemple : augmenter la lisibilité', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos réglages pour la vision (contraste, taille du texte…).', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage pour la vision', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
                 array(
                     'slug'       => 'vision-daltonisme',
                     'label'      => __( 'Daltonisme', 'a11y-widget' ),
-                    'hint'       => __( 'Placeholders pour vos filtres adaptés aux différents types de daltonisme.', 'a11y-widget' ),
                     'aria_label' => __( 'Options pour le daltonisme', 'a11y-widget' ),
                     'children'   => array(
                         array(
                             'slug'        => 'vision-daltonisme-deuteranopie',
                             'label'       => __( 'Deutéranopie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un traitement adapté à la deutéranopie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode deutéranopie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-protanopie',
                             'label'       => __( 'Protanopie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un traitement adapté à la protanopie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode protanopie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-deuteranomalie',
                             'label'       => __( 'Deutéranomalie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : ajustez vos scripts pour la deutéranomalie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode deutéranomalie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-protanomalie',
                             'label'       => __( 'Protanomalie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : ajustez vos scripts pour la protanomalie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode protanomalie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-tritanopie',
                             'label'       => __( 'Tritanopie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un traitement adapté à la tritanopie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode tritanopie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-tritanomalie',
                             'label'       => __( 'Tritanomalie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : ajustez vos scripts pour la tritanomalie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode tritanomalie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-achromatopsie',
                             'label'       => __( 'Achromatopsie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un mode achromatopsie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode achromatopsie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
@@ -149,12 +140,12 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'       => 'luminosite-reglages',
                     'label'      => __( 'Modes de luminosité', 'a11y-widget' ),
-                    'hint'       => __( 'Activez un mode nuit, un filtre anti lumière bleue ou ajustez les filtres visuels du site.', 'a11y-widget' ),
+                    'hint'       => '',
                     'aria_label' => __( 'Configurer les options de luminosité', 'a11y-widget' ),
                     'template'   => 'brightness-settings',
                     'settings'   => array(
                         'modes_label'             => __( 'Mode d’affichage', 'a11y-widget' ),
-                        'modes_hint'              => __( 'Choisissez le rendu lumineux le plus confortable.', 'a11y-widget' ),
+                        'modes_hint'              => '',
                         'mode_normal_label'       => __( 'Normal', 'a11y-widget' ),
                         'mode_normal_aria'        => __( 'Revenir au mode normal', 'a11y-widget' ),
                         'mode_night_label'        => __( 'Mode nuit', 'a11y-widget' ),
@@ -168,7 +159,7 @@ function a11y_widget_get_default_sections() {
                         'mode_grayscale_label'    => __( 'Niveaux de gris', 'a11y-widget' ),
                         'mode_grayscale_aria'     => __( 'Activer le mode niveaux de gris', 'a11y-widget' ),
                         'advanced_label'          => __( 'Réglages avancés', 'a11y-widget' ),
-                        'advanced_hint'           => __( 'Affinez le contraste, la luminosité ou la saturation.', 'a11y-widget' ),
+                        'advanced_hint'           => '',
                         'contrast_label'          => __( 'Contraste', 'a11y-widget' ),
                         'contrast_decrease'       => __( 'Diminuer le contraste', 'a11y-widget' ),
                         'contrast_increase'       => __( 'Augmenter le contraste', 'a11y-widget' ),
@@ -192,32 +183,32 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'       => 'cognitif-reading-guide',
                     'label'      => __( 'Guide de lecture', 'a11y-widget' ),
-                    'hint'       => __( 'Affiche une règle de lecture, un sommaire automatique et des aides au focus.', 'a11y-widget' ),
+                    'hint'       => '',
                     'aria_label' => __( 'Activer le guide de lecture', 'a11y-widget' ),
                     'template'   => 'reading-guide',
                     'settings'   => array(
                         'rule_label'                     => __( 'Règle de lecture', 'a11y-widget' ),
-                        'rule_hint'                      => __( 'Activez une règle horizontale qui suit la souris ou le focus.', 'a11y-widget' ),
+                        'rule_hint'                      => '',
                         'personalization_label'          => __( 'Personnalisation de la règle', 'a11y-widget' ),
                         'color_label'                    => __( 'Couleur', 'a11y-widget' ),
-                        'color_hint'                     => __( 'Choisissez la couleur de la règle de lecture.', 'a11y-widget' ),
+                        'color_hint'                     => '',
                         'opacity_label'                  => __( 'Opacité', 'a11y-widget' ),
-                        'opacity_hint'                   => __( 'Ajustez la transparence pour ne pas masquer le texte.', 'a11y-widget' ),
+                        'opacity_hint'                   => '',
                         'height_label'                   => __( 'Hauteur', 'a11y-widget' ),
-                        'height_hint'                    => __( 'Définissez l’épaisseur de la règle (en pixels).', 'a11y-widget' ),
+                        'height_hint'                    => '',
                         'summary_label'                  => __( 'Sommaire automatique', 'a11y-widget' ),
-                        'summary_hint'                   => __( 'Active un sommaire généré automatiquement selon les niveaux de titres définis dans l’administration.', 'a11y-widget' ),
+                        'summary_hint'                   => '',
                         'summary_toggle_label'           => __( 'Activer le sommaire', 'a11y-widget' ),
                         'summary_title_default'          => __( 'Sommaire', 'a11y-widget' ),
                         'syllable_label'                 => __( 'Séparation syllabique', 'a11y-widget' ),
-                        'syllable_hint'                  => __( 'Insère des points médians dans les mots longs pour rythmer la lecture.', 'a11y-widget' ),
+                        'syllable_hint'                  => '',
                         'syllable_toggle_label'          => __( 'Activer la séparation syllabique', 'a11y-widget' ),
                         'syllable_selector_label'        => __( 'Zones à syllaber', 'a11y-widget' ),
-                        'syllable_selector_hint'         => __( 'Sélecteur CSS ou attribut data-reading-guide-syllables pour cibler les blocs à transformer.', 'a11y-widget' ),
+                        'syllable_selector_hint'         => '',
                         'syllable_selector_default'      => __( 'main p, main li', 'a11y-widget' ),
                         'syllable_selector_placeholder'  => __( 'Ex. article p, article li', 'a11y-widget' ),
                         'focus_label'                    => __( 'Mode focus', 'a11y-widget' ),
-                        'focus_hint'                     => __( 'Réduit les animations et transitions pour limiter les distractions. Ajoutez l’attribut data-reading-guide-allow-animation sur les éléments à préserver.', 'a11y-widget' ),
+                        'focus_hint'                     => '',
                         'focus_toggle_label'             => __( 'Activer le mode focus', 'a11y-widget' ),
                         'selectors'                      => array(
                             'headings'                      => $heading_selector,
@@ -232,7 +223,7 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'       => 'cognitif-dyslexie',
                     'label'      => __( 'Dyslexie', 'a11y-widget' ),
-                    'hint'       => __( 'Surlignez une lettre dans la page pour faciliter le repérage visuel.', 'a11y-widget' ),
+                    'hint'       => '',
                     'aria_label' => __( 'Activer le surligneur de lettres', 'a11y-widget' ),
                     'template'   => 'dyslexie-highlighter',
                     'settings'   => array(
@@ -242,7 +233,7 @@ function a11y_widget_get_default_sections() {
                         'accent_label'        => __( 'Prendre les accents en compte', 'a11y-widget' ),
                         'no_letter_warning'   => __( 'Saisissez une lettre pour commencer le surlignage.', 'a11y-widget' ),
                         'font_label'          => __( 'Police du texte', 'a11y-widget' ),
-                        'font_help'           => __( 'Choisissez une police plus lisible pour le contenu.', 'a11y-widget' ),
+                        'font_help'           => '',
                         'font_option_default' => __( 'Police du site', 'a11y-widget' ),
                         'font_option_arial'   => __( 'Arial', 'a11y-widget' ),
                         'font_option_verdana' => __( 'Verdana', 'a11y-widget' ),
@@ -255,11 +246,11 @@ function a11y_widget_get_default_sections() {
                         'font_option_inconstant' => __( 'Inconstant', 'a11y-widget' ),
                         'font_option_accessible_dfa' => __( 'Accessible DfA', 'a11y-widget' ),
                         'size_label'          => __( 'Taille du texte', 'a11y-widget' ),
-                        'size_help'           => __( 'Ajustez la taille du texte pour plus de confort.', 'a11y-widget' ),
+                        'size_help'           => '',
                         'line_label'          => __( 'Espacement des lignes', 'a11y-widget' ),
-                        'line_help'           => __( 'Augmentez ou réduisez l’espace entre les lignes.', 'a11y-widget' ),
+                        'line_help'           => '',
                         'styles_label'        => __( 'Styles du texte', 'a11y-widget' ),
-                        'styles_help'         => __( 'Retirez certains styles pour alléger la lecture.', 'a11y-widget' ),
+                        'styles_help'         => '',
                         'disable_italic_label'=> __( 'Supprimer l’italique', 'a11y-widget' ),
                         'disable_bold_label'  => __( 'Supprimer le gras', 'a11y-widget' ),
                         'reset_label'         => __( 'Réinitialiser les réglages du texte', 'a11y-widget' ),
@@ -275,21 +266,20 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'moteur-placeholder',
                     'label'       => __( 'Exemple : zones cliquables agrandies', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos options pour la navigation motrice.', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage moteur', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
                 array(
                     'slug'       => 'moteur-boutons',
                     'label'      => __( 'Boutons', 'a11y-widget' ),
-                    'hint'       => __( 'Ajustez la taille et les couleurs des boutons du site.', 'a11y-widget' ),
+                    'hint'       => '',
                     'aria_label' => __( 'Configurer l’apparence des boutons', 'a11y-widget' ),
                     'template'   => 'button-settings',
                     'settings'   => array(
                         'size_label'  => __( 'Taille des boutons', 'a11y-widget' ),
-                        'size_help'   => __( 'Augmentez la taille et l’espacement pour faciliter le clic.', 'a11y-widget' ),
+                        'size_help'   => '',
                         'theme_label' => __( 'Couleurs des boutons', 'a11y-widget' ),
-                        'theme_help'  => __( 'Choisissez un thème pour améliorer le contraste des boutons.', 'a11y-widget' ),
+                        'theme_help'  => '',
                         'theme_prev'  => __( 'Thème précédent', 'a11y-widget' ),
                         'theme_next'  => __( 'Thème suivant', 'a11y-widget' ),
                         'reset_label' => __( 'Réinitialiser les boutons', 'a11y-widget' ),
@@ -298,14 +288,14 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'       => 'moteur-curseur',
                     'label'      => __( 'Curseur', 'a11y-widget' ),
-                    'hint'       => __( 'Personnalisez la taille et la couleur du pointeur.', 'a11y-widget' ),
+                    'hint'       => '',
                     'aria_label' => __( 'Configurer le curseur personnalisé', 'a11y-widget' ),
                     'template'   => 'cursor-settings',
                     'settings'   => array(
                         'size_label' => __( 'Taille du curseur', 'a11y-widget' ),
-                        'size_help'  => __( 'Ajustez le diamètre du pointeur pour le rendre plus visible.', 'a11y-widget' ),
+                        'size_help'  => '',
                         'color_label' => __( 'Couleur du curseur', 'a11y-widget' ),
-                        'color_help'  => __( 'Appliquez une couleur unie pour renforcer le contraste.', 'a11y-widget' ),
+                        'color_help'  => '',
                     ),
                 ),
             ),
@@ -318,7 +308,6 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'epilepsie-placeholder',
                     'label'       => __( 'Exemple : réduire les animations', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos outils pour limiter les stimuli visuels.', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage pour l’épilepsie', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
@@ -332,7 +321,6 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'audition-placeholder',
                     'label'       => __( 'Exemple : activer les sous-titres', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos options pour l’accessibilité audio.', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage pour l’audition', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
@@ -585,6 +573,67 @@ function a11y_widget_normalize_nested_children( $feature ) {
     $feature['children'] = $normalized_children;
 
     return $feature;
+}
+
+/**
+ * Remove hint text from placeholder features, including nested children.
+ *
+ * A feature is considered a placeholder when it explicitly sets the
+ * `placeholder` flag or when it originates from the Markdown directory and
+ * does not define a custom template. These entries are meant to be wiring
+ * stubs, so their descriptive text should remain hidden in the interface.
+ *
+ * @param array $feature Feature data.
+ *
+ * @return array
+ */
+function a11y_widget_strip_placeholder_hint_from_feature( $feature ) {
+    if ( ! is_array( $feature ) ) {
+        return $feature;
+    }
+
+    $has_placeholder_flag   = ! empty( $feature['placeholder'] );
+    $has_markdown_origin    = isset( $feature['source'] );
+    $defines_custom_template = isset( $feature['template'] ) && '' !== $feature['template'];
+
+    if ( $has_placeholder_flag || ( $has_markdown_origin && ! $defines_custom_template ) ) {
+        $feature['hint'] = '';
+    }
+
+    if ( ! empty( $feature['children'] ) && is_array( $feature['children'] ) ) {
+        foreach ( $feature['children'] as $index => $child_feature ) {
+            $feature['children'][ $index ] = a11y_widget_strip_placeholder_hint_from_feature( $child_feature );
+        }
+    }
+
+    return $feature;
+}
+
+/**
+ * Strip hint text from placeholder features within a collection of sections.
+ *
+ * @param array $sections Sections with their features.
+ *
+ * @return array
+ */
+function a11y_widget_strip_placeholder_hints( $sections ) {
+    if ( empty( $sections ) || ! is_array( $sections ) ) {
+        return $sections;
+    }
+
+    foreach ( $sections as $section_index => $section ) {
+        if ( empty( $section['children'] ) || ! is_array( $section['children'] ) ) {
+            continue;
+        }
+
+        foreach ( $section['children'] as $feature_index => $feature ) {
+            $section['children'][ $feature_index ] = a11y_widget_strip_placeholder_hint_from_feature( $feature );
+        }
+
+        $sections[ $section_index ] = $section;
+    }
+
+    return $sections;
 }
 
 /**
@@ -888,6 +937,7 @@ function a11y_widget_get_sections() {
     }
 
     $sections = a11y_widget_apply_custom_feature_layout( $sections );
+    $sections = a11y_widget_strip_placeholder_hints( $sections );
 
     /**
      * Filter the final list of sections sent to the template.
