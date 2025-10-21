@@ -49,6 +49,15 @@
   const searchResults = document.querySelector('[data-role="search-results"]');
   const searchList = searchResults ? searchResults.querySelector('[data-role="search-list"]') : null;
   const searchEmpty = searchResults ? searchResults.querySelector('[data-role="search-empty"]') : null;
+  const tutorialToggle = document.getElementById('a11y-tutorial-toggle');
+  const tutorialSection = document.getElementById('a11y-tutorial');
+  const tutorialList = tutorialSection ? tutorialSection.querySelector('[data-role="tutorial-list"]') : null;
+  const tutorialEmpty = tutorialSection ? tutorialSection.querySelector('[data-role="tutorial-empty"]') : null;
+  const tutorialWinLabel = tutorialSection ? (tutorialSection.dataset.platformWinLabel || 'Windows / Linux') : 'Windows / Linux';
+  const tutorialMacLabel = tutorialSection ? (tutorialSection.dataset.platformMacLabel || 'macOS') : 'macOS';
+  const tutorialWinPattern = tutorialSection ? (tutorialSection.dataset.shortcutWinPattern || 'Alt + %s') : 'Alt + %s';
+  const tutorialMacPattern = tutorialSection ? (tutorialSection.dataset.shortcutMacPattern || 'Ctrl + Option + %s') : 'Ctrl + Option + %s';
+  const isMacOS = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test((navigator.platform || navigator.userAgent || ''));
 
   const sectionsData = (() => {
     if(!featureDataScript){ return []; }
@@ -67,6 +76,208 @@
       sectionsById.set(section.id, section);
     }
   });
+
+  const SHORTCUT_BASE_KEYS = ['1','2','3','4','5','6','7','8','9','0','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  const shortcutEntriesBySlug = new Map();
+  const shortcutEntriesByKey = new Map();
+  const shortcutDisplayList = [];
+
+  function getShortcutKeyToken(index){
+    if(index < SHORTCUT_BASE_KEYS.length){
+      return SHORTCUT_BASE_KEYS[index];
+    }
+    const extraIndex = index - SHORTCUT_BASE_KEYS.length + 1;
+    return `F${extraIndex}`;
+  }
+
+  function normalizeShortcutKeyToken(token){
+    return typeof token === 'string' ? token.toLowerCase() : '';
+  }
+
+  function formatShortcutPattern(pattern, token){
+    if(typeof pattern === 'string' && pattern.includes('%s')){
+      return pattern.replace('%s', token);
+    }
+    if(typeof pattern === 'string'){
+      return `${pattern} ${token}`.trim();
+    }
+    return token;
+  }
+
+  function ensureShortcutEntry(slug, label){
+    if(typeof slug !== 'string' || !slug){ return null; }
+    const cleanLabel = typeof label === 'string' && label.trim() ? label.trim() : slug;
+    let entry = shortcutEntriesBySlug.get(slug);
+    if(!entry){
+      const keyToken = getShortcutKeyToken(shortcutDisplayList.length);
+      const normalizedKey = normalizeShortcutKeyToken(keyToken);
+      const winDisplay = formatShortcutPattern(tutorialWinPattern, keyToken);
+      const macDisplay = formatShortcutPattern(tutorialMacPattern, keyToken);
+      entry = {
+        slug,
+        keyToken,
+        normalizedKey,
+        label: cleanLabel,
+        winDisplay,
+        macDisplay,
+        ariaValue: `Alt+${keyToken} Control+Alt+${keyToken}`,
+      };
+      shortcutEntriesBySlug.set(slug, entry);
+      if(normalizedKey){ shortcutEntriesByKey.set(normalizedKey, entry); }
+      shortcutDisplayList.push(entry);
+    } else if(cleanLabel && (!entry.label || entry.label === entry.slug)){
+      entry.label = cleanLabel;
+    }
+    return entry;
+  }
+
+  function collectShortcutCandidates(feature){
+    if(!feature || typeof feature.slug !== 'string' || !feature.slug){ return; }
+    const label = typeof feature.label === 'string' && feature.label
+      ? feature.label
+      : (typeof feature.aria_label === 'string' && feature.aria_label ? feature.aria_label : feature.slug);
+    ensureShortcutEntry(feature.slug, label);
+    if(Array.isArray(feature.children)){
+      feature.children.forEach(child => collectShortcutCandidates(child));
+    }
+  }
+
+  sectionsData.forEach(section => {
+    if(!section){ return; }
+    const features = Array.isArray(section.features) ? section.features : [];
+    features.forEach(feature => collectShortcutCandidates(feature));
+  });
+
+  function populateTutorialList(){
+    if(!tutorialList){ return; }
+    tutorialList.innerHTML = '';
+    if(!shortcutDisplayList.length){
+      if(tutorialEmpty){ tutorialEmpty.hidden = false; }
+      if(tutorialToggle){
+        tutorialToggle.disabled = true;
+        tutorialToggle.setAttribute('aria-disabled', 'true');
+        tutorialToggle.setAttribute('aria-expanded', 'false');
+      }
+      if(tutorialSection){
+        tutorialSection.hidden = true;
+        tutorialSection.setAttribute('aria-hidden', 'true');
+      }
+      return;
+    }
+    if(tutorialEmpty){ tutorialEmpty.hidden = true; }
+    if(tutorialToggle){
+      tutorialToggle.disabled = false;
+      tutorialToggle.removeAttribute('aria-disabled');
+    }
+    const winLabelText = tutorialWinLabel ? `${tutorialWinLabel} :` : 'Windows / Linux :';
+    const macLabelText = tutorialMacLabel ? `${tutorialMacLabel} :` : 'macOS :';
+    shortcutDisplayList.forEach(entry => {
+      if(!entry){ return; }
+      const item = document.createElement('li');
+      item.className = 'a11y-tutorial__item';
+      const featureSpan = document.createElement('span');
+      featureSpan.className = 'a11y-tutorial__feature';
+      featureSpan.textContent = entry.label || entry.slug;
+      item.appendChild(featureSpan);
+
+      const commandsSpan = document.createElement('span');
+      commandsSpan.className = 'a11y-tutorial__commands';
+
+      const winCombo = document.createElement('span');
+      winCombo.className = 'a11y-tutorial__combo';
+      const winLabelEl = document.createElement('span');
+      winLabelEl.className = 'a11y-tutorial__platform';
+      winLabelEl.textContent = winLabelText;
+      winCombo.appendChild(winLabelEl);
+      const winKeysEl = document.createElement('span');
+      winKeysEl.className = 'a11y-tutorial__keys';
+      winKeysEl.textContent = entry.winDisplay;
+      winCombo.appendChild(winKeysEl);
+      commandsSpan.appendChild(winCombo);
+
+      const macCombo = document.createElement('span');
+      macCombo.className = 'a11y-tutorial__combo';
+      const macLabelEl = document.createElement('span');
+      macLabelEl.className = 'a11y-tutorial__platform';
+      macLabelEl.textContent = macLabelText;
+      macCombo.appendChild(macLabelEl);
+      const macKeysEl = document.createElement('span');
+      macKeysEl.className = 'a11y-tutorial__keys';
+      macKeysEl.textContent = entry.macDisplay;
+      macCombo.appendChild(macKeysEl);
+      commandsSpan.appendChild(macCombo);
+
+      item.appendChild(commandsSpan);
+      tutorialList.appendChild(item);
+    });
+  }
+
+  function applyShortcutToInput(slug, input, fallbackLabel=''){
+    if(!slug || !input){ return; }
+    const entry = ensureShortcutEntry(slug, fallbackLabel);
+    if(!entry){ return; }
+    input.dataset.shortcutKey = entry.keyToken;
+    input.dataset.shortcutWin = entry.winDisplay;
+    input.dataset.shortcutMac = entry.macDisplay;
+    input.setAttribute('aria-keyshortcuts', entry.ariaValue);
+    const titleParts = [];
+    if(entry.winDisplay){ titleParts.push(`${tutorialWinLabel}: ${entry.winDisplay}`); }
+    if(entry.macDisplay){ titleParts.push(`${tutorialMacLabel}: ${entry.macDisplay}`); }
+    if(titleParts.length){ input.setAttribute('title', titleParts.join(' • ')); }
+  }
+
+  populateTutorialList();
+
+  function getEventShortcutToken(event){
+    const key = typeof event.key === 'string' ? event.key : '';
+    if(key.length === 1){
+      const lower = key.toLowerCase();
+      if(/^[a-z0-9]$/.test(lower)){ return lower; }
+    }
+    if(/^F\d{1,2}$/i.test(key)){ return key.toLowerCase(); }
+    const code = typeof event.code === 'string' ? event.code : '';
+    if(code.startsWith('Digit')){ return code.slice(5).toLowerCase(); }
+    if(code.startsWith('Key')){ return code.slice(3).toLowerCase(); }
+    if(/^F\d{1,2}$/i.test(code)){ return code.toLowerCase(); }
+    return key.toLowerCase();
+  }
+
+  function isEditableTarget(target){
+    if(!target || typeof target !== 'object'){ return false; }
+    if(target instanceof Element){
+      if(target.closest('[contenteditable]')){ return true; }
+      if(target.isContentEditable){ return true; }
+      const tag = target.tagName;
+      if(!tag){ return false; }
+      if(tag === 'INPUT'){
+        const type = (target.getAttribute('type') || '').toLowerCase();
+        if(['checkbox','radio','button','submit','reset','range','color','file','image','hidden'].includes(type)){ return false; }
+        return true;
+      }
+      if(tag === 'TEXTAREA'){ return true; }
+    }
+    return false;
+  }
+
+  function handleShortcutKeydown(event){
+    if(event.defaultPrevented || event.repeat){ return; }
+    if(isEditableTarget(event.target)){ return; }
+    const token = getEventShortcutToken(event);
+    if(!token){ return; }
+    const entry = shortcutEntriesByKey.get(token);
+    if(!entry){ return; }
+    const isCombo = isMacOS
+      ? (event.ctrlKey && event.altKey && !event.metaKey)
+      : (event.altKey && !event.ctrlKey && !event.metaKey);
+    if(!isCombo){ return; }
+    event.preventDefault();
+    const nextState = !A11yAPI.get(entry.slug);
+    toggleFeature(entry.slug, nextState);
+    const input = featureInputs.get(entry.slug);
+    if(input && typeof input.focus === 'function'){
+      try { input.focus({ preventScroll: true }); } catch(err){ input.focus(); }
+    }
+  }
 
   tabs.forEach(tab => {
     const sectionId = tab.dataset.sectionId || '';
@@ -1270,7 +1481,7 @@
     }
   }
 
-  function buildSwitch(slug, ariaLabel){
+  function buildSwitch(slug, ariaLabel, displayLabel=''){
     if(!slug){ return null; }
     const switchLabel = document.createElement('label');
     switchLabel.className = 'a11y-switch';
@@ -1280,6 +1491,7 @@
     input.setAttribute('data-role', 'feature-input');
     input.dataset.feature = slug;
     if(ariaLabel){ input.setAttribute('aria-label', ariaLabel); }
+    applyShortcutToInput(slug, input, displayLabel || ariaLabel || '');
     const track = document.createElement('span');
     track.className = 'track';
     const thumb = document.createElement('span');
@@ -1302,6 +1514,7 @@
       inputEl.dataset.feature = slug;
       const aria = feature.aria_label || feature.label || '';
       if(aria){ inputEl.setAttribute('aria-label', aria); }
+      applyShortcutToInput(slug, inputEl, feature.label || feature.aria_label || '');
       registerFeatureInput(slug, inputEl);
     }
     return fragment;
@@ -1370,7 +1583,7 @@
 
       header.appendChild(labelWrapper);
 
-      const switchEl = buildSwitch(slug, child.aria_label || child.label || '');
+      const switchEl = buildSwitch(slug, child.aria_label || child.label || '', child.label || child.aria_label || '');
       if(!switchEl){ return; }
       header.appendChild(switchEl);
       row.appendChild(header);
@@ -1568,7 +1781,7 @@
       rowLabel.textContent = child.label;
       rowMeta.appendChild(rowLabel);
 
-      const switchEl = buildSwitch(child.slug, child.aria_label || child.label || '');
+      const switchEl = buildSwitch(child.slug, child.aria_label || child.label || '', child.label || child.aria_label || '');
       if(!switchEl){
         return;
       }
@@ -2280,7 +2493,7 @@ ${interactiveSelectors} {
 
     header.appendChild(meta);
 
-    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '');
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
     if(switchEl){
       switchEl.classList.add('a11y-brightness__switch');
       header.appendChild(switchEl);
@@ -3841,7 +4054,7 @@ ${interactiveSelectors} {
     header.className = 'a11y-reading-guide__header';
     header.appendChild(meta);
 
-    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '');
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
     if(switchEl){
       switchEl.classList.add('a11y-reading-guide__switch');
       header.appendChild(switchEl);
@@ -4520,7 +4733,7 @@ ${interactiveSelectors} {
     header.className = 'a11y-dyslexie__header';
     header.appendChild(meta);
 
-    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '');
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
     if(switchEl){
       switchEl.classList.add('a11y-dyslexie__switch');
       header.appendChild(switchEl);
@@ -4847,7 +5060,7 @@ ${interactiveSelectors} {
     header.className = 'a11y-cursor__header';
     header.appendChild(meta);
 
-    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '');
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
     if(switchEl){
       switchEl.classList.add('a11y-cursor__switch');
       header.appendChild(switchEl);
@@ -5239,7 +5452,7 @@ ${interactiveSelectors} {
 
     header.appendChild(meta);
 
-    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '');
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
     if(switchEl){
       switchEl.classList.add('a11y-buttons__switch');
       header.appendChild(switchEl);
@@ -5883,6 +6096,20 @@ ${interactiveSelectors} {
     searchInput.addEventListener('search', handleSearchInput);
   }
 
+  if(tutorialToggle && tutorialSection){
+    tutorialToggle.addEventListener('click', () => {
+      if(tutorialToggle.disabled){ return; }
+      const expanded = tutorialToggle.getAttribute('aria-expanded') === 'true';
+      const next = !expanded;
+      tutorialToggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+      tutorialSection.hidden = !next;
+      tutorialSection.setAttribute('aria-hidden', next ? 'false' : 'true');
+      if(next && tutorialList && !tutorialList.childElementCount){
+        populateTutorialList();
+      }
+    });
+  }
+
   if(btn){
     btn.addEventListener('click', (e)=>{
       if(skipNextClick){
@@ -5948,6 +6175,8 @@ ${interactiveSelectors} {
   }
   restoreLauncherPosition();
   if(btn){ window.addEventListener('resize', handleResize); }
+
+  document.addEventListener('keydown', handleShortcutKeydown, true);
 
 })();
 

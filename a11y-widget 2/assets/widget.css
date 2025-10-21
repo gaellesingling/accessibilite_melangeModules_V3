@@ -149,8 +149,71 @@
 .a11y-icon { width: 28px; height: 28px; color: var(--a11y-primary); }
 .a11y-close { border: none; background: none; padding: 8px; cursor: pointer; border-radius: 10px; }
 .a11y-close:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+.a11y-tutorial-toggle {
+  border: none;
+  background: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--a11y-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.a11y-tutorial-toggle:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+.a11y-tutorial-toggle[aria-expanded="true"] { color: var(--a11y-text); background: rgba(214, 30, 91, 0.12); }
+
 
 .a11y-content { overflow: auto; padding: 12px 12px 0; }
+.a11y-tutorial {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--a11y-border);
+  background: var(--a11y-surface-elev);
+  display: grid;
+  gap: 10px;
+}
+.a11y-tutorial[hidden] { display: none; }
+.a11y-tutorial__title { margin: 0; font-size: 0.95rem; font-weight: 700; }
+.a11y-tutorial__intro,
+.a11y-tutorial__legend,
+.a11y-tutorial__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--a11y-text-subtle);
+}
+.a11y-tutorial__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.a11y-tutorial__item {
+  display: grid;
+  gap: 6px;
+  background: var(--a11y-surface);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+.a11y-tutorial__feature { font-weight: 600; font-size: 0.9rem; color: var(--a11y-text); }
+.a11y-tutorial__commands { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.85rem; color: var(--a11y-text); }
+.a11y-tutorial__combo { display: inline-flex; align-items: center; gap: 6px; }
+.a11y-tutorial__platform { font-weight: 600; color: var(--a11y-text-subtle); }
+.a11y-tutorial__keys {
+  font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--a11y-text);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.a11y-tutorial__empty[hidden] { display: none; }
+
 .a11y-search { display: grid; gap: 6px; margin: 0 0 18px; }
 .a11y-search__label { font-size: 0.9rem; font-weight: 600; color: var(--a11y-text); }
 .a11y-search__input {
