@@ -374,7 +374,8 @@
     ];
     if(shouldDarkenDocument){
       rules.push(
-        `html[data-a11y-luminosite-reglages="on"] { background-color: #0d0d11; color-scheme: dark; }`,
+        `html[data-a11y-luminosite-reglages="on"] { background-color: #121417; color: #f4f7fb; color-scheme: dark; }`,
+        `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; color: #f4f7fb; }`,
         `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; }`
       );
     }
