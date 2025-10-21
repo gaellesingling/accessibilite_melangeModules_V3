@@ -33,11 +33,45 @@
       </button>
       <svg class="a11y-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm6.75 6.5h-4.5v11a1 1 0 1 1-2 0v-5h-1v5a1 1 0 1 1-2 0v-11h-4.5a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2Z"/></svg>
       <h2 id="a11y-title" class="a11y-title"><?php echo esc_html__('Accessibilité du site', 'a11y-widget'); ?></h2>
+      <button
+        type="button"
+        class="a11y-tutorial-toggle"
+        id="a11y-tutorial-toggle"
+        aria-expanded="false"
+        aria-controls="a11y-tutorial"
+      >
+        <?php echo esc_html__( 'Tutoriel des commandes', 'a11y-widget' ); ?>
+      </button>
       <div class="a11y-spacer" aria-hidden="true"></div>
       <button class="a11y-close" id="a11y-close" aria-label="<?php echo esc_attr__('Fermer le module', 'a11y-widget'); ?>">✕</button>
     </header>
 
     <div class="a11y-content" id="a11y-content">
+      <?php
+      $tutorial_intro  = esc_html__( 'Activez chaque fonctionnalité grâce aux raccourcis clavier ci-dessous.', 'a11y-widget' );
+      $tutorial_legend = esc_html__( 'Windows / Linux : Alt + touche — macOS : Ctrl + Option + touche', 'a11y-widget' );
+      $tutorial_empty  = esc_html__( 'Aucun raccourci n’est disponible pour le moment.', 'a11y-widget' );
+      ?>
+      <section
+        class="a11y-tutorial"
+        id="a11y-tutorial"
+        role="region"
+        aria-labelledby="a11y-tutorial-title"
+        hidden
+        aria-hidden="true"
+        data-role="tutorial"
+        data-platform-win-label="<?php echo esc_attr__( 'Windows / Linux', 'a11y-widget' ); ?>"
+        data-platform-mac-label="<?php echo esc_attr__( 'macOS', 'a11y-widget' ); ?>"
+        data-shortcut-win-pattern="<?php echo esc_attr__( 'Alt + %s', 'a11y-widget' ); ?>"
+        data-shortcut-mac-pattern="<?php echo esc_attr__( 'Ctrl + Option + %s', 'a11y-widget' ); ?>"
+      >
+        <h3 class="a11y-tutorial__title" id="a11y-tutorial-title"><?php echo esc_html__( 'Tutoriel des commandes clavier', 'a11y-widget' ); ?></h3>
+        <p class="a11y-tutorial__intro"><?php echo $tutorial_intro; ?></p>
+        <p class="a11y-tutorial__legend" data-role="tutorial-legend"><?php echo $tutorial_legend; ?></p>
+        <ul class="a11y-tutorial__list" data-role="tutorial-list"></ul>
+        <p class="a11y-tutorial__empty" data-role="tutorial-empty" hidden><?php echo $tutorial_empty; ?></p>
+      </section>
+
       <?php
       $search_label       = esc_html__( 'Rechercher une fonctionnalité', 'a11y-widget' );
       $search_placeholder = esc_attr__( 'Rechercher une fonctionnalité…', 'a11y-widget' );
