@@ -40,7 +40,7 @@
         aria-expanded="false"
         aria-controls="a11y-tutorial"
       >
-        <?php echo esc_html__( 'Tutoriel des commandes', 'a11y-widget' ); ?>
+        <?php echo esc_html__( 'Aria', 'a11y-widget' ); ?>
       </button>
       <div class="a11y-spacer" aria-hidden="true"></div>
       <button class="a11y-close" id="a11y-close" aria-label="<?php echo esc_attr__('Fermer le module', 'a11y-widget'); ?>">✕</button>
@@ -65,7 +65,7 @@
         data-shortcut-win-pattern="<?php echo esc_attr__( 'Alt + %s', 'a11y-widget' ); ?>"
         data-shortcut-mac-pattern="<?php echo esc_attr__( 'Ctrl + Option + %s', 'a11y-widget' ); ?>"
       >
-        <h3 class="a11y-tutorial__title" id="a11y-tutorial-title"><?php echo esc_html__( 'Tutoriel des commandes clavier', 'a11y-widget' ); ?></h3>
+        <h3 class="a11y-tutorial__title" id="a11y-tutorial-title"><?php echo esc_html__( 'Aria', 'a11y-widget' ); ?></h3>
         <p class="a11y-tutorial__intro"><?php echo $tutorial_intro; ?></p>
         <p class="a11y-tutorial__legend" data-role="tutorial-legend"><?php echo $tutorial_legend; ?></p>
         <ul class="a11y-tutorial__list" data-role="tutorial-list"></ul>
