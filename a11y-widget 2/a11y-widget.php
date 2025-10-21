@@ -78,62 +78,53 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'vision-placeholder',
                     'label'       => __( 'Exemple : augmenter la lisibilité', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos réglages pour la vision (contraste, taille du texte…).', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage pour la vision', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
                 array(
                     'slug'       => 'vision-daltonisme',
                     'label'      => __( 'Daltonisme', 'a11y-widget' ),
-                    'hint'       => __( 'Placeholders pour vos filtres adaptés aux différents types de daltonisme.', 'a11y-widget' ),
                     'aria_label' => __( 'Options pour le daltonisme', 'a11y-widget' ),
                     'children'   => array(
                         array(
                             'slug'        => 'vision-daltonisme-deuteranopie',
                             'label'       => __( 'Deutéranopie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un traitement adapté à la deutéranopie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode deutéranopie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-protanopie',
                             'label'       => __( 'Protanopie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un traitement adapté à la protanopie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode protanopie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-deuteranomalie',
                             'label'       => __( 'Deutéranomalie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : ajustez vos scripts pour la deutéranomalie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode deutéranomalie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-protanomalie',
                             'label'       => __( 'Protanomalie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : ajustez vos scripts pour la protanomalie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode protanomalie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-tritanopie',
                             'label'       => __( 'Tritanopie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un traitement adapté à la tritanopie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode tritanopie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-tritanomalie',
                             'label'       => __( 'Tritanomalie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : ajustez vos scripts pour la tritanomalie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode tritanomalie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
                         array(
                             'slug'        => 'vision-daltonisme-achromatopsie',
                             'label'       => __( 'Achromatopsie', 'a11y-widget' ),
-                            'hint'        => __( 'Placeholder : appliquez un mode achromatopsie.', 'a11y-widget' ),
                             'aria_label'  => __( 'Activer le mode achromatopsie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
@@ -275,7 +266,6 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'moteur-placeholder',
                     'label'       => __( 'Exemple : zones cliquables agrandies', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos options pour la navigation motrice.', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage moteur', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
@@ -318,7 +308,6 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'epilepsie-placeholder',
                     'label'       => __( 'Exemple : réduire les animations', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos outils pour limiter les stimuli visuels.', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage pour l’épilepsie', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
@@ -332,7 +321,6 @@ function a11y_widget_get_default_sections() {
                 array(
                     'slug'        => 'audition-placeholder',
                     'label'       => __( 'Exemple : activer les sous-titres', 'a11y-widget' ),
-                    'hint'        => __( 'Ajoutez vos options pour l’accessibilité audio.', 'a11y-widget' ),
                     'aria_label'  => __( 'Exemple de réglage pour l’audition', 'a11y-widget' ),
                     'placeholder' => true,
                 ),
