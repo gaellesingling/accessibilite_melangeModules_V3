@@ -366,11 +366,19 @@
     }
     const styleEl = ensureVisualFilterStyleElement();
     const filterValue = combined || 'none';
+    const shouldDarkenDocument = brightnessActive && normalizeBrightnessMode(brightnessSettings.mode) === 'night';
     const rules = [
       `body { --a11y-visual-filter: ${filterValue}; }`,
       `body > :not([data-a11y-filter-exempt]) { filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
       `#a11y-overlay { --a11y-visual-filter: ${filterValue}; filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
     ];
+    if(shouldDarkenDocument){
+      rules.push(
+        `html[data-a11y-luminosite-reglages="on"] { background-color: #121417; color: #f4f7fb; color-scheme: dark; }`,
+        `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; color: #f4f7fb; }`,
+        `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; }`
+      );
+    }
     styleEl.textContent = rules.join('\n');
     if(combined){
       document.documentElement.classList.add('a11y-visual-filter-active');
