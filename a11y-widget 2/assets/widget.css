@@ -161,7 +161,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 100%;
 }
 .a11y-tutorial-toggle:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-tutorial-toggle[aria-expanded="true"] { color: var(--a11y-text); background: rgba(214, 30, 91, 0.12); }
