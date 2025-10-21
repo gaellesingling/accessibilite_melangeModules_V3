@@ -576,6 +576,67 @@ function a11y_widget_normalize_nested_children( $feature ) {
 }
 
 /**
+ * Remove hint text from placeholder features, including nested children.
+ *
+ * A feature is considered a placeholder when it explicitly sets the
+ * `placeholder` flag or when it originates from the Markdown directory and
+ * does not define a custom template. These entries are meant to be wiring
+ * stubs, so their descriptive text should remain hidden in the interface.
+ *
+ * @param array $feature Feature data.
+ *
+ * @return array
+ */
+function a11y_widget_strip_placeholder_hint_from_feature( $feature ) {
+    if ( ! is_array( $feature ) ) {
+        return $feature;
+    }
+
+    $has_placeholder_flag   = ! empty( $feature['placeholder'] );
+    $has_markdown_origin    = isset( $feature['source'] );
+    $defines_custom_template = isset( $feature['template'] ) && '' !== $feature['template'];
+
+    if ( $has_placeholder_flag || ( $has_markdown_origin && ! $defines_custom_template ) ) {
+        $feature['hint'] = '';
+    }
+
+    if ( ! empty( $feature['children'] ) && is_array( $feature['children'] ) ) {
+        foreach ( $feature['children'] as $index => $child_feature ) {
+            $feature['children'][ $index ] = a11y_widget_strip_placeholder_hint_from_feature( $child_feature );
+        }
+    }
+
+    return $feature;
+}
+
+/**
+ * Strip hint text from placeholder features within a collection of sections.
+ *
+ * @param array $sections Sections with their features.
+ *
+ * @return array
+ */
+function a11y_widget_strip_placeholder_hints( $sections ) {
+    if ( empty( $sections ) || ! is_array( $sections ) ) {
+        return $sections;
+    }
+
+    foreach ( $sections as $section_index => $section ) {
+        if ( empty( $section['children'] ) || ! is_array( $section['children'] ) ) {
+            continue;
+        }
+
+        foreach ( $section['children'] as $feature_index => $feature ) {
+            $section['children'][ $feature_index ] = a11y_widget_strip_placeholder_hint_from_feature( $feature );
+        }
+
+        $sections[ $section_index ] = $section;
+    }
+
+    return $sections;
+}
+
+/**
  * Parse Markdown feature files located in the plugin `features/` directory.
  *
  * File format (per line, bullet list):
@@ -876,6 +937,7 @@ function a11y_widget_get_sections() {
     }
 
     $sections = a11y_widget_apply_custom_feature_layout( $sections );
+    $sections = a11y_widget_strip_placeholder_hints( $sections );
 
     /**
      * Filter the final list of sections sent to the template.
