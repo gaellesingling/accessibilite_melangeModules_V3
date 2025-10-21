@@ -1,0 +1,94 @@
+{
+  "name": "migraine",
+  "title": "Soulagement Migraines",
+  "description": "Réduit les déclencheurs visuels des migraines ophtalmiques",
+  "version": "1.0.0",
+  "author": "Accessibility Modular Plugin",
+  "category": "cognitive",
+  "icon": "🧠",
+  "enabled": true,
+  "priority": 6,
+  "rgaa_criteria": [
+    "3.2",
+    "3.3",
+    "10.3" 
+  ],
+  "wcag_criteria": [
+    "1.4.3",
+    "1.4.6",
+    "1.4.8",
+    "1.4.12"
+  ],
+  "conformity_level": "AAA",
+  "features": [
+    {
+      "id": "color_theme",
+      "label": "Thème de couleur",
+      "type": "select",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "Aucun"
+        },
+        {
+          "value": "grayscale",
+          "label": "Niveaux de gris"
+        },
+        {
+          "value": "amber",
+          "label": "Teinte chaude/ambrée"
+        }
+      ],
+      "description": "Applique une teinte apaisante"
+    },
+    {
+      "id": "color_theme_intensity",
+      "label": "Intensité du thème",
+      "type": "range",
+      "default": 100,
+      "min": 0,
+      "max": 100,
+      "step": 10,
+      "unit": "%",
+      "description": "Ajuste l'intensité du thème Ambré"
+    },
+    {
+      "id": "remove_patterns",
+      "label": "Supprimer les motifs",
+      "type": "checkbox",
+      "default": false,
+      "description": "Supprime les arrière-plans à motifs répétitifs"
+    }
+  ],
+  "cookies": [
+    "acc_migraine_dark_mode",
+    "acc_migraine_brightness",
+    "acc_migraine_blue_light_filter",
+    "acc_migraine_saturation",
+    "acc_migraine_contrast",
+    "acc_migraine_color_theme",
+    "acc_migraine_color_theme_intensity",
+    "acc_migraine_remove_patterns",
+    "acc_migraine_increase_spacing"
+  ],
+  "dependencies": [],
+  "external_resources": [],
+  "performance": {
+    "weight": "7KB",
+    "execution_time": "< 10ms",
+    "browser_compatibility": "IE11+"
+  },
+  "accessibility": {
+    "keyboard_navigation": true,
+    "screen_reader_support": true,
+    "aria_labels": true,
+    "focus_management": true
+  },
+  "medical_conditions": [
+    "migraine_ophtalmique",
+    "photophobie",
+    "fatigue_oculaire",
+    "sensibilite_lumiere"
+  ]
+}
