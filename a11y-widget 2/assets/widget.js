@@ -374,9 +374,11 @@
     ];
     if(shouldDarkenDocument){
       rules.push(
-        `html[data-a11y-luminosite-reglages="on"] { background-color: #121417; color: #f4f7fb; color-scheme: dark; }`,
-        `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; color: #f4f7fb; }`,
-        `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; }`
+        `html[data-a11y-luminosite-reglages="on"] { background-color: #171a20; color-scheme: dark; }`,
+        `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; }`,
+        `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; }`,
+        `html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) :is(img, picture, video, canvas, svg, iframe, embed, object) { filter: invert(1) hue-rotate(180deg) !important; }`,
+        `html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, picture, video, canvas, svg, iframe, embed, object) { filter: none !important; }`
       );
     }
     styleEl.textContent = rules.join('\n');

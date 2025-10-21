@@ -696,14 +696,12 @@
 }
 
 html[data-a11y-luminosite-reglages="on"] {
-  background-color: #121417;
-  color: #f4f7fb;
+  background-color: #171a20;
   color-scheme: dark;
 }
 
 html[data-a11y-luminosite-reglages="on"] body {
   background-color: transparent;
-  color: #f4f7fb;
 }
 
 [data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) {
@@ -716,10 +714,18 @@ html[data-a11y-luminosite-reglages="on"]::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: rgba(18, 20, 26, 0.82);
+  background: rgba(27, 30, 36, 0.72);
   opacity: 0;
   transition: opacity 0.3s ease, background-color 0.3s ease;
   z-index: calc(var(--a11y-z-overlay) - 1);
+}
+
+html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) :is(img, picture, video, canvas, svg, iframe, embed, object) {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, picture, video, canvas, svg, iframe, embed, object) {
+  filter: none !important;
 }
 .a11y-buttons__header {
   display: flex;
@@ -1248,7 +1254,7 @@ html[data-a11y-luminosite-reglages="on"] #a11y-overlay {
 }
 
 #a11y-overlay.acc-mode-night {
-  background-color: rgba(24, 26, 34, 0.82);
+  background-color: rgba(27, 30, 36, 0.68);
   filter: invert(1) hue-rotate(180deg);
 }
 
