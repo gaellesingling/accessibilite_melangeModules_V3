@@ -4590,18 +4590,12 @@ ${interactiveSelectors} {
     }
     const styleEl = ensureMonophtalmieDepthStyle();
     const selector = `html[data-a11yVisionMonophtalmie="on"]`;
+    const scope = `${selector} body`;
+    const exclusions = `:not(:where(#a11y-widget-root, #a11y-widget-root *, [data-a11y-filter-exempt], [data-a11y-filter-exempt] *))`;
     styleEl.textContent = [
-      `${selector} body *,`,
-      `${selector} body *::before,`,
-      `${selector} body *::after { transition: filter 0.25s ease, box-shadow 0.25s ease; }`,
-      `${selector} body * { filter: drop-shadow(0 0 0 transparent) drop-shadow(0 12px 18px rgba(15, 23, 42, 0.28)); }`,
-      `${selector} #a11y-widget-root,`,
-      `${selector} #a11y-widget-root *,`,
-      `${selector} [data-a11y-filter-exempt],`,
-      `${selector} [data-a11y-filter-exempt] * { filter: none !important; }`,
-      `${selector} body img,`,
-      `${selector} body video,`,
-      `${selector} body figure { filter: drop-shadow(0 18px 28px rgba(15, 23, 42, 0.45)) !important; }`,
+      `${scope} :where(img, video, iframe, button, a, input, select, textarea, .card, .box, .panel, article, section)${exclusions} { box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3) !important; }`,
+      `${scope} :where(button, a, input[type="button"], input[type="submit"])${exclusions} { border: 2px solid rgba(0, 0, 0, 0.2) !important; }`,
+      `${scope} :where(h1, h2, h3, h4, h5, h6)${exclusions} { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important; }`,
     ].join('\n');
   }
 
