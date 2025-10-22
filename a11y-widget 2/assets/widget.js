@@ -305,7 +305,7 @@
   };
   const MIGRAINE_DEFAULTS = {
     colorTheme: 'amber',
-    colorThemeIntensity: 70,
+    colorThemeIntensity: 45,
     brightness: 90,
     saturation: 80,
     contrast: 110,
@@ -336,7 +336,7 @@
     },
     strong: {
       colorTheme: 'amber',
-      colorThemeIntensity: 75,
+      colorThemeIntensity: 60,
       brightness: 85,
       saturation: 65,
       contrast: 115,
@@ -346,7 +346,7 @@
     },
     crisis: {
       colorTheme: 'amber',
-      colorThemeIntensity: 90,
+      colorThemeIntensity: 70,
       brightness: 80,
       saturation: 55,
       contrast: 120,
@@ -2484,9 +2484,6 @@ ${interactiveSelectors} {
   function buildMigraineFilter(settings){
     const snapshot = getMigraineSnapshot(settings);
     const parts = [];
-    if(snapshot.colorTheme === 'amber'){
-      parts.push('invert(1) hue-rotate(180deg)');
-    }
     const brightnessFactor = clampMigraineBrightness(snapshot.brightness) / 100;
     const contrastFactor = clampMigraineContrast(snapshot.contrast) / 100;
     const saturationFactor = clampMigraineSaturation(snapshot.saturation) / 100;
@@ -2521,11 +2518,11 @@ ${interactiveSelectors} {
     }
     const styleEl = ensureMigraineOverlayStyle();
     const normalized = Math.max(0, Math.min(1, clampMigraineIntensity(snapshot.colorThemeIntensity) / 100));
-    const alpha = Math.min(0.7, 0.18 + normalized * 0.5);
+    const alpha = Math.min(0.6, 0.12 + normalized * 0.45);
     const opacity = Math.round(alpha * 1000) / 1000;
     const css = [
       `html[data-a11y-${MIGRAINE_SLUG}="on"] body { position: relative; }`,
-      `html[data-a11y-${MIGRAINE_SLUG}="on"] body::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: rgba(255, 190, 90, ${opacity}); mix-blend-mode: multiply; opacity: 1; transition: opacity .25s ease; z-index: 2147483640; }`,
+      `html[data-a11y-${MIGRAINE_SLUG}="on"] body::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: rgba(255, 214, 153, ${opacity}); mix-blend-mode: color; opacity: 1; transition: opacity .25s ease; z-index: 2147483640; }`,
     ];
     styleEl.textContent = css.join('\n');
   }
