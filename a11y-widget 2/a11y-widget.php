@@ -2,7 +2,7 @@
 /**
  * Plugin Name: A11y Widget – Module d’accessibilité (mini)
  * Description: Bouton flottant qui ouvre un module d’accessibilité avec placeholders (à brancher selon vos besoins). Shortcode: [a11y_widget]. 
- * Version: 1.2.0
+ * Version: 1.3.0
  * Author: ChatGPT
  * License: GPL-2.0-or-later
  * Text Domain: a11y-widget
@@ -10,7 +10,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'A11Y_WIDGET_VERSION', '1.2.0' );
+define( 'A11Y_WIDGET_VERSION', '1.3.0' );
 define( 'A11Y_WIDGET_URL', plugin_dir_url( __FILE__ ) );
 define( 'A11Y_WIDGET_PATH', plugin_dir_path( __FILE__ ) );
 
@@ -125,6 +125,45 @@ function a11y_widget_get_default_sections() {
                             'aria_label'  => __( 'Activer le mode achromatopsie', 'a11y-widget' ),
                             'placeholder' => true,
                         ),
+                    ),
+                ),
+                array(
+                    'slug'       => 'vision-migraine',
+                    'label'      => __( 'Soulagement migraines', 'a11y-widget' ),
+                    'hint'       => __( 'Filtre chaud, réduction de la lumière bleue et options anti-déclencheurs.', 'a11y-widget' ),
+                    'aria_label' => __( 'Configurer les réglages pour soulager les migraines visuelles', 'a11y-widget' ),
+                    'template'   => 'migraine-relief',
+                    'settings'   => array(
+                        'intro'                        => __( 'Ces réglages réduisent les déclencheurs visuels courants (lumière bleue, contrastes violents, motifs répétitifs) pour soulager les migraines ophtalmiques.', 'a11y-widget' ),
+                        'theme_label'                  => __( 'Thème de confort visuel', 'a11y-widget' ),
+                        'theme_hint'                   => __( 'Ajustez la palette pour adoucir la page.', 'a11y-widget' ),
+                        'theme_option_none'            => __( 'Standard atténué', 'a11y-widget' ),
+                        'theme_option_none_aria'       => __( 'Utiliser le rendu standard atténué', 'a11y-widget' ),
+                        'theme_option_grayscale'       => __( 'Tons neutres', 'a11y-widget' ),
+                        'theme_option_grayscale_aria'  => __( 'Passer en niveaux de gris doux', 'a11y-widget' ),
+                        'theme_option_amber'           => __( 'Filtre ambré', 'a11y-widget' ),
+                        'theme_option_amber_aria'      => __( 'Activer le filtre ambré pour réduire la lumière bleue', 'a11y-widget' ),
+                        'intensity_label'              => __( 'Intensité du filtre ambré', 'a11y-widget' ),
+                        'intensity_hint'               => __( 'Plus l’intensité est élevée, plus la teinte chaude est prononcée.', 'a11y-widget' ),
+                        'intensity_value_suffix'       => __( '%', 'a11y-widget' ),
+                        'intensity_decrease'           => __( 'Diminuer l’intensité', 'a11y-widget' ),
+                        'intensity_increase'           => __( 'Augmenter l’intensité', 'a11y-widget' ),
+                        'remove_patterns_label'        => __( 'Supprimer les motifs répétitifs', 'a11y-widget' ),
+                        'remove_patterns_hint'         => __( 'Élimine les arrière-plans très contrastés ou à motifs susceptibles de déclencher une crise.', 'a11y-widget' ),
+                        'increase_spacing_label'       => __( 'Espacement augmenté', 'a11y-widget' ),
+                        'increase_spacing_hint'        => __( 'Ajoute de l’espace entre les paragraphes et lignes pour calmer la lecture.', 'a11y-widget' ),
+                        'presets_label'                => __( 'Presets rapides', 'a11y-widget' ),
+                        'preset_mild_label'            => __( 'Soulagement doux', 'a11y-widget' ),
+                        'preset_mild_hint'             => __( 'Atténuer légèrement la luminosité sans modifier la palette.', 'a11y-widget' ),
+                        'preset_moderate_label'        => __( 'Mode focus', 'a11y-widget' ),
+                        'preset_moderate_hint'         => __( 'Réduction nette de la lumière bleue et du contraste.', 'a11y-widget' ),
+                        'preset_strong_label'          => __( 'Protection renforcée', 'a11y-widget' ),
+                        'preset_strong_hint'           => __( 'Combinaison filtre ambré + suppression des motifs.', 'a11y-widget' ),
+                        'preset_crisis_label'          => __( 'Mode crise', 'a11y-widget' ),
+                        'preset_crisis_hint'           => __( 'Configuration maximale pour les situations critiques.', 'a11y-widget' ),
+                        'reset_label'                  => __( 'Réinitialiser les réglages migraine', 'a11y-widget' ),
+                        'reset_aria'                   => __( 'Réinitialiser toutes les options de soulagement migraine', 'a11y-widget' ),
+                        'live_region_label'            => __( 'Notification des réglages migraine', 'a11y-widget' ),
                     ),
                 ),
             ),
