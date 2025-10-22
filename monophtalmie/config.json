@@ -1,0 +1,102 @@
+{
+  "name": "monophtalmie",
+  "title": "Aide Monophtalmie",
+  "description": "Compense les défis visuels de la vision monoculaire : loupe, profondeur, champ visuel",
+  "version": "1.1.0",
+  "author": "Accessibility Modular Plugin",
+  "category": "vision",
+  "icon": "👁️",
+  "enabled": true,
+  "priority": 5,
+  "rgaa_criteria": [
+    "3.2",
+    "3.3",
+    "10.4",
+    "10.11"
+  ],
+  "wcag_criteria": [
+    "1.4.3",
+    "1.4.4",
+    "1.4.8",
+    "1.4.10",
+    "2.5.5"
+  ],
+  "conformity_level": "AAA",
+  "features": [
+    {
+      "id": "magnifier",
+      "label": "Loupe",
+      "type": "toggle",
+      "default": false,
+      "description": "Active une loupe qui suit le curseur"
+    },
+    {
+      "id": "magnifier_zoom",
+      "label": "Zoom de la loupe",
+      "type": "range",
+      "default": 200,
+      "min": 150,
+      "max": 400,
+      "step": 50,
+      "unit": "%",
+      "description": "Ajuste le niveau de zoom de la loupe"
+    },
+    {
+      "id": "depth_indicators",
+      "label": "Indicateurs de profondeur",
+      "type": "toggle",
+      "default": false,
+      "description": "Accentue les ombres pour améliorer la perception 3D"
+    },
+    {
+      "id": "reduce_field",
+      "label": "Adapter le champ visuel",
+      "type": "toggle",
+      "default": false,
+      "description": "Centre et réduit la largeur du contenu"
+    },
+    {
+      "id": "field_position",
+      "label": "Position du contenu",
+      "type": "select",
+      "default": "center",
+      "options": ["left", "center", "right"],
+      "description": "Positionne le contenu à gauche, au centre ou à droite"
+    },
+    {
+      "id": "low_vision_mode",
+      "label": "Mode vision basse",
+      "type": "toggle",
+      "default": false,
+      "description": "Contraste élevé, texte agrandi, interface simplifiée"
+    }
+  ],
+  "cookies": [
+    "acc_monophtalmie_magnifier",
+    "acc_monophtalmie_magnifier_zoom",
+    "acc_monophtalmie_depth_indicators",
+    "acc_monophtalmie_reduce_field",
+    "acc_monophtalmie_field_position",
+    "acc_monophtalmie_low_vision_mode"
+  ],
+  "dependencies": [],
+  "external_resources": [],
+  "performance": {
+    "weight": "13KB",
+    "execution_time": "< 15ms",
+    "browser_compatibility": "Chrome 90+, Firefox 88+, Safari 14+"
+  },
+  "accessibility": {
+    "keyboard_navigation": true,
+    "screen_reader_support": true,
+    "aria_labels": true,
+    "focus_management": true
+  },
+  "medical_conditions": [
+    "monophtalmie",
+    "vision_monoculaire",
+    "champ_visuel_reduit",
+    "vision_basse",
+    "absence_vision_stereoscopique"
+  ]
+}
