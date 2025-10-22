@@ -293,6 +293,76 @@
     else { panel.setAttribute('aria-hidden','false'); }
   });
 
+  const MIGRAINE_SLUG = 'vision-migraine';
+  const MIGRAINE_SETTINGS_KEY = 'a11y-widget-migraine-settings:v1';
+  const MIGRAINE_THEMES = ['none', 'grayscale', 'amber'];
+  const MIGRAINE_INTENSITY_RANGE = { min: 10, max: 100, step: 5 };
+  const MIGRAINE_FILTER_RANGES = {
+    brightness: { min: 70, max: 115, step: 5 },
+    saturation: { min: 40, max: 110, step: 5 },
+    contrast: { min: 90, max: 135, step: 5 },
+    blueLight: { min: 0, max: 100, step: 5 },
+  };
+  const MIGRAINE_DEFAULTS = {
+    colorTheme: 'amber',
+    colorThemeIntensity: 70,
+    brightness: 90,
+    saturation: 80,
+    contrast: 110,
+    blueLight: 60,
+    removePatterns: false,
+    increaseSpacing: false,
+  };
+  const MIGRAINE_PRESETS = {
+    mild: {
+      colorTheme: 'none',
+      colorThemeIntensity: 0,
+      brightness: 95,
+      saturation: 90,
+      contrast: 105,
+      blueLight: 30,
+      removePatterns: false,
+      increaseSpacing: false,
+    },
+    moderate: {
+      colorTheme: 'grayscale',
+      colorThemeIntensity: 0,
+      brightness: 90,
+      saturation: 70,
+      contrast: 110,
+      blueLight: 55,
+      removePatterns: false,
+      increaseSpacing: false,
+    },
+    strong: {
+      colorTheme: 'amber',
+      colorThemeIntensity: 75,
+      brightness: 85,
+      saturation: 65,
+      contrast: 115,
+      blueLight: 70,
+      removePatterns: true,
+      increaseSpacing: true,
+    },
+    crisis: {
+      colorTheme: 'amber',
+      colorThemeIntensity: 90,
+      brightness: 80,
+      saturation: 55,
+      contrast: 120,
+      blueLight: 85,
+      removePatterns: true,
+      increaseSpacing: true,
+    },
+  };
+  const migraineInstances = new Set();
+  let migraineSettings = loadMigraineSettings();
+  let migraineActive = false;
+  let migraineOverlayStyle = null;
+  let migrainePatternStyle = null;
+  let migraineSpacingStyle = null;
+  let migraineIdCounter = 0;
+
   const BRIGHTNESS_SLUG = 'luminosite-reglages';
   const BRIGHTNESS_SETTINGS_KEY = 'a11y-widget-brightness-settings:v1';
   const BRIGHTNESS_MODES = ['normal', 'night', 'blue_light', 'high_contrast', 'low_contrast', 'grayscale'];
@@ -330,7 +400,7 @@
   let brightnessActive = false;
   let brightnessIdCounter = 0;
 
-  const VISUAL_FILTER_ORDER = ['colorblind', 'brightness'];
+  const VISUAL_FILTER_ORDER = ['colorblind', 'migraine', 'brightness'];
   const visualFilterComponents = new Map();
   let visualFilterStyleElement = null;
   const NIGHT_MODE_MEDIA_SELECTOR = 'img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player';
@@ -2253,6 +2323,465 @@ ${interactiveSelectors} {
     syncCursorInstances();
   }
 
+  function getDefaultMigraineSettings(){
+    return Object.assign({}, MIGRAINE_DEFAULTS);
+  }
+
+  function normalizeMigraineTheme(value){
+    if(typeof value !== 'string'){ return MIGRAINE_DEFAULTS.colorTheme; }
+    const normalized = value.toLowerCase().replace(/\s+/g, '-').trim();
+    if(MIGRAINE_THEMES.includes(normalized)){ return normalized; }
+    if(['gris', 'grey', 'gray'].includes(normalized)){ return 'grayscale'; }
+    if(normalized === 'ambre'){ return 'amber'; }
+    return MIGRAINE_DEFAULTS.colorTheme;
+  }
+
+  function clampMigraineValue(value, config, fallback){
+    const { min = 0, max = 100, step = 1 } = config || {};
+    const numeric = Number(value);
+    if(!Number.isFinite(numeric)){ return fallback; }
+    const safeStep = step > 0 ? step : 1;
+    const stepped = Math.round(numeric / safeStep) * safeStep;
+    const bounded = Math.min(max, Math.max(min, stepped));
+    return Math.round(bounded);
+  }
+
+  function clampMigraineIntensity(value){
+    return clampMigraineValue(value, MIGRAINE_INTENSITY_RANGE, MIGRAINE_DEFAULTS.colorThemeIntensity);
+  }
+
+  function clampMigraineBrightness(value){
+    return clampMigraineValue(value, MIGRAINE_FILTER_RANGES.brightness, MIGRAINE_DEFAULTS.brightness);
+  }
+
+  function clampMigraineSaturation(value){
+    return clampMigraineValue(value, MIGRAINE_FILTER_RANGES.saturation, MIGRAINE_DEFAULTS.saturation);
+  }
+
+  function clampMigraineContrast(value){
+    return clampMigraineValue(value, MIGRAINE_FILTER_RANGES.contrast, MIGRAINE_DEFAULTS.contrast);
+  }
+
+  function clampMigraineBlueLight(value){
+    return clampMigraineValue(value, MIGRAINE_FILTER_RANGES.blueLight, MIGRAINE_DEFAULTS.blueLight);
+  }
+
+  function normalizeMigraineSettings(source){
+    const defaults = getDefaultMigraineSettings();
+    if(!source || typeof source !== 'object'){ return defaults; }
+    const result = Object.assign({}, defaults);
+    if(Object.prototype.hasOwnProperty.call(source, 'colorTheme')){
+      result.colorTheme = normalizeMigraineTheme(source.colorTheme);
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'colorThemeIntensity')){
+      result.colorThemeIntensity = clampMigraineIntensity(source.colorThemeIntensity);
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'brightness')){
+      result.brightness = clampMigraineBrightness(source.brightness);
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'saturation')){
+      result.saturation = clampMigraineSaturation(source.saturation);
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'contrast')){
+      result.contrast = clampMigraineContrast(source.contrast);
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'blueLight')){
+      result.blueLight = clampMigraineBlueLight(source.blueLight);
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'removePatterns')){
+      result.removePatterns = !!source.removePatterns;
+    }
+    if(Object.prototype.hasOwnProperty.call(source, 'increaseSpacing')){
+      result.increaseSpacing = !!source.increaseSpacing;
+    }
+    return result;
+  }
+
+  function getMigraineSnapshot(source){
+    return normalizeMigraineSettings(source);
+  }
+
+  function migraineSnapshotsEqual(a, b){
+    if(!a || !b){ return false; }
+    return (
+      a.colorTheme === b.colorTheme
+      && a.colorThemeIntensity === b.colorThemeIntensity
+      && a.brightness === b.brightness
+      && a.saturation === b.saturation
+      && a.contrast === b.contrast
+      && a.blueLight === b.blueLight
+      && !!a.removePatterns === !!b.removePatterns
+      && !!a.increaseSpacing === !!b.increaseSpacing
+    );
+  }
+
+  function loadMigraineSettings(){
+    const defaults = getDefaultMigraineSettings();
+    try {
+      const raw = localStorage.getItem(MIGRAINE_SETTINGS_KEY);
+      if(!raw){ return Object.assign({}, defaults); }
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object'){ return Object.assign({}, defaults); }
+      return normalizeMigraineSettings(parsed);
+    } catch(err){
+      return Object.assign({}, defaults);
+    }
+  }
+
+  function persistMigraineSettings(){
+    const payload = getMigraineSnapshot(migraineSettings);
+    try { localStorage.setItem(MIGRAINE_SETTINGS_KEY, JSON.stringify(payload)); } catch(err){ /* ignore */ }
+  }
+
+  function ensureMigraineOverlayStyle(){
+    if(migraineOverlayStyle && migraineOverlayStyle.isConnected){ return migraineOverlayStyle; }
+    let el = document.getElementById('a11y-migraine-overlay-style');
+    if(!el){
+      el = document.createElement('style');
+      el.id = 'a11y-migraine-overlay-style';
+      document.head.appendChild(el);
+    }
+    migraineOverlayStyle = el;
+    return el;
+  }
+
+  function ensureMigrainePatternStyle(){
+    if(migrainePatternStyle && migrainePatternStyle.isConnected){ return migrainePatternStyle; }
+    let el = document.getElementById('a11y-migraine-pattern-style');
+    if(!el){
+      el = document.createElement('style');
+      el.id = 'a11y-migraine-pattern-style';
+      document.head.appendChild(el);
+    }
+    migrainePatternStyle = el;
+    return el;
+  }
+
+  function ensureMigraineSpacingStyle(){
+    if(migraineSpacingStyle && migraineSpacingStyle.isConnected){ return migraineSpacingStyle; }
+    let el = document.getElementById('a11y-migraine-spacing-style');
+    if(!el){
+      el = document.createElement('style');
+      el.id = 'a11y-migraine-spacing-style';
+      document.head.appendChild(el);
+    }
+    migraineSpacingStyle = el;
+    return el;
+  }
+
+  function clearMigraineOverlayStyle(){
+    if(migraineOverlayStyle){ migraineOverlayStyle.textContent = ''; }
+  }
+
+  function clearMigrainePatternStyle(){
+    if(migrainePatternStyle){ migrainePatternStyle.textContent = ''; }
+  }
+
+  function clearMigraineSpacingStyle(){
+    if(migraineSpacingStyle){ migraineSpacingStyle.textContent = ''; }
+  }
+
+  function buildMigraineFilter(settings){
+    const snapshot = getMigraineSnapshot(settings);
+    const parts = [];
+    if(snapshot.colorTheme === 'amber'){
+      parts.push('invert(1) hue-rotate(180deg)');
+    }
+    const brightnessFactor = clampMigraineBrightness(snapshot.brightness) / 100;
+    const contrastFactor = clampMigraineContrast(snapshot.contrast) / 100;
+    const saturationFactor = clampMigraineSaturation(snapshot.saturation) / 100;
+    const blueRatio = clampMigraineBlueLight(snapshot.blueLight) / 100;
+    if(Math.abs(contrastFactor - 1) > 0.01){
+      parts.push(`contrast(${formatFilterNumber(contrastFactor)})`);
+    }
+    if(Math.abs(brightnessFactor - 1) > 0.01){
+      parts.push(`brightness(${formatFilterNumber(brightnessFactor)})`);
+    }
+    if(Math.abs(saturationFactor - 1) > 0.01){
+      parts.push(`saturate(${formatFilterNumber(saturationFactor)})`);
+    }
+    if(blueRatio > 0){
+      const sepiaAmount = Math.min(0.65, 0.2 + blueRatio * 0.45);
+      const hueShift = -12 - (18 * blueRatio);
+      parts.push(`sepia(${formatFilterNumber(sepiaAmount)})`);
+      parts.push(`hue-rotate(${Math.round(hueShift)}deg)`);
+    }
+    if(snapshot.colorTheme === 'grayscale'){
+      parts.push('grayscale(100%)');
+    }
+    return parts.join(' ').trim();
+  }
+
+  function updateMigraineOverlayStyle(){
+    if(!migraineActive){ clearMigraineOverlayStyle(); return; }
+    const snapshot = getMigraineSnapshot(migraineSettings);
+    if(snapshot.colorTheme !== 'amber' || snapshot.colorThemeIntensity <= 0){
+      clearMigraineOverlayStyle();
+      return;
+    }
+    const styleEl = ensureMigraineOverlayStyle();
+    const normalized = Math.max(0, Math.min(1, clampMigraineIntensity(snapshot.colorThemeIntensity) / 100));
+    const alpha = Math.min(0.7, 0.18 + normalized * 0.5);
+    const opacity = Math.round(alpha * 1000) / 1000;
+    const css = [
+      `html[data-a11y-${MIGRAINE_SLUG}="on"] body { position: relative; }`,
+      `html[data-a11y-${MIGRAINE_SLUG}="on"] body::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: rgba(255, 190, 90, ${opacity}); mix-blend-mode: multiply; opacity: 1; transition: opacity .25s ease; z-index: 2147483640; }`,
+    ];
+    styleEl.textContent = css.join('\n');
+  }
+
+  function updateMigrainePatternStyles(){
+    if(!migraineActive || !migraineSettings.removePatterns){
+      clearMigrainePatternStyle();
+      return;
+    }
+    const styleEl = ensureMigrainePatternStyle();
+    const selector = `html[data-a11y-${MIGRAINE_SLUG}="on"]`;
+    styleEl.textContent = [
+      `${selector} * { background-image: none !important; }`,
+      `${selector} *::before, ${selector} *::after { background-image: none !important; }`,
+      `${selector} * { box-shadow: none !important; }`,
+    ].join('\n');
+  }
+
+  function updateMigraineSpacingStyle(){
+    if(!migraineActive || !migraineSettings.increaseSpacing){
+      clearMigraineSpacingStyle();
+      return;
+    }
+    const styleEl = ensureMigraineSpacingStyle();
+    const selector = `html[data-a11y-${MIGRAINE_SLUG}="on"]`;
+    styleEl.textContent = [
+      `${selector} p,`,
+      `${selector} li,`,
+      `${selector} dd,`,
+      `${selector} blockquote { line-height: 1.75 !important; letter-spacing: 0.02em !important; word-spacing: 0.12em !important; }`,
+      `${selector} p { margin-bottom: 1.2em !important; }`,
+    ].join('\n');
+  }
+
+  function applyMigraineSettings(){
+    if(!migraineActive){
+      setVisualFilterComponent('migraine', '');
+      clearMigraineOverlayStyle();
+      clearMigrainePatternStyle();
+      clearMigraineSpacingStyle();
+      return;
+    }
+    const filterValue = buildMigraineFilter(migraineSettings);
+    setVisualFilterComponent('migraine', filterValue);
+    updateMigraineOverlayStyle();
+    updateMigrainePatternStyles();
+    updateMigraineSpacingStyle();
+  }
+
+  function setMigraineActive(value){
+    const next = !!value;
+    if(migraineActive === next){
+      if(next){ applyMigraineSettings(); }
+      syncMigraineInstances();
+      return;
+    }
+    migraineActive = next;
+    if(next){ ensureVisualFilterStyleElement(); }
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function setMigraineColorTheme(value){
+    const next = normalizeMigraineTheme(value);
+    const current = normalizeMigraineTheme(migraineSettings.colorTheme);
+    if(current === next){
+      syncMigraineInstances();
+      return;
+    }
+    migraineSettings.colorTheme = next;
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function setMigraineColorThemeIntensity(value){
+    const next = clampMigraineIntensity(value);
+    const current = clampMigraineIntensity(migraineSettings.colorThemeIntensity);
+    if(current === next){
+      syncMigraineInstances();
+      return;
+    }
+    migraineSettings.colorThemeIntensity = next;
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function setMigraineRemovePatterns(value){
+    const next = !!value;
+    if(migraineSettings.removePatterns === next){
+      syncMigraineInstances();
+      return;
+    }
+    migraineSettings.removePatterns = next;
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function setMigraineIncreaseSpacing(value){
+    const next = !!value;
+    if(migraineSettings.increaseSpacing === next){
+      syncMigraineInstances();
+      return;
+    }
+    migraineSettings.increaseSpacing = next;
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function applyMigrainePreset(key){
+    const preset = MIGRAINE_PRESETS[key];
+    if(!preset){ return; }
+    migraineSettings = normalizeMigraineSettings(Object.assign({}, MIGRAINE_DEFAULTS, preset));
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function resetMigraineSettings(){
+    migraineSettings = getDefaultMigraineSettings();
+    applyMigraineSettings();
+    persistMigraineSettings();
+    syncMigraineInstances();
+  }
+
+  function isMigraineAtDefaults(){
+    return migraineSnapshotsEqual(getMigraineSnapshot(migraineSettings), getMigraineSnapshot(MIGRAINE_DEFAULTS));
+  }
+
+  function isMigrainePresetMatch(key){
+    const preset = MIGRAINE_PRESETS[key];
+    if(!preset){ return false; }
+    const target = getMigraineSnapshot(Object.assign({}, MIGRAINE_DEFAULTS, preset));
+    return migraineSnapshotsEqual(getMigraineSnapshot(migraineSettings), target);
+  }
+
+  function pruneMigraineInstances(){
+    migraineInstances.forEach(instance => {
+      if(!instance){
+        migraineInstances.delete(instance);
+        return;
+      }
+      if(instance.wasConnected && (!instance.article || !instance.article.isConnected)){
+        migraineInstances.delete(instance);
+      }
+    });
+  }
+
+  function announceMigraine(message){
+    migraineInstances.forEach(instance => {
+      if(!instance || !instance.liveRegion){ return; }
+      instance.liveRegion.textContent = message || '';
+      if(message){
+        const region = instance.liveRegion;
+        setTimeout(() => {
+          if(region.isConnected && region.textContent === message){
+            region.textContent = '';
+          }
+        }, 1600);
+      }
+    });
+  }
+
+  function updateMigraineInstanceUI(instance){
+    if(!instance){ return; }
+    const {
+      article,
+      controls,
+      themeSelect,
+      intensityField,
+      intensitySlider,
+      intensityValue,
+      intensityDecrease,
+      intensityIncrease,
+      removePatternsInput,
+      increaseSpacingInput,
+      presets,
+      resetBtn,
+      intensityValueSuffix,
+    } = instance;
+    const active = migraineActive;
+    const snapshot = getMigraineSnapshot(migraineSettings);
+    const showIntensity = snapshot.colorTheme === 'amber';
+    const intensity = clampMigraineIntensity(snapshot.colorThemeIntensity);
+
+    if(article){
+      if(article.isConnected){ instance.wasConnected = true; }
+      article.classList.toggle('is-disabled', !active);
+    }
+
+    if(controls){
+      controls.classList.toggle('is-disabled', !active);
+      if(!active){ controls.setAttribute('aria-disabled', 'true'); }
+      else { controls.removeAttribute('aria-disabled'); }
+    }
+
+    if(themeSelect){
+      themeSelect.value = snapshot.colorTheme;
+      themeSelect.disabled = !active;
+    }
+
+    if(intensityField){
+      intensityField.hidden = !showIntensity;
+      if(showIntensity){ intensityField.removeAttribute('aria-hidden'); }
+      else { intensityField.setAttribute('aria-hidden', 'true'); }
+    }
+
+    if(intensitySlider){
+      intensitySlider.value = `${intensity}`;
+      intensitySlider.disabled = !active || !showIntensity;
+      intensitySlider.setAttribute('aria-valuenow', `${intensity}`);
+      const valueText = intensityValueSuffix ? `${intensity}${intensityValueSuffix}` : `${intensity}`;
+      intensitySlider.setAttribute('aria-valuetext', valueText);
+    }
+
+    if(intensityValue){
+      intensityValue.textContent = intensityValueSuffix ? `${intensity}${intensityValueSuffix}` : `${intensity}`;
+    }
+
+    if(intensityDecrease){ intensityDecrease.disabled = !active || !showIntensity || intensity <= MIGRAINE_INTENSITY_RANGE.min; }
+    if(intensityIncrease){ intensityIncrease.disabled = !active || !showIntensity || intensity >= MIGRAINE_INTENSITY_RANGE.max; }
+
+    if(removePatternsInput){
+      removePatternsInput.checked = !!snapshot.removePatterns;
+      removePatternsInput.disabled = !active;
+    }
+
+    if(increaseSpacingInput){
+      increaseSpacingInput.checked = !!snapshot.increaseSpacing;
+      increaseSpacingInput.disabled = !active;
+    }
+
+    if(Array.isArray(presets)){
+      presets.forEach(entry => {
+        if(!entry || !entry.button){ return; }
+        const isActive = active && isMigrainePresetMatch(entry.key);
+        entry.button.disabled = !active;
+        entry.button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        entry.button.classList.toggle('is-active', isActive);
+      });
+    }
+
+    if(resetBtn){
+      resetBtn.disabled = !active || isMigraineAtDefaults();
+    }
+  }
+
+  function syncMigraineInstances(){
+    pruneMigraineInstances();
+    migraineInstances.forEach(instance => updateMigraineInstanceUI(instance));
+  }
+
   function getDefaultBrightnessSettings(){
     return {
       mode: 'normal',
@@ -2601,6 +3130,397 @@ ${interactiveSelectors} {
       const target = buttons[targetIndex];
       if(target && !target.disabled){ target.focus(); }
     }
+  }
+
+  function createMigraineCard(feature){
+    if(!feature || typeof feature.slug !== 'string' || !feature.slug){ return null; }
+
+    const article = document.createElement('article');
+    article.className = 'a11y-card a11y-card--migraine';
+    article.setAttribute('data-role', 'feature-card');
+
+    const header = document.createElement('div');
+    header.className = 'a11y-migraine__header';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.setAttribute('data-role', 'feature-meta');
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = feature.label || '';
+    meta.appendChild(labelEl);
+
+    if(feature.hint){
+      const hintEl = document.createElement('span');
+      hintEl.className = 'hint';
+      hintEl.textContent = feature.hint;
+      meta.appendChild(hintEl);
+    }
+
+    header.appendChild(meta);
+
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
+    if(switchEl){
+      switchEl.classList.add('a11y-migraine__switch');
+      header.appendChild(switchEl);
+    }
+
+    article.appendChild(header);
+
+    const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
+    const texts = {
+      intro: typeof settings.intro === 'string' ? settings.intro : '',
+      theme_label: typeof settings.theme_label === 'string' ? settings.theme_label : '',
+      theme_hint: typeof settings.theme_hint === 'string' ? settings.theme_hint : '',
+      theme_option_none: typeof settings.theme_option_none === 'string' ? settings.theme_option_none : '',
+      theme_option_none_aria: typeof settings.theme_option_none_aria === 'string' ? settings.theme_option_none_aria : '',
+      theme_option_grayscale: typeof settings.theme_option_grayscale === 'string' ? settings.theme_option_grayscale : '',
+      theme_option_grayscale_aria: typeof settings.theme_option_grayscale_aria === 'string' ? settings.theme_option_grayscale_aria : '',
+      theme_option_amber: typeof settings.theme_option_amber === 'string' ? settings.theme_option_amber : '',
+      theme_option_amber_aria: typeof settings.theme_option_amber_aria === 'string' ? settings.theme_option_amber_aria : '',
+      intensity_label: typeof settings.intensity_label === 'string' ? settings.intensity_label : '',
+      intensity_hint: typeof settings.intensity_hint === 'string' ? settings.intensity_hint : '',
+      intensity_value_suffix: typeof settings.intensity_value_suffix === 'string' ? settings.intensity_value_suffix : '',
+      intensity_decrease: typeof settings.intensity_decrease === 'string' ? settings.intensity_decrease : '',
+      intensity_increase: typeof settings.intensity_increase === 'string' ? settings.intensity_increase : '',
+      remove_patterns_label: typeof settings.remove_patterns_label === 'string' ? settings.remove_patterns_label : '',
+      remove_patterns_hint: typeof settings.remove_patterns_hint === 'string' ? settings.remove_patterns_hint : '',
+      increase_spacing_label: typeof settings.increase_spacing_label === 'string' ? settings.increase_spacing_label : '',
+      increase_spacing_hint: typeof settings.increase_spacing_hint === 'string' ? settings.increase_spacing_hint : '',
+      presets_label: typeof settings.presets_label === 'string' ? settings.presets_label : '',
+      preset_mild_label: typeof settings.preset_mild_label === 'string' ? settings.preset_mild_label : '',
+      preset_mild_hint: typeof settings.preset_mild_hint === 'string' ? settings.preset_mild_hint : '',
+      preset_moderate_label: typeof settings.preset_moderate_label === 'string' ? settings.preset_moderate_label : '',
+      preset_moderate_hint: typeof settings.preset_moderate_hint === 'string' ? settings.preset_moderate_hint : '',
+      preset_strong_label: typeof settings.preset_strong_label === 'string' ? settings.preset_strong_label : '',
+      preset_strong_hint: typeof settings.preset_strong_hint === 'string' ? settings.preset_strong_hint : '',
+      preset_crisis_label: typeof settings.preset_crisis_label === 'string' ? settings.preset_crisis_label : '',
+      preset_crisis_hint: typeof settings.preset_crisis_hint === 'string' ? settings.preset_crisis_hint : '',
+      reset_label: typeof settings.reset_label === 'string' ? settings.reset_label : '',
+      reset_aria: typeof settings.reset_aria === 'string' ? settings.reset_aria : '',
+      live_region_label: typeof settings.live_region_label === 'string' ? settings.live_region_label : '',
+    };
+
+    if(texts.intro){
+      const info = document.createElement('p');
+      info.className = 'a11y-migraine__info';
+      info.textContent = texts.intro;
+      article.appendChild(info);
+    }
+
+    const controls = document.createElement('form');
+    controls.className = 'a11y-migraine__controls';
+    controls.addEventListener('submit', event => { event.preventDefault(); });
+    article.appendChild(controls);
+
+    const baseId = `a11y-migraine-${++migraineIdCounter}`;
+
+    const themeField = document.createElement('div');
+    themeField.className = 'a11y-migraine__field';
+    controls.appendChild(themeField);
+
+    const themeLabel = document.createElement('label');
+    themeLabel.className = 'a11y-migraine__label';
+    themeLabel.id = `${baseId}-theme-label`;
+    const themeSelectId = `${baseId}-theme`;
+    themeLabel.setAttribute('for', themeSelectId);
+    themeLabel.textContent = texts.theme_label || '';
+    themeField.appendChild(themeLabel);
+
+    let themeHintId = '';
+    if(texts.theme_hint){
+      const themeHint = document.createElement('p');
+      themeHint.className = 'a11y-migraine__hint';
+      themeHint.id = `${baseId}-theme-hint`;
+      themeHint.textContent = texts.theme_hint;
+      themeField.appendChild(themeHint);
+      themeHintId = themeHint.id;
+    }
+
+    const themeSelect = document.createElement('select');
+    themeSelect.className = 'a11y-migraine__select';
+    themeSelect.id = themeSelectId;
+    themeSelect.setAttribute('aria-labelledby', themeLabel.id);
+    if(themeHintId){ themeSelect.setAttribute('aria-describedby', themeHintId); }
+
+    const themeOptions = [
+      { value: 'none', label: texts.theme_option_none || 'Standard', aria: texts.theme_option_none_aria },
+      { value: 'grayscale', label: texts.theme_option_grayscale || 'Grayscale', aria: texts.theme_option_grayscale_aria },
+      { value: 'amber', label: texts.theme_option_amber || 'Amber', aria: texts.theme_option_amber_aria },
+    ];
+    themeOptions.forEach(optionDef => {
+      const option = document.createElement('option');
+      option.value = optionDef.value;
+      option.textContent = optionDef.label || optionDef.value;
+      if(optionDef.aria){ option.setAttribute('aria-label', optionDef.aria); }
+      themeSelect.appendChild(option);
+    });
+    themeField.appendChild(themeSelect);
+
+    themeSelect.addEventListener('change', () => {
+      const value = themeSelect.value;
+      setMigraineColorTheme(value);
+      const selectedOption = themeSelect.options[themeSelect.selectedIndex];
+      if(selectedOption){
+        const label = selectedOption.textContent || value;
+        announceMigraine(label ? `${label}` : '');
+      }
+    });
+
+    const intensityField = document.createElement('div');
+    intensityField.className = 'a11y-migraine__field';
+    intensityField.setAttribute('data-role', 'migraine-intensity');
+    controls.appendChild(intensityField);
+
+    const intensityLabel = document.createElement('label');
+    intensityLabel.className = 'a11y-migraine__label';
+    const intensityId = `${baseId}-intensity`;
+    intensityLabel.setAttribute('for', intensityId);
+    intensityLabel.textContent = texts.intensity_label || '';
+    const intensityValue = document.createElement('span');
+    intensityValue.className = 'a11y-migraine__value';
+    intensityLabel.appendChild(intensityValue);
+    intensityField.appendChild(intensityLabel);
+
+    if(texts.intensity_hint){
+      const intensityHint = document.createElement('p');
+      intensityHint.className = 'a11y-migraine__hint';
+      intensityHint.textContent = texts.intensity_hint;
+      intensityField.appendChild(intensityHint);
+    }
+
+    const sliderContainer = document.createElement('div');
+    sliderContainer.className = 'a11y-migraine__slider';
+    intensityField.appendChild(sliderContainer);
+
+    const intensityDecrease = document.createElement('button');
+    intensityDecrease.type = 'button';
+    intensityDecrease.className = 'a11y-migraine__slider-button';
+    intensityDecrease.textContent = '−';
+    if(texts.intensity_decrease){ intensityDecrease.setAttribute('aria-label', texts.intensity_decrease); }
+    sliderContainer.appendChild(intensityDecrease);
+
+    const intensitySlider = document.createElement('input');
+    intensitySlider.type = 'range';
+    intensitySlider.className = 'a11y-migraine__range';
+    intensitySlider.id = intensityId;
+    intensitySlider.min = `${MIGRAINE_INTENSITY_RANGE.min}`;
+    intensitySlider.max = `${MIGRAINE_INTENSITY_RANGE.max}`;
+    intensitySlider.step = `${MIGRAINE_INTENSITY_RANGE.step}`;
+    intensitySlider.setAttribute('aria-valuemin', `${MIGRAINE_INTENSITY_RANGE.min}`);
+    intensitySlider.setAttribute('aria-valuemax', `${MIGRAINE_INTENSITY_RANGE.max}`);
+    sliderContainer.appendChild(intensitySlider);
+
+    const intensityIncrease = document.createElement('button');
+    intensityIncrease.type = 'button';
+    intensityIncrease.className = 'a11y-migraine__slider-button';
+    intensityIncrease.textContent = '+';
+    if(texts.intensity_increase){ intensityIncrease.setAttribute('aria-label', texts.intensity_increase); }
+    sliderContainer.appendChild(intensityIncrease);
+
+    intensitySlider.addEventListener('input', () => {
+      setMigraineColorThemeIntensity(intensitySlider.value);
+    });
+    intensitySlider.addEventListener('change', () => {
+      const value = clampMigraineIntensity(intensitySlider.value);
+      const suffix = texts.intensity_value_suffix || '';
+      const message = texts.intensity_label ? `${texts.intensity_label} ${value}${suffix}` : `${value}${suffix}`;
+      announceMigraine(message.trim());
+    });
+
+    intensityDecrease.addEventListener('click', () => {
+      const current = clampMigraineIntensity(intensitySlider.value);
+      const step = MIGRAINE_INTENSITY_RANGE.step || 5;
+      const next = clampMigraineIntensity(current - step);
+      if(next !== current){
+        setMigraineColorThemeIntensity(next);
+        const suffix = texts.intensity_value_suffix || '';
+        announceMigraine(texts.intensity_label ? `${texts.intensity_label} ${next}${suffix}` : `${next}${suffix}`);
+      }
+    });
+
+    intensityIncrease.addEventListener('click', () => {
+      const current = clampMigraineIntensity(intensitySlider.value);
+      const step = MIGRAINE_INTENSITY_RANGE.step || 5;
+      const next = clampMigraineIntensity(current + step);
+      if(next !== current){
+        setMigraineColorThemeIntensity(next);
+        const suffix = texts.intensity_value_suffix || '';
+        announceMigraine(texts.intensity_label ? `${texts.intensity_label} ${next}${suffix}` : `${next}${suffix}`);
+      }
+    });
+
+    const patternsField = document.createElement('div');
+    patternsField.className = 'a11y-migraine__field';
+    controls.appendChild(patternsField);
+
+    const patternsLabel = document.createElement('label');
+    patternsLabel.className = 'a11y-migraine__toggle';
+    const patternsInput = document.createElement('input');
+    patternsInput.type = 'checkbox';
+    patternsInput.className = 'a11y-migraine__checkbox';
+    patternsInput.id = `${baseId}-patterns`;
+    patternsLabel.appendChild(patternsInput);
+    const patternsText = document.createElement('span');
+    patternsText.className = 'a11y-migraine__toggle-text';
+    patternsText.textContent = texts.remove_patterns_label || '';
+    patternsLabel.appendChild(patternsText);
+    patternsField.appendChild(patternsLabel);
+    let patternsHintId = '';
+    if(texts.remove_patterns_hint){
+      const hint = document.createElement('p');
+      hint.className = 'a11y-migraine__hint';
+      hint.id = `${baseId}-patterns-hint`;
+      hint.textContent = texts.remove_patterns_hint;
+      patternsField.appendChild(hint);
+      patternsHintId = hint.id;
+    }
+    if(patternsHintId){ patternsInput.setAttribute('aria-describedby', patternsHintId); }
+
+    patternsInput.addEventListener('change', () => {
+      setMigraineRemovePatterns(patternsInput.checked);
+      const label = texts.remove_patterns_label || '';
+      announceMigraine(label ? `${label} ${patternsInput.checked ? 'activé' : 'désactivé'}` : '');
+    });
+
+    const spacingField = document.createElement('div');
+    spacingField.className = 'a11y-migraine__field';
+    controls.appendChild(spacingField);
+
+    const spacingLabel = document.createElement('label');
+    spacingLabel.className = 'a11y-migraine__toggle';
+    const spacingInput = document.createElement('input');
+    spacingInput.type = 'checkbox';
+    spacingInput.className = 'a11y-migraine__checkbox';
+    spacingInput.id = `${baseId}-spacing`;
+    spacingLabel.appendChild(spacingInput);
+    const spacingText = document.createElement('span');
+    spacingText.className = 'a11y-migraine__toggle-text';
+    spacingText.textContent = texts.increase_spacing_label || '';
+    spacingLabel.appendChild(spacingText);
+    spacingField.appendChild(spacingLabel);
+    let spacingHintId = '';
+    if(texts.increase_spacing_hint){
+      const hint = document.createElement('p');
+      hint.className = 'a11y-migraine__hint';
+      hint.id = `${baseId}-spacing-hint`;
+      hint.textContent = texts.increase_spacing_hint;
+      spacingField.appendChild(hint);
+      spacingHintId = hint.id;
+    }
+    if(spacingHintId){ spacingInput.setAttribute('aria-describedby', spacingHintId); }
+
+    spacingInput.addEventListener('change', () => {
+      setMigraineIncreaseSpacing(spacingInput.checked);
+      const label = texts.increase_spacing_label || '';
+      announceMigraine(label ? `${label} ${spacingInput.checked ? 'activé' : 'désactivé'}` : '');
+    });
+
+    const presetsField = document.createElement('div');
+    presetsField.className = 'a11y-migraine__field';
+    controls.appendChild(presetsField);
+
+    if(texts.presets_label){
+      const presetsLabel = document.createElement('p');
+      presetsLabel.className = 'a11y-migraine__label';
+      presetsLabel.textContent = texts.presets_label;
+      presetsField.appendChild(presetsLabel);
+    }
+
+    const presetGrid = document.createElement('div');
+    presetGrid.className = 'a11y-migraine__preset-grid';
+    presetsField.appendChild(presetGrid);
+
+    const presetDefs = [
+      { key: 'mild', label: texts.preset_mild_label, hint: texts.preset_mild_hint },
+      { key: 'moderate', label: texts.preset_moderate_label, hint: texts.preset_moderate_hint },
+      { key: 'strong', label: texts.preset_strong_label, hint: texts.preset_strong_hint },
+      { key: 'crisis', label: texts.preset_crisis_label, hint: texts.preset_crisis_hint },
+    ];
+
+    const presetEntries = [];
+    presetDefs.forEach(def => {
+      if(!def || !def.key){ return; }
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'a11y-migraine__preset';
+      button.dataset.preset = def.key;
+      button.textContent = def.label || def.key;
+      button.setAttribute('aria-pressed', 'false');
+      if(def.hint){
+        button.title = def.hint;
+        button.setAttribute('aria-description', def.hint);
+      }
+      button.addEventListener('click', () => {
+        applyMigrainePreset(def.key);
+        const announceText = def.label ? `${def.label} activé` : '';
+        if(announceText){ announceMigraine(announceText); }
+      });
+      presetGrid.appendChild(button);
+      presetEntries.push({ key: def.key, button });
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'a11y-migraine__actions';
+    controls.appendChild(actions);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'a11y-migraine__reset';
+    resetBtn.textContent = texts.reset_label || 'Réinitialiser';
+    if(texts.reset_aria){ resetBtn.setAttribute('aria-label', texts.reset_aria); }
+    actions.appendChild(resetBtn);
+
+    resetBtn.addEventListener('click', () => {
+      resetMigraineSettings();
+      if(texts.reset_label || texts.reset_aria){
+        announceMigraine(texts.reset_label || texts.reset_aria);
+      } else {
+        announceMigraine('Réglages migraines réinitialisés');
+      }
+    });
+
+    const liveRegion = document.createElement('div');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    if(texts.live_region_label){ liveRegion.setAttribute('aria-label', texts.live_region_label); }
+    liveRegion.dataset.srOnly = 'true';
+    article.appendChild(liveRegion);
+
+    const instance = {
+      article,
+      controls,
+      themeSelect,
+      intensityField,
+      intensitySlider,
+      intensityValue,
+      intensityDecrease,
+      intensityIncrease,
+      removePatternsInput: patternsInput,
+      increaseSpacingInput: spacingInput,
+      presets: presetEntries,
+      resetBtn,
+      liveRegion,
+      intensityValueSuffix: texts.intensity_value_suffix || '',
+      wasConnected: false,
+    };
+
+    migraineInstances.add(instance);
+    syncMigraineInstances();
+
+    const markConnection = () => {
+      if(instance.article && instance.article.isConnected){
+        instance.wasConnected = true;
+      }
+    };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(markConnection);
+    } else {
+      setTimeout(markConnection, 0);
+    }
+
+    return article;
   }
 
   function createBrightnessCard(feature){
@@ -5735,6 +6655,9 @@ ${interactiveSelectors} {
     if(template === 'dyslexie-highlighter'){
       return createDyslexiaCard(feature);
     }
+    if(template === 'migraine-relief'){
+      return createMigraineCard(feature);
+    }
     if(template === 'brightness-settings'){
       return createBrightnessCard(feature);
     }
@@ -6179,6 +7102,11 @@ ${interactiveSelectors} {
       if(on){ ensureVisualFilterStyleElement(); }
       setColorblindFilterState(slug, on);
     });
+  });
+
+  A11yAPI.registerFeature(MIGRAINE_SLUG, on => {
+    if(on){ ensureVisualFilterStyleElement(); }
+    setMigraineActive(on);
   });
 
   A11yAPI.registerFeature(BRIGHTNESS_SLUG, on => {
