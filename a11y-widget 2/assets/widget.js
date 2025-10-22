@@ -4379,12 +4379,30 @@ ${interactiveSelectors} {
 
   function applyMonophtalmieMagnifierBackgroundStyles(){
     if(!monophtalmieMagnifierEl || !monophtalmieMagnifierContent){ return; }
-    if(!document.body){ return; }
     if(typeof window === 'undefined' || typeof window.getComputedStyle !== 'function'){ return; }
-    const computed = getComputedStyle(document.body);
-    if(!computed){ return; }
-    const background = computed.background || '';
-    const backgroundColor = computed.backgroundColor || '';
+    if(!document.body && !document.documentElement){ return; }
+
+    const normalizeColor = value => typeof value === 'string' ? value.replace(/\s+/g, '').toLowerCase() : '';
+    const isTransparentColor = value => {
+      const normalized = normalizeColor(value);
+      return normalized === 'rgba(0,0,0,0)' || normalized === 'transparent';
+    };
+    const isTransparentBackground = computed => {
+      if(!computed){ return false; }
+      const backgroundImage = computed.backgroundImage || '';
+      const hasImage = typeof backgroundImage === 'string' && backgroundImage !== 'none';
+      return !hasImage && isTransparentColor(computed.backgroundColor);
+    };
+
+    const bodyComputed = document.body ? getComputedStyle(document.body) : null;
+    const docComputed = document.documentElement ? getComputedStyle(document.documentElement) : null;
+    const useDocComputed = (!bodyComputed || isTransparentBackground(bodyComputed)) && !!docComputed;
+    const sourceComputed = useDocComputed ? docComputed : (bodyComputed || docComputed);
+
+    if(!sourceComputed){ return; }
+
+    const background = sourceComputed.background || '';
+    const backgroundColor = sourceComputed.backgroundColor || '';
     monophtalmieMagnifierEl.style.background = background;
     monophtalmieMagnifierEl.style.backgroundColor = backgroundColor;
     monophtalmieMagnifierContent.style.background = background;
