@@ -321,32 +321,58 @@
             if (this.settings.depthIndicators) {
                 const css = `
                     <style id="acc-mono-depth-style">
-                        img:not(#acc-widget-panel *), 
-                        video:not(#acc-widget-panel *), 
-                        iframe:not(#acc-widget-panel *), 
-                        button:not(#acc-widget-panel *), 
-                        a:not(#acc-widget-panel *), 
-                        input:not(#acc-widget-panel *), 
-                        select:not(#acc-widget-panel *), 
-                        textarea:not(#acc-widget-panel *), 
-                        .card, .box, .panel, 
-                        article:not(#acc-widget-panel), 
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) {
+                            position: relative !important;
+                            background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 55%), repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0 18px, rgba(0, 0, 0, 0.22) 18px 36px);
+                            background-attachment: fixed, fixed;
+                            background-blend-mode: multiply, normal;
+                        }
+
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *)::before {
+                            content: '';
+                            position: fixed;
+                            inset: 0;
+                            pointer-events: none;
+                            z-index: 2147483600;
+                            background: radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.45), transparent 52%), radial-gradient(circle at 78% 42%, rgba(0, 0, 0, 0.5), transparent 58%), linear-gradient(120deg, rgba(0, 0, 0, 0.4), transparent 70%);
+                            mix-blend-mode: multiply;
+                            opacity: 0.55;
+                        }
+
+                        #acc-widget-panel,
+                        #acc-widget-panel * {
+                            isolation: isolate;
+                            mix-blend-mode: normal !important;
+                            position: relative;
+                            z-index: 2147483647 !important;
+                        }
+
+                        img:not(#acc-widget-panel *),
+                        video:not(#acc-widget-panel *),
+                        iframe:not(#acc-widget-panel *),
+                        button:not(#acc-widget-panel *),
+                        a:not(#acc-widget-panel *),
+                        input:not(#acc-widget-panel *),
+                        select:not(#acc-widget-panel *),
+                        textarea:not(#acc-widget-panel *),
+                        .card, .box, .panel,
+                        article:not(#acc-widget-panel),
                         section:not(#acc-widget-panel) {
                             box-shadow: 3px 3px 8px rgba(0,0,0,0.3) !important;
                         }
-                        
-                        button:not(#acc-widget-panel *), 
-                        a:not(#acc-widget-panel *), 
-                        input[type="button"]:not(#acc-widget-panel *), 
+
+                        button:not(#acc-widget-panel *),
+                        a:not(#acc-widget-panel *),
+                        input[type="button"]:not(#acc-widget-panel *),
                         input[type="submit"]:not(#acc-widget-panel *) {
                             border: 2px solid rgba(0,0,0,0.2) !important;
                         }
-                        
-                        h1:not(#acc-widget-panel *), 
-                        h2:not(#acc-widget-panel *), 
-                        h3:not(#acc-widget-panel *), 
-                        h4:not(#acc-widget-panel *), 
-                        h5:not(#acc-widget-panel *), 
+
+                        h1:not(#acc-widget-panel *),
+                        h2:not(#acc-widget-panel *),
+                        h3:not(#acc-widget-panel *),
+                        h4:not(#acc-widget-panel *),
+                        h5:not(#acc-widget-panel *),
                         h6:not(#acc-widget-panel *) {
                             text-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
                         }
