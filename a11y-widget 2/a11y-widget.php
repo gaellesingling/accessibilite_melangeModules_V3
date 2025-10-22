@@ -68,6 +68,9 @@ function a11y_widget_get_default_sections() {
     $heading_selector = function_exists( 'a11y_widget_get_reading_guide_heading_selector' )
         ? a11y_widget_get_reading_guide_heading_selector()
         : 'main h2, main h3';
+    $syllable_selector = function_exists( 'a11y_widget_get_reading_guide_syllable_selector' )
+        ? a11y_widget_get_reading_guide_syllable_selector()
+        : 'main p, main li';
 
     return array(
         array(
@@ -205,7 +208,7 @@ function a11y_widget_get_default_sections() {
                         'syllable_toggle_label'          => __( 'Activer la séparation syllabique', 'a11y-widget' ),
                         'syllable_selector_label'        => __( 'Zones à syllaber', 'a11y-widget' ),
                         'syllable_selector_hint'         => '',
-                        'syllable_selector_default'      => __( 'main p, main li', 'a11y-widget' ),
+                        'syllable_selector_default'      => $syllable_selector,
                         'syllable_selector_placeholder'  => __( 'Ex. article p, article li', 'a11y-widget' ),
                         'focus_label'                    => __( 'Mode focus', 'a11y-widget' ),
                         'focus_hint'                     => '',
