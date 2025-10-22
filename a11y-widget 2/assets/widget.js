@@ -4377,6 +4377,20 @@ ${interactiveSelectors} {
   let monophtalmieLowVisionStyle = null;
   let monophtalmieIdCounter = 0;
 
+  function applyMonophtalmieMagnifierBackgroundStyles(){
+    if(!monophtalmieMagnifierEl || !monophtalmieMagnifierContent){ return; }
+    if(!document.body){ return; }
+    if(typeof window === 'undefined' || typeof window.getComputedStyle !== 'function'){ return; }
+    const computed = getComputedStyle(document.body);
+    if(!computed){ return; }
+    const background = computed.background || '';
+    const backgroundColor = computed.backgroundColor || '';
+    monophtalmieMagnifierEl.style.background = background;
+    monophtalmieMagnifierEl.style.backgroundColor = backgroundColor;
+    monophtalmieMagnifierContent.style.background = background;
+    monophtalmieMagnifierContent.style.backgroundColor = backgroundColor;
+  }
+
   function ensureMonophtalmieMagnifier(){
     if(monophtalmieMagnifierEl && monophtalmieMagnifierEl.isConnected){ return monophtalmieMagnifierEl; }
     if(!document.body){ return null; }
@@ -4410,6 +4424,7 @@ ${interactiveSelectors} {
     document.body.appendChild(container);
     monophtalmieMagnifierEl = container;
     monophtalmieMagnifierContent = content;
+    applyMonophtalmieMagnifierBackgroundStyles();
     return container;
   }
 
@@ -4461,33 +4476,38 @@ ${interactiveSelectors} {
     if(!monophtalmieMagnifierContent){ return; }
     const content = monophtalmieMagnifierContent;
     content.textContent = '';
-    const source = document.body;
-    if(!source){ return; }
-    const fragment = document.createDocumentFragment();
-    const nodes = Array.from(source.childNodes || []);
-    nodes.forEach(node => {
-      if(!node){ return; }
-      if(node.nodeType === Node.ELEMENT_NODE){
-        const element = node;
-        const tag = element.tagName;
-        if(tag === 'SCRIPT'){ return; }
-        if(element.id === 'a11y-widget-root' || element.id === 'a11y-monophtalmie-magnifier'){ return; }
+    const sourceRoot = document.documentElement || document.body;
+    if(!sourceRoot){ return; }
+    const cloneRoot = sourceRoot.cloneNode(true);
+    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelectorAll){
+      cloneRoot.querySelectorAll('script, #a11y-widget-root, #a11y-monophtalmie-magnifier').forEach(el => {
+        if(el && el.parentNode){ el.parentNode.removeChild(el); }
+      });
+    }
+    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE){
+      if(cloneRoot.id === 'a11y-widget-root' || cloneRoot.id === 'a11y-monophtalmie-magnifier'){
+        while(cloneRoot.firstChild){ cloneRoot.removeChild(cloneRoot.firstChild); }
       }
-      if(node.nodeType === Node.COMMENT_NODE){ return; }
-      const clone = node.cloneNode(true);
-      if(clone && clone.nodeType === Node.ELEMENT_NODE && clone.querySelectorAll){
-        clone.querySelectorAll('script, #a11y-widget-root, #a11y-monophtalmie-magnifier').forEach(el => {
-          if(el && el.parentNode){ el.parentNode.removeChild(el); }
-        });
-      }
-      fragment.appendChild(clone);
-    });
-    content.appendChild(fragment);
+    }
+    if(!cloneRoot){ return; }
+    content.appendChild(cloneRoot);
     const docEl = document.documentElement;
-    const width = Math.max(docEl ? docEl.scrollWidth : 0, source.scrollWidth || 0, source.offsetWidth || 0);
-    const height = Math.max(docEl ? docEl.scrollHeight : 0, source.scrollHeight || 0, source.offsetHeight || 0);
+    const body = document.body;
+    const width = Math.max(
+      docEl ? docEl.scrollWidth : 0,
+      body ? body.scrollWidth || 0 : 0,
+      docEl ? docEl.offsetWidth : 0,
+      body ? body.offsetWidth || 0 : 0
+    );
+    const height = Math.max(
+      docEl ? docEl.scrollHeight : 0,
+      body ? body.scrollHeight || 0 : 0,
+      docEl ? docEl.offsetHeight : 0,
+      body ? body.offsetHeight || 0 : 0
+    );
     content.style.width = `${width}px`;
     content.style.height = `${height}px`;
+    applyMonophtalmieMagnifierBackgroundStyles();
   }
 
   function updateMonophtalmieMagnifierZoom(){
