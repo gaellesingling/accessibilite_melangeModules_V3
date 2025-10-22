@@ -79,12 +79,6 @@ function a11y_widget_get_default_sections() {
             'icon'     => 'eye',
             'children' => array(
                 array(
-                    'slug'        => 'vision-placeholder',
-                    'label'       => __( 'Exemple : augmenter la lisibilité', 'a11y-widget' ),
-                    'aria_label'  => __( 'Exemple de réglage pour la vision', 'a11y-widget' ),
-                    'placeholder' => true,
-                ),
-                array(
                     'slug'       => 'vision-daltonisme',
                     'label'      => __( 'Daltonisme', 'a11y-widget' ),
                     'aria_label' => __( 'Options pour le daltonisme', 'a11y-widget' ),
@@ -266,12 +260,6 @@ function a11y_widget_get_default_sections() {
             'title'    => __( 'Moteur', 'a11y-widget' ),
             'icon'     => 'hand',
             'children' => array(
-                array(
-                    'slug'        => 'moteur-placeholder',
-                    'label'       => __( 'Exemple : zones cliquables agrandies', 'a11y-widget' ),
-                    'aria_label'  => __( 'Exemple de réglage moteur', 'a11y-widget' ),
-                    'placeholder' => true,
-                ),
                 array(
                     'slug'       => 'moteur-boutons',
                     'label'      => __( 'Boutons', 'a11y-widget' ),
