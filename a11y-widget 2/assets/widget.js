@@ -5634,7 +5634,19 @@ ${interactiveSelectors} {
     const prevLabel = texts.theme_prev || 'Thème précédent';
     prevBtn.setAttribute('aria-label', prevLabel);
     prevBtn.title = prevLabel;
-    prevBtn.innerHTML = '<span aria-hidden="true">◀</span>';
+    const prevIcon = document.createElement('span');
+    prevIcon.className = 'a11y-buttons__icon';
+    prevIcon.setAttribute('aria-hidden', 'true');
+    const prevSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    prevSvg.setAttribute('viewBox', '0 0 16 16');
+    prevSvg.setAttribute('role', 'img');
+    prevSvg.setAttribute('focusable', 'false');
+    const prevPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    prevPath.setAttribute('d', 'M10.53 2.47 4.99 8l5.54 5.53-1.06 1.06L2.87 8l6.6-6.59 1.06 1.06Z');
+    prevPath.setAttribute('fill', 'currentColor');
+    prevSvg.appendChild(prevPath);
+    prevIcon.appendChild(prevSvg);
+    prevBtn.appendChild(prevIcon);
     themeControls.appendChild(prevBtn);
 
     const themeName = document.createElement('span');
@@ -5647,7 +5659,19 @@ ${interactiveSelectors} {
     const nextLabel = texts.theme_next || 'Thème suivant';
     nextBtn.setAttribute('aria-label', nextLabel);
     nextBtn.title = nextLabel;
-    nextBtn.innerHTML = '<span aria-hidden="true">▶</span>';
+    const nextIcon = document.createElement('span');
+    nextIcon.className = 'a11y-buttons__icon';
+    nextIcon.setAttribute('aria-hidden', 'true');
+    const nextSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    nextSvg.setAttribute('viewBox', '0 0 16 16');
+    nextSvg.setAttribute('role', 'img');
+    nextSvg.setAttribute('focusable', 'false');
+    const nextPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    nextPath.setAttribute('d', 'm5.47 2.47 6.6 6.6-6.6 6.46-1.06-1.06L9.99 8 4.41 3.53l1.06-1.06Z');
+    nextPath.setAttribute('fill', 'currentColor');
+    nextSvg.appendChild(nextPath);
+    nextIcon.appendChild(nextSvg);
+    nextBtn.appendChild(nextIcon);
     themeControls.appendChild(nextBtn);
 
     themeField.appendChild(themeControls);
