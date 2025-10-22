@@ -3,10 +3,13 @@ Contributors: chatgpt
 Tags: accessibility, a11y, widget
 Requires at least: 5.0
 Tested up to: 6.6
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 
 Un bouton flottant ouvre un module d’accessibilité avec des interrupteurs **placeholders** (rien n’est appliqué par défaut). Vous pouvez brancher vos propres styles/scripts via `data-*`, l’API JS et les CustomEvents.
+
+== Nouveautés 1.3.0 ==
+- Nouveau mode « Soulagement migraines » avec filtre ambré, suppression des motifs répétitifs, espacement augmenté et 4 presets rapides.
 
 == Nouveautés 1.2.0 ==
 - Nouvelle page d’administration « Accessibilité » permettant de masquer certaines fonctionnalités du module pour les utilisateurs finaux.
