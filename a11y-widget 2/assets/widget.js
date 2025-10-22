@@ -4593,9 +4593,12 @@ ${interactiveSelectors} {
     const scope = `${selector} body`;
     const exclusions = `:not(:where(#a11y-widget-root, #a11y-widget-root *, [data-a11y-filter-exempt], [data-a11y-filter-exempt] *))`;
     styleEl.textContent = [
+      `${scope}${exclusions} { position: relative !important; background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 55%), repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0 18px, rgba(0, 0, 0, 0.22) 18px 36px); background-attachment: fixed, fixed; background-blend-mode: multiply, normal; }`,
+      `${scope}${exclusions}::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483600; background: radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.45), transparent 52%), radial-gradient(circle at 78% 42%, rgba(0, 0, 0, 0.5), transparent 58%), linear-gradient(120deg, rgba(0, 0, 0, 0.4), transparent 70%); mix-blend-mode: multiply; opacity: 0.55; }`,
       `${scope} :where(img, video, iframe, button, a, input, select, textarea, .card, .box, .panel, article, section)${exclusions} { box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3) !important; }`,
       `${scope} :where(button, a, input[type="button"], input[type="submit"])${exclusions} { border: 2px solid rgba(0, 0, 0, 0.2) !important; }`,
       `${scope} :where(h1, h2, h3, h4, h5, h6)${exclusions} { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important; }`,
+      `${selector} #a11y-widget-root, ${selector} #a11y-widget-root * { isolation: isolate; mix-blend-mode: normal !important; position: relative; z-index: 2147483647; }`,
     ].join('\n');
   }
 
