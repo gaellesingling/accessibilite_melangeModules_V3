@@ -833,6 +833,12 @@ html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, pict
   font-size: 1rem;
   line-height: 1;
 }
+.a11y-buttons__icon svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+  fill: currentColor;
+}
 .a11y-buttons__theme-name {
   flex: 1 1 auto;
   text-align: center;
