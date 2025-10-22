@@ -4379,12 +4379,49 @@ ${interactiveSelectors} {
 
   function applyMonophtalmieMagnifierBackgroundStyles(){
     if(!monophtalmieMagnifierEl || !monophtalmieMagnifierContent){ return; }
-    if(!document.body){ return; }
     if(typeof window === 'undefined' || typeof window.getComputedStyle !== 'function'){ return; }
-    const computed = getComputedStyle(document.body);
-    if(!computed){ return; }
-    const background = computed.background || '';
-    const backgroundColor = computed.backgroundColor || '';
+    if(!document.body && !document.documentElement){ return; }
+
+    const normalizeColor = value => typeof value === 'string' ? value.replace(/\s+/g, '').toLowerCase() : '';
+    const isTransparentColor = value => {
+      const normalized = normalizeColor(value);
+      return normalized === 'rgba(0,0,0,0)' || normalized === 'transparent';
+    };
+    const hasBackgroundImage = computed => {
+      if(!computed){ return false; }
+      const backgroundImage = computed.backgroundImage || '';
+      return typeof backgroundImage === 'string' && backgroundImage !== 'none';
+    };
+    const hasVisibleColor = computed => {
+      if(!computed){ return false; }
+      return !isTransparentColor(computed.backgroundColor);
+    };
+    const isBackgroundEmpty = computed => {
+      if(!computed){ return true; }
+      return !hasBackgroundImage(computed) && !hasVisibleColor(computed);
+    };
+
+    const bodyComputed = document.body ? getComputedStyle(document.body) : null;
+    const docComputed = document.documentElement ? getComputedStyle(document.documentElement) : null;
+
+    let sourceComputed = bodyComputed || docComputed;
+    if(docComputed){
+      const bodyHasImage = hasBackgroundImage(bodyComputed);
+      const docHasImage = hasBackgroundImage(docComputed);
+      const bodyEmpty = isBackgroundEmpty(bodyComputed);
+      const docHasVisibleColor = hasVisibleColor(docComputed);
+
+      if(bodyEmpty && (docHasImage || docHasVisibleColor)){
+        sourceComputed = docComputed;
+      } else if(docHasImage && !bodyHasImage){
+        sourceComputed = docComputed;
+      }
+    }
+
+    if(!sourceComputed){ return; }
+
+    const background = sourceComputed.background || '';
+    const backgroundColor = sourceComputed.backgroundColor || '';
     monophtalmieMagnifierEl.style.background = background;
     monophtalmieMagnifierEl.style.backgroundColor = backgroundColor;
     monophtalmieMagnifierContent.style.background = background;
