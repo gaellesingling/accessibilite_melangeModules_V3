@@ -1298,6 +1298,7 @@
   const READING_GUIDE_SUMMARY_POS_KEY = 'a11y-widget-reading-guide-summary-pos:v1';
   const readingGuideInstances = new Set();
   let readingGuideSettings = loadReadingGuideSettings();
+  let readingGuideAdminSyllableSelector = '';
   let readingGuideActive = false;
   let readingGuideOverlayEl = null;
   let readingGuideSummaryEl = null;
@@ -3012,9 +3013,6 @@ ${interactiveSelectors} {
       if(Object.prototype.hasOwnProperty.call(parsed, 'syllableEnabled')){
         result.syllableEnabled = !!parsed.syllableEnabled;
       }
-      if(Object.prototype.hasOwnProperty.call(parsed, 'syllableSelector')){
-        result.syllableSelector = typeof parsed.syllableSelector === 'string' ? parsed.syllableSelector : defaults.syllableSelector;
-      }
       if(Object.prototype.hasOwnProperty.call(parsed, 'focusEnabled')){
         result.focusEnabled = !!parsed.focusEnabled;
       }
@@ -3031,7 +3029,6 @@ ${interactiveSelectors} {
       height: clampReadingGuideHeight(readingGuideSettings.height),
       summaryEnabled: !!readingGuideSettings.summaryEnabled,
       syllableEnabled: !!readingGuideSettings.syllableEnabled,
-      syllableSelector: typeof readingGuideSettings.syllableSelector === 'string' ? readingGuideSettings.syllableSelector : READING_GUIDE_DEFAULTS.syllableSelector,
       focusEnabled: !!readingGuideSettings.focusEnabled,
     };
     try { localStorage.setItem(READING_GUIDE_SETTINGS_KEY, JSON.stringify(payload)); } catch(err){ /* ignore */ }
@@ -3040,6 +3037,9 @@ ${interactiveSelectors} {
   function resetReadingGuideSettings(options = {}){
     const { persist: shouldPersist = true } = options;
     readingGuideSettings = Object.assign({}, READING_GUIDE_DEFAULTS);
+    if(readingGuideAdminSyllableSelector){
+      readingGuideSettings.syllableSelector = readingGuideAdminSyllableSelector;
+    }
     if(shouldPersist){ persistReadingGuideSettings(); }
     try { localStorage.removeItem(READING_GUIDE_SUMMARY_POS_KEY); } catch(err){ /* ignore */ }
     readingGuideSummaryHasCustomPosition = false;
@@ -3078,10 +3078,12 @@ ${interactiveSelectors} {
     if(defaultTitle){
       readingGuideTexts.summaryTitleFallback = defaultTitle;
     }
-    if(typeof rawSettings.syllable_selector_default === 'string' && rawSettings.syllable_selector_default.trim()){
-      if(!readingGuideSettings.syllableSelector || readingGuideSettings.syllableSelector === READING_GUIDE_DEFAULTS.syllableSelector){
-        readingGuideSettings.syllableSelector = rawSettings.syllable_selector_default.trim();
-      }
+    const syllableSelectorValue = typeof rawSettings.syllable_selector_default === 'string'
+      ? rawSettings.syllable_selector_default.trim()
+      : '';
+    if(syllableSelectorValue){
+      readingGuideAdminSyllableSelector = syllableSelectorValue;
+      readingGuideSettings.syllableSelector = syllableSelectorValue;
     }
   }
 
@@ -4015,9 +4017,6 @@ ${interactiveSelectors} {
       case 'focusEnabled':
         next = !!value;
         break;
-      case 'syllableSelector':
-        next = typeof value === 'string' ? value : '';
-        break;
       default:
         break;
     }
@@ -4035,7 +4034,7 @@ ${interactiveSelectors} {
       if(key === 'summaryEnabled'){
         applyReadingGuideSummary();
       }
-      if(key === 'syllableEnabled' || key === 'syllableSelector'){
+      if(key === 'syllableEnabled'){
         applyReadingGuideSyllables();
       }
       if(key === 'focusEnabled'){
@@ -4066,7 +4065,6 @@ ${interactiveSelectors} {
       heightValue,
       summaryToggle,
       syllableToggle,
-      syllableSelectorInput,
       focusToggle,
       settings = {},
     } = instance;
@@ -4109,11 +4107,6 @@ ${interactiveSelectors} {
     if(syllableToggle){
       syllableToggle.disabled = !active;
       setCheckboxState(syllableToggle, !!readingGuideSettings.syllableEnabled);
-    }
-    if(syllableSelectorInput){
-      syllableSelectorInput.disabled = !active || !readingGuideSettings.syllableEnabled;
-      setInputValue(syllableSelectorInput, readingGuideSettings.syllableSelector || '');
-      if(settings.syllable_selector_placeholder){ syllableSelectorInput.setAttribute('placeholder', settings.syllable_selector_placeholder); }
     }
     if(focusToggle){
       focusToggle.disabled = !active;
@@ -4345,23 +4338,6 @@ ${interactiveSelectors} {
     syllableToggleWrap.appendChild(syllableToggleText);
     syllableSection.appendChild(syllableToggleWrap);
 
-    const syllableSelectorField = document.createElement('div');
-    syllableSelectorField.className = 'a11y-reading-guide__field';
-    const syllableSelectorLabel = document.createElement('label');
-    syllableSelectorLabel.className = 'a11y-reading-guide__label';
-    syllableSelectorLabel.textContent = settings.syllable_selector_label || '';
-    const syllableSelectorInput = document.createElement('input');
-    syllableSelectorInput.type = 'text';
-    syllableSelectorInput.className = 'a11y-reading-guide__input';
-    syllableSelectorLabel.appendChild(syllableSelectorInput);
-    syllableSelectorField.appendChild(syllableSelectorLabel);
-    if(settings.syllable_selector_hint){
-      const syllableSelectorHint = document.createElement('p');
-      syllableSelectorHint.className = 'a11y-reading-guide__hint';
-      syllableSelectorHint.textContent = settings.syllable_selector_hint;
-      syllableSelectorField.appendChild(syllableSelectorHint);
-    }
-    syllableSection.appendChild(syllableSelectorField);
     controls.appendChild(syllableSection);
 
     const focusSection = document.createElement('fieldset');
@@ -4398,7 +4374,6 @@ ${interactiveSelectors} {
       heightValue,
       summaryToggle,
       syllableToggle,
-      syllableSelectorInput,
       focusToggle,
       settings,
       wasConnected: false,
@@ -4425,9 +4400,6 @@ ${interactiveSelectors} {
     summaryToggle.addEventListener('change', () => setReadingGuideSetting('summaryEnabled', summaryToggle.checked));
 
     syllableToggle.addEventListener('change', () => setReadingGuideSetting('syllableEnabled', syllableToggle.checked));
-
-    syllableSelectorInput.addEventListener('input', () => setReadingGuideSetting('syllableSelector', syllableSelectorInput.value, { persist: false, apply: false }));
-    syllableSelectorInput.addEventListener('change', () => setReadingGuideSetting('syllableSelector', syllableSelectorInput.value));
 
     focusToggle.addEventListener('change', () => setReadingGuideSetting('focusEnabled', focusToggle.checked));
 

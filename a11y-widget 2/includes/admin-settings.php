@@ -169,6 +169,85 @@ function a11y_widget_get_reading_guide_heading_selector() {
 }
 
 /**
+ * Default CSS selectors used to apply syllable separation.
+ *
+ * @return string
+ */
+function a11y_widget_get_reading_guide_syllable_selector_default() {
+    return 'main p, main li';
+}
+
+/**
+ * Option name helper for the reading guide syllable selector list.
+ *
+ * @return string
+ */
+function a11y_widget_get_reading_guide_syllable_selector_option_name() {
+    return 'a11y_widget_reading_guide_syllable_selectors';
+}
+
+/**
+ * Sanitize the CSS selectors stored for syllable separation.
+ *
+ * @param mixed $input Raw input.
+ *
+ * @return string
+ */
+function a11y_widget_sanitize_syllable_selectors( $input ) {
+    if ( null === $input ) {
+        return a11y_widget_get_reading_guide_syllable_selector_default();
+    }
+
+    if ( is_array( $input ) ) {
+        $parts = $input;
+    } else {
+        $parts = preg_split( '/,/', (string) $input );
+    }
+
+    if ( ! is_array( $parts ) ) {
+        return a11y_widget_get_reading_guide_syllable_selector_default();
+    }
+
+    $unique  = array();
+    $ordered = array();
+
+    foreach ( $parts as $selector ) {
+        if ( is_array( $selector ) ) {
+            continue;
+        }
+
+        $selector = trim( (string) $selector );
+
+        if ( '' === $selector || isset( $unique[ $selector ] ) ) {
+            continue;
+        }
+
+        $unique[ $selector ] = true;
+        $ordered[]           = $selector;
+    }
+
+    if ( empty( $ordered ) ) {
+        return a11y_widget_get_reading_guide_syllable_selector_default();
+    }
+
+    return implode( ', ', $ordered );
+}
+
+/**
+ * Retrieve the sanitized CSS selectors used for syllable separation.
+ *
+ * @return string
+ */
+function a11y_widget_get_reading_guide_syllable_selector() {
+    $stored = get_option(
+        a11y_widget_get_reading_guide_syllable_selector_option_name(),
+        a11y_widget_get_reading_guide_syllable_selector_default()
+    );
+
+    return a11y_widget_sanitize_syllable_selectors( $stored );
+}
+
+/**
  * Retrieve the list of disabled features stored in the database.
  *
  * @return string[]
@@ -323,6 +402,16 @@ function a11y_widget_register_settings() {
             'default'           => a11y_widget_get_reading_guide_heading_levels_default(),
         )
     );
+
+    register_setting(
+        'a11y_widget_settings',
+        a11y_widget_get_reading_guide_syllable_selector_option_name(),
+        array(
+            'type'              => 'string',
+            'sanitize_callback' => 'a11y_widget_sanitize_syllable_selectors',
+            'default'           => a11y_widget_get_reading_guide_syllable_selector_default(),
+        )
+    );
 }
 add_action( 'admin_init', 'a11y_widget_register_settings' );
 
@@ -386,6 +475,8 @@ function a11y_widget_render_admin_page() {
     $heading_option_key   = a11y_widget_get_reading_guide_heading_levels_option_name();
     $heading_levels       = a11y_widget_get_reading_guide_heading_levels();
     $available_headings   = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
+    $syllable_option_key  = a11y_widget_get_reading_guide_syllable_selector_option_name();
+    $syllable_selectors   = a11y_widget_get_reading_guide_syllable_selector();
     ?>
     <div class="wrap a11y-widget-admin">
         <h1><?php esc_html_e( 'Accessibilité RGAA', 'a11y-widget' ); ?></h1>
@@ -431,6 +522,19 @@ function a11y_widget_render_admin_page() {
                             <?php echo esc_html( sprintf( __( 'Titres %s', 'a11y-widget' ), strtoupper( $heading_level ) ) ); ?>
                         </label>
                     <?php endforeach; ?>
+                </div>
+                <div class="a11y-widget-admin-reading-guide__field">
+                    <label for="a11y-widget-reading-guide-syllable-selector"><?php esc_html_e( 'Zones à syllaber', 'a11y-widget' ); ?></label>
+                    <input
+                        type="text"
+                        id="a11y-widget-reading-guide-syllable-selector"
+                        class="regular-text"
+                        name="<?php echo esc_attr( $syllable_option_key ); ?>"
+                        value="<?php echo esc_attr( $syllable_selectors ); ?>"
+                    />
+                    <p class="description">
+                        <?php esc_html_e( 'Indiquez les sélecteurs CSS, séparés par des virgules, pour définir les éléments concernés par la séparation syllabique.', 'a11y-widget' ); ?>
+                    </p>
                 </div>
             </fieldset>
 
