@@ -1,0 +1,76 @@
+/**
+ * Module Aide Monophtalmie - CSS
+ * Styles supplémentaires pour le module
+ * Version: 1.0.0
+ */
+
+/* ===========================
+   LOUPE
+   =========================== */
+#acc-magnifier {
+    /* Styles dynamiques appliqués via JS */
+    transition: opacity 0.2s ease;
+}
+
+#acc-magnifier::after {
+    content: '🔍';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 16px;
+    opacity: 0.7;
+}
+
+/* ===========================
+   ANIMATIONS
+   =========================== */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.acc-module-monophtalmie .acc-feature-input:checked + .acc-module-toggle-slider {
+    animation: pulse 2s ease-in-out;
+}
+
+/* ===========================
+   INDICATEURS VISUELS
+   =========================== */
+.acc-monophtalmie-active {
+    outline: 2px solid #2196F3;
+    outline-offset: 2px;
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 480px) {
+    #acc-magnifier {
+        width: 100px !important;
+        height: 100px !important;
+    }
+}
+
+/* ===========================
+   ACCESSIBILITÉ
+   =========================== */
+@media (prefers-reduced-motion: reduce) {
+    #acc-magnifier,
+    .acc-module-monophtalmie * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* ===========================
+   MODE IMPRESSION
+   =========================== */
+@media print {
+    #acc-magnifier {
+        display: none !important;
+    }
+}
