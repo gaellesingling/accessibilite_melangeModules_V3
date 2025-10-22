@@ -293,6 +293,57 @@
     else { panel.setAttribute('aria-hidden','false'); }
   });
 
+  const EPILEPSY_SLUG = 'epilepsie-protection';
+  const EPILEPSY_SETTINGS_KEY = 'a11y-widget-epilepsy-settings:v1';
+  const EPILEPSY_FEATURE_KEYS = ['stopAnimations', 'stopGifs', 'stopVideos', 'removeParallax', 'reduceMotion', 'blockFlashing'];
+  const EPILEPSY_FEATURE_CONFIG = [
+    { key: 'stopAnimations', labelKey: 'stop_animations_label', hintKey: 'stop_animations_hint' },
+    { key: 'stopGifs', labelKey: 'stop_gifs_label', hintKey: 'stop_gifs_hint' },
+    { key: 'stopVideos', labelKey: 'stop_videos_label', hintKey: 'stop_videos_hint' },
+    { key: 'removeParallax', labelKey: 'remove_parallax_label', hintKey: 'remove_parallax_hint' },
+    { key: 'reduceMotion', labelKey: 'reduce_motion_label', hintKey: 'reduce_motion_hint' },
+    { key: 'blockFlashing', labelKey: 'block_flashing_label', hintKey: 'block_flashing_hint' },
+  ];
+  const EPILEPSY_TEXT_DEFAULTS = {
+    intro: '',
+    stop_animations_label: 'Arrêter les animations',
+    stop_animations_hint: '',
+    stop_gifs_label: 'Figer les GIFs animés',
+    stop_gifs_hint: '',
+    stop_videos_label: 'Bloquer l’autoplay des vidéos',
+    stop_videos_hint: '',
+    remove_parallax_label: 'Supprimer les effets parallax',
+    remove_parallax_hint: '',
+    reduce_motion_label: 'Réduire les mouvements',
+    reduce_motion_hint: '',
+    block_flashing_label: 'Bloquer les flashs',
+    block_flashing_hint: '',
+    activate_all_label: 'Activer toutes les protections',
+    activate_all_aria: '',
+    activate_all_confirm: '',
+    reset_label: 'Réinitialiser',
+    reset_aria: '',
+    live_region_label: '',
+    gif_placeholder_label: 'GIF désactivé',
+    gif_placeholder_hint: '',
+    flash_overlay_title: 'Flash détecté',
+    flash_overlay_body: 'Un flash dangereux a été détecté. La page est masquée pour votre sécurité.',
+    flash_overlay_dismiss: 'Fermer',
+  };
+  let epilepsySettings = loadEpilepsySettings();
+  let epilepsyActive = false;
+  let epilepsyTexts = Object.assign({}, EPILEPSY_TEXT_DEFAULTS);
+  const epilepsyInstances = new Set();
+  let epilepsyIdCounter = 0;
+  let epilepsyAnimationStyle = null;
+  let epilepsyParallaxStyle = null;
+  let epilepsyMotionStyle = null;
+  let epilepsyGifObserver = null;
+  let epilepsyFlashInterval = null;
+  let epilepsyFlashState = { lastBrightness: null, timestamps: [] };
+  let epilepsyFlashOverlay = null;
+  let epilepsyGifPlaceholderId = 0;
+
   const MIGRAINE_SLUG = 'vision-migraine';
   const MIGRAINE_SETTINGS_KEY = 'a11y-widget-migraine-settings:v1';
   const MIGRAINE_THEMES = ['none', 'grayscale', 'amber'];
@@ -362,6 +413,732 @@
   let migrainePatternStyle = null;
   let migraineSpacingStyle = null;
   let migraineIdCounter = 0;
+
+  function getDefaultEpilepsySettings(){
+    return {
+      stopAnimations: false,
+      stopGifs: false,
+      stopVideos: false,
+      removeParallax: false,
+      reduceMotion: false,
+      blockFlashing: false,
+    };
+  }
+
+  function normalizeEpilepsySettings(raw){
+    if(!raw || typeof raw !== 'object'){ return getDefaultEpilepsySettings(); }
+    const normalized = getDefaultEpilepsySettings();
+    EPILEPSY_FEATURE_KEYS.forEach(key => {
+      if(Object.prototype.hasOwnProperty.call(raw, key)){
+        normalized[key] = !!raw[key];
+      }
+    });
+    return normalized;
+  }
+
+  function loadEpilepsySettings(){
+    try {
+      const raw = localStorage.getItem(EPILEPSY_SETTINGS_KEY);
+      if(!raw){ return getDefaultEpilepsySettings(); }
+      const parsed = JSON.parse(raw);
+      return normalizeEpilepsySettings(parsed);
+    } catch(err){
+      return getDefaultEpilepsySettings();
+    }
+  }
+
+  function persistEpilepsySettings(){
+    try { localStorage.setItem(EPILEPSY_SETTINGS_KEY, JSON.stringify(epilepsySettings)); } catch(err){}
+  }
+
+  function updateEpilepsyTexts(overrides){
+    if(!overrides || typeof overrides !== 'object'){ return; }
+    const next = Object.assign({}, epilepsyTexts);
+    Object.keys(EPILEPSY_TEXT_DEFAULTS).forEach(key => {
+      if(Object.prototype.hasOwnProperty.call(overrides, key)){
+        const value = overrides[key];
+        if(typeof value === 'string' && value.trim()){
+          next[key] = value;
+        }
+      }
+    });
+    epilepsyTexts = next;
+  }
+
+  function setEpilepsyActive(next){
+    const normalized = !!next;
+    if(epilepsyActive === normalized){
+      applyEpilepsySettings();
+      syncEpilepsyInstances();
+      return;
+    }
+    epilepsyActive = normalized;
+    applyEpilepsySettings();
+    syncEpilepsyInstances();
+    if(!epilepsyActive){
+      stopEpilepsyFlashDetection();
+      hideEpilepsyFlashOverlay();
+    }
+  }
+
+  function applyEpilepsySettings(){
+    EPILEPSY_FEATURE_KEYS.forEach(key => applyEpilepsyFeature(key));
+  }
+
+  function ensureEpilepsyStyle(current, id, css){
+    if(current && current.isConnected){
+      if(current.textContent !== css){ current.textContent = css; }
+      return current;
+    }
+    let el = document.getElementById(id);
+    if(!el){
+      el = document.createElement('style');
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    el.textContent = css;
+    return el;
+  }
+
+  function removeEpilepsyStyle(current, id){
+    if(current && current.parentNode){ current.parentNode.removeChild(current); return null; }
+    if(id){
+      const el = document.getElementById(id);
+      if(el && el.parentNode){ el.parentNode.removeChild(el); }
+    }
+    return null;
+  }
+
+  function pauseAutoplayMedia(){
+    const videos = document.querySelectorAll('video');
+    videos.forEach(video => {
+      try { video.pause(); } catch(err){}
+      video.autoplay = false;
+      video.removeAttribute('autoplay');
+    });
+    const iframes = document.querySelectorAll('iframe[src*="youtube"], iframe[src*="vimeo"]');
+    iframes.forEach(iframe => {
+      const src = iframe.getAttribute('src') || '';
+      if(!src){ return; }
+      if(src.includes('autoplay=1')){
+        const next = src.replace(/autoplay=1/g, 'autoplay=0');
+        iframe.setAttribute('src', next);
+      }
+    });
+  }
+
+  function isGifSource(src){
+    if(typeof src !== 'string' || !src){ return false; }
+    const clean = src.split('?')[0].split('#')[0];
+    return clean.toLowerCase().endsWith('.gif');
+  }
+
+  function createEpilepsyGifPlaceholder(){
+    const label = epilepsyTexts.gif_placeholder_label || '';
+    const hint = epilepsyTexts.gif_placeholder_hint || '';
+    if(!label && !hint){ return null; }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'a11y-epilepsy__gif-fallback';
+    if(label){
+      const heading = document.createElement('strong');
+      heading.textContent = label;
+      wrapper.appendChild(heading);
+    }
+    if(hint){
+      const text = document.createElement('span');
+      text.textContent = hint;
+      wrapper.appendChild(text);
+    }
+    wrapper.setAttribute('role', 'status');
+    wrapper.setAttribute('aria-live', 'polite');
+    return wrapper;
+  }
+
+  function removeEpilepsyGifPlaceholder(img){
+    if(!img || !(img instanceof HTMLImageElement)){ return; }
+    const placeholderId = img.dataset.a11yEpilepsyPlaceholderId;
+    if(placeholderId){
+      const placeholder = document.getElementById(placeholderId);
+      if(placeholder && placeholder.parentNode){ placeholder.parentNode.removeChild(placeholder); }
+      delete img.dataset.a11yEpilepsyPlaceholderId;
+    }
+  }
+
+  function applyEpilepsyGifFallback(img){
+    if(!img || !(img instanceof HTMLImageElement)){ return; }
+    img.dataset.a11yEpilepsyFrozen = 'fallback';
+    if(!img.dataset.a11yEpilepsyOriginalSrc){
+      img.dataset.a11yEpilepsyOriginalSrc = img.currentSrc || img.src || '';
+    }
+    img.style.visibility = 'hidden';
+    if(!img.dataset.a11yEpilepsyPlaceholderId){
+      const placeholder = createEpilepsyGifPlaceholder();
+      if(placeholder){
+        const id = `a11y-epilepsy-gif-${++epilepsyGifPlaceholderId}`;
+        placeholder.id = id;
+        if(img.parentNode){ img.parentNode.insertBefore(placeholder, img.nextSibling); }
+        img.dataset.a11yEpilepsyPlaceholderId = id;
+      }
+    }
+  }
+
+  function freezeEpilepsyGif(img){
+    if(!img || !(img instanceof HTMLImageElement)){ return; }
+    const src = img.currentSrc || img.src || '';
+    if(!isGifSource(src)){ return; }
+    const state = img.dataset.a11yEpilepsyFrozen;
+    if(state === 'true' || state === 'pending' || state === 'fallback'){ return; }
+    if(!img.dataset.a11yEpilepsyOriginalSrc){
+      img.dataset.a11yEpilepsyOriginalSrc = src;
+    }
+    if(!img.complete || img.naturalWidth === 0 || img.naturalHeight === 0){
+      img.addEventListener('load', () => freezeEpilepsyGif(img), { once: true });
+      return;
+    }
+    img.dataset.a11yEpilepsyFrozen = 'pending';
+    const loader = new Image();
+    loader.crossOrigin = 'anonymous';
+    loader.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = loader.width;
+        canvas.height = loader.height;
+        const ctx = canvas.getContext('2d');
+        if(ctx){ ctx.drawImage(loader, 0, 0); }
+        const dataUrl = canvas.toDataURL('image/png');
+        img.src = dataUrl;
+        img.dataset.a11yEpilepsyFrozen = 'true';
+        img.style.visibility = '';
+        removeEpilepsyGifPlaceholder(img);
+      } catch(err){
+        applyEpilepsyGifFallback(img);
+      }
+    };
+    loader.onerror = () => {
+      applyEpilepsyGifFallback(img);
+    };
+    try {
+      loader.src = src;
+    } catch(err){
+      applyEpilepsyGifFallback(img);
+    }
+  }
+
+  function unfreezeEpilepsyGif(img){
+    if(!img || !(img instanceof HTMLImageElement)){ return; }
+    const original = img.dataset.a11yEpilepsyOriginalSrc;
+    if(original){
+      img.src = original;
+    }
+    img.style.visibility = '';
+    removeEpilepsyGifPlaceholder(img);
+    delete img.dataset.a11yEpilepsyFrozen;
+    delete img.dataset.a11yEpilepsyOriginalSrc;
+  }
+
+  function freezeAllEpilepsyGifs(){
+    if(!document || !document.body){ return; }
+    const images = document.body.querySelectorAll('img');
+    images.forEach(img => {
+      if(isGifSource(img.currentSrc || img.src || '')){
+        freezeEpilepsyGif(img);
+      }
+    });
+  }
+
+  function unfreezeAllEpilepsyGifs(){
+    const images = document.querySelectorAll('img[data-a11y-epilepsy-original-src]');
+    images.forEach(img => unfreezeEpilepsyGif(img));
+  }
+
+  function ensureEpilepsyGifObserver(){
+    if(epilepsyGifObserver || typeof MutationObserver === 'undefined' || !document.body){ return; }
+    epilepsyGifObserver = new MutationObserver(() => {
+      freezeAllEpilepsyGifs();
+    });
+    epilepsyGifObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  }
+
+  function disconnectEpilepsyGifObserver(){
+    if(epilepsyGifObserver){
+      epilepsyGifObserver.disconnect();
+      epilepsyGifObserver = null;
+    }
+  }
+
+  function calculateEpilepsyBrightness(){
+    const target = document.body || document.documentElement;
+    if(!target){ return 0.5; }
+    const style = window.getComputedStyle(target);
+    let color = style ? style.backgroundColor : '';
+    if(!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)'){
+      const htmlStyle = window.getComputedStyle(document.documentElement);
+      color = htmlStyle ? htmlStyle.backgroundColor : 'rgb(255,255,255)';
+    }
+    const rgb = color.match(/\d+(\.\d+)?/g);
+    if(!rgb || rgb.length < 3){ return 0.5; }
+    const r = Number(rgb[0]) || 0;
+    const g = Number(rgb[1]) || 0;
+    const b = Number(rgb[2]) || 0;
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  }
+
+  function showEpilepsyFlashOverlay(){
+    if(epilepsyFlashOverlay && epilepsyFlashOverlay.isConnected){ return; }
+    const overlay = document.createElement('div');
+    overlay.className = 'a11y-epilepsy__overlay';
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    const content = document.createElement('div');
+    content.className = 'a11y-epilepsy__overlay-content';
+    const title = document.createElement('p');
+    title.className = 'a11y-epilepsy__overlay-title';
+    const titleId = `a11y-epilepsy-overlay-${Date.now()}`;
+    title.id = titleId;
+    title.textContent = epilepsyTexts.flash_overlay_title || 'Flash dangereux détecté';
+    const body = document.createElement('p');
+    body.className = 'a11y-epilepsy__overlay-text';
+    body.textContent = epilepsyTexts.flash_overlay_body || '';
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'a11y-epilepsy__overlay-dismiss';
+    dismiss.textContent = epilepsyTexts.flash_overlay_dismiss || 'Fermer';
+    dismiss.addEventListener('click', () => hideEpilepsyFlashOverlay());
+    content.appendChild(title);
+    content.appendChild(body);
+    content.appendChild(dismiss);
+    overlay.appendChild(content);
+    overlay.setAttribute('aria-labelledby', titleId);
+    document.body.appendChild(overlay);
+    epilepsyFlashOverlay = overlay;
+    setTimeout(() => {
+      if(dismiss && typeof dismiss.focus === 'function'){
+        try { dismiss.focus({ preventScroll: true }); } catch(err){ dismiss.focus(); }
+      }
+    }, 60);
+  }
+
+  function hideEpilepsyFlashOverlay(){
+    if(epilepsyFlashOverlay && epilepsyFlashOverlay.parentNode){
+      epilepsyFlashOverlay.parentNode.removeChild(epilepsyFlashOverlay);
+    }
+    epilepsyFlashOverlay = null;
+  }
+
+  function handleEpilepsyFlashDetected(){
+    showEpilepsyFlashOverlay();
+    const message = epilepsyTexts.flash_overlay_title || 'Flash dangereux détecté';
+    announceEpilepsy(message);
+  }
+
+  function startEpilepsyFlashDetection(){
+    if(epilepsyFlashInterval || typeof setInterval !== 'function'){ return; }
+    epilepsyFlashState = { lastBrightness: null, timestamps: [] };
+    epilepsyFlashInterval = setInterval(() => {
+      const brightness = calculateEpilepsyBrightness();
+      const last = epilepsyFlashState.lastBrightness;
+      if(last !== null){
+        const change = Math.abs(brightness - last);
+        if(change > 0.2){
+          const now = Date.now();
+          epilepsyFlashState.timestamps.push(now);
+          epilepsyFlashState.timestamps = epilepsyFlashState.timestamps.filter(ts => now - ts < 1000);
+          if(epilepsyFlashState.timestamps.length > 3){
+            handleEpilepsyFlashDetected();
+            epilepsyFlashState.timestamps = [];
+          }
+        }
+      }
+      epilepsyFlashState.lastBrightness = brightness;
+    }, 100);
+  }
+
+  function stopEpilepsyFlashDetection(){
+    if(epilepsyFlashInterval){
+      clearInterval(epilepsyFlashInterval);
+      epilepsyFlashInterval = null;
+    }
+    epilepsyFlashState = { lastBrightness: null, timestamps: [] };
+  }
+
+  function applyEpilepsyFeature(key){
+    const enabled = epilepsyActive && !!epilepsySettings[key];
+    switch(key){
+      case 'stopAnimations': {
+        if(enabled){
+          const css = `
+            *, *::before, *::after {
+              animation-duration: 0s !important;
+              animation-delay: 0s !important;
+              animation-iteration-count: 1 !important;
+              transition-duration: 0s !important;
+              transition-delay: 0s !important;
+            }
+          `;
+          epilepsyAnimationStyle = ensureEpilepsyStyle(epilepsyAnimationStyle, 'a11y-epilepsy-animations-style', css);
+        } else {
+          epilepsyAnimationStyle = removeEpilepsyStyle(epilepsyAnimationStyle, 'a11y-epilepsy-animations-style');
+        }
+        break;
+      }
+      case 'stopGifs': {
+        if(enabled){
+          freezeAllEpilepsyGifs();
+          ensureEpilepsyGifObserver();
+        } else {
+          disconnectEpilepsyGifObserver();
+          unfreezeAllEpilepsyGifs();
+        }
+        break;
+      }
+      case 'stopVideos': {
+        if(enabled){
+          pauseAutoplayMedia();
+        }
+        break;
+      }
+      case 'removeParallax': {
+        if(enabled){
+          const css = `
+            *, *::before, *::after {
+              background-attachment: scroll !important;
+              transform: none !important;
+              perspective: none !important;
+            }
+            [data-parallax], .parallax, .parallax-bg, .jarallax {
+              transform: none !important;
+              position: static !important;
+            }
+          `;
+          epilepsyParallaxStyle = ensureEpilepsyStyle(epilepsyParallaxStyle, 'a11y-epilepsy-parallax-style', css);
+        } else {
+          epilepsyParallaxStyle = removeEpilepsyStyle(epilepsyParallaxStyle, 'a11y-epilepsy-parallax-style');
+        }
+        break;
+      }
+      case 'reduceMotion': {
+        if(enabled){
+          const css = `
+            @media (prefers-reduced-motion: reduce) {
+              *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+              }
+            }
+            * {
+              scroll-behavior: auto !important;
+            }
+            html {
+              scroll-behavior: auto !important;
+            }
+          `;
+          epilepsyMotionStyle = ensureEpilepsyStyle(epilepsyMotionStyle, 'a11y-epilepsy-motion-style', css);
+        } else {
+          epilepsyMotionStyle = removeEpilepsyStyle(epilepsyMotionStyle, 'a11y-epilepsy-motion-style');
+        }
+        break;
+      }
+      case 'blockFlashing': {
+        if(enabled){
+          startEpilepsyFlashDetection();
+        } else {
+          stopEpilepsyFlashDetection();
+          hideEpilepsyFlashOverlay();
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  function setEpilepsySetting(key, value, options = {}){
+    if(!Object.prototype.hasOwnProperty.call(epilepsySettings, key)){ return false; }
+    const next = !!value;
+    if(epilepsySettings[key] === next){ return false; }
+    epilepsySettings[key] = next;
+    if(!options.defer){
+      finalizeEpilepsySettingsChange();
+    }
+    if(options.message){
+      announceEpilepsy(options.message);
+    }
+    return true;
+  }
+
+  function finalizeEpilepsySettingsChange(){
+    persistEpilepsySettings();
+    applyEpilepsySettings();
+    syncEpilepsyInstances();
+  }
+
+  function resetEpilepsySettings(){
+    const defaults = getDefaultEpilepsySettings();
+    let changed = false;
+    EPILEPSY_FEATURE_KEYS.forEach(key => {
+      if(setEpilepsySetting(key, defaults[key], { defer: true })){
+        changed = true;
+      }
+    });
+    if(changed){
+      finalizeEpilepsySettingsChange();
+    } else {
+      syncEpilepsyInstances();
+    }
+    return changed;
+  }
+
+  function isEpilepsyAtDefaults(){
+    const defaults = getDefaultEpilepsySettings();
+    return EPILEPSY_FEATURE_KEYS.every(key => !!epilepsySettings[key] === !!defaults[key]);
+  }
+
+  function pruneEpilepsyInstances(){
+    epilepsyInstances.forEach(instance => {
+      if(!instance){
+        epilepsyInstances.delete(instance);
+        return;
+      }
+      if(instance.wasConnected && (!instance.article || !instance.article.isConnected)){
+        epilepsyInstances.delete(instance);
+      }
+    });
+  }
+
+  function announceEpilepsy(message){
+    epilepsyInstances.forEach(instance => {
+      if(!instance || !instance.liveRegion){ return; }
+      instance.liveRegion.textContent = message || '';
+      if(message){
+        const region = instance.liveRegion;
+        setTimeout(() => {
+          if(region.isConnected && region.textContent === message){
+            region.textContent = '';
+          }
+        }, 1600);
+      }
+    });
+  }
+
+  function updateEpilepsyInstanceUI(instance){
+    if(!instance){ return; }
+    const active = epilepsyActive;
+    if(instance.article){
+      instance.article.classList.toggle('is-disabled', !active);
+    }
+    if(instance.controls){
+      instance.controls.classList.toggle('is-disabled', !active);
+    }
+    if(Array.isArray(instance.toggles)){
+      instance.toggles.forEach(entry => {
+        if(!entry || !entry.input){ return; }
+        entry.input.checked = !!epilepsySettings[entry.key];
+        entry.input.disabled = !active;
+      });
+    }
+    if(instance.resetBtn){
+      instance.resetBtn.disabled = !active || isEpilepsyAtDefaults();
+    }
+  }
+
+  function syncEpilepsyInstances(){
+    pruneEpilepsyInstances();
+    epilepsyInstances.forEach(instance => updateEpilepsyInstanceUI(instance));
+  }
+
+  function createEpilepsyCard(feature){
+    if(!feature || typeof feature.slug !== 'string' || !feature.slug){ return null; }
+
+    const article = document.createElement('article');
+    article.className = 'a11y-card a11y-card--epilepsy';
+    article.setAttribute('data-role', 'feature-card');
+
+    const header = document.createElement('div');
+    header.className = 'a11y-epilepsy__header';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.setAttribute('data-role', 'feature-meta');
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = feature.label || '';
+    meta.appendChild(labelEl);
+
+    if(feature.hint){
+      const hintEl = document.createElement('span');
+      hintEl.className = 'hint';
+      hintEl.textContent = feature.hint;
+      meta.appendChild(hintEl);
+    }
+
+    header.appendChild(meta);
+
+    const switchEl = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
+    if(switchEl){
+      switchEl.classList.add('a11y-epilepsy__switch');
+      header.appendChild(switchEl);
+    }
+
+    article.appendChild(header);
+
+    const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
+    const texts = Object.assign({}, EPILEPSY_TEXT_DEFAULTS);
+    Object.keys(EPILEPSY_TEXT_DEFAULTS).forEach(key => {
+      if(Object.prototype.hasOwnProperty.call(settings, key) && typeof settings[key] === 'string'){
+        texts[key] = settings[key];
+      }
+    });
+    updateEpilepsyTexts(texts);
+
+    if(texts.intro){
+      const info = document.createElement('p');
+      info.className = 'a11y-epilepsy__info';
+      info.textContent = texts.intro;
+      article.appendChild(info);
+    }
+
+    const controls = document.createElement('div');
+    controls.className = 'a11y-epilepsy__controls';
+    article.appendChild(controls);
+
+    const featureList = document.createElement('div');
+    featureList.className = 'a11y-epilepsy__features';
+    controls.appendChild(featureList);
+
+    const toggleEntries = [];
+    const baseId = `a11y-epilepsy-${++epilepsyIdCounter}`;
+
+    EPILEPSY_FEATURE_CONFIG.forEach(def => {
+      const row = document.createElement('div');
+      row.className = 'a11y-epilepsy__feature';
+
+      const rowHeader = document.createElement('div');
+      rowHeader.className = 'a11y-epilepsy__feature-header';
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.className = 'a11y-epilepsy__checkbox';
+      const inputId = `${baseId}-${def.key}`;
+      input.id = inputId;
+      rowHeader.appendChild(input);
+
+      const label = document.createElement('label');
+      label.className = 'a11y-epilepsy__feature-label';
+      label.setAttribute('for', inputId);
+      label.textContent = texts[def.labelKey] || def.key;
+      rowHeader.appendChild(label);
+
+      row.appendChild(rowHeader);
+
+      let hintId = '';
+      const hintText = texts[def.hintKey] || '';
+      if(hintText){
+        const hint = document.createElement('p');
+        hint.className = 'a11y-epilepsy__feature-hint';
+        hint.id = `${inputId}-hint`;
+        hint.textContent = hintText;
+        row.appendChild(hint);
+        hintId = hint.id;
+      }
+      if(hintId){
+        input.setAttribute('aria-describedby', hintId);
+      }
+
+      input.checked = !!epilepsySettings[def.key];
+      input.disabled = !epilepsyActive;
+      input.addEventListener('change', () => {
+        const labelText = label.textContent || '';
+        const message = labelText ? `${labelText} ${input.checked ? 'activé' : 'désactivé'}` : '';
+        setEpilepsySetting(def.key, input.checked, { message });
+      });
+
+      featureList.appendChild(row);
+      toggleEntries.push({ key: def.key, input });
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'a11y-epilepsy__actions';
+    controls.appendChild(actions);
+
+    const activateAllBtn = document.createElement('button');
+    activateAllBtn.type = 'button';
+    activateAllBtn.className = 'a11y-epilepsy__action a11y-epilepsy__action--primary';
+    activateAllBtn.textContent = texts.activate_all_label || EPILEPSY_TEXT_DEFAULTS.activate_all_label;
+    if(texts.activate_all_aria){ activateAllBtn.setAttribute('aria-label', texts.activate_all_aria); }
+    activateAllBtn.addEventListener('click', () => {
+      if(texts.activate_all_confirm && !window.confirm(texts.activate_all_confirm)){
+        return;
+      }
+      if(!A11yAPI.get(feature.slug)){
+        toggleFeature(feature.slug, true);
+      }
+      let changed = false;
+      EPILEPSY_FEATURE_KEYS.forEach(key => {
+        if(setEpilepsySetting(key, true, { defer: true })){
+          changed = true;
+        }
+      });
+      if(changed){
+        finalizeEpilepsySettingsChange();
+      } else {
+        applyEpilepsySettings();
+        syncEpilepsyInstances();
+      }
+      if(texts.activate_all_label){
+        announceEpilepsy(texts.activate_all_label);
+      }
+    });
+    actions.appendChild(activateAllBtn);
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'a11y-epilepsy__action';
+    resetBtn.textContent = texts.reset_label || EPILEPSY_TEXT_DEFAULTS.reset_label;
+    if(texts.reset_aria){ resetBtn.setAttribute('aria-label', texts.reset_aria); }
+    resetBtn.addEventListener('click', () => {
+      const changed = resetEpilepsySettings();
+      if(changed){
+        const message = texts.reset_label || texts.reset_aria || 'Réinitialisation des protections épilepsie';
+        announceEpilepsy(message);
+      }
+    });
+    actions.appendChild(resetBtn);
+
+    const liveRegion = document.createElement('div');
+    liveRegion.dataset.srOnly = 'true';
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    if(texts.live_region_label){ liveRegion.setAttribute('aria-label', texts.live_region_label); }
+    article.appendChild(liveRegion);
+
+    const instance = {
+      article,
+      controls,
+      toggles: toggleEntries,
+      resetBtn,
+      liveRegion,
+      wasConnected: false,
+    };
+
+    epilepsyInstances.add(instance);
+    syncEpilepsyInstances();
+
+    const markConnection = () => {
+      if(instance.article && instance.article.isConnected){
+        instance.wasConnected = true;
+      }
+    };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(markConnection);
+    } else {
+      setTimeout(markConnection, 0);
+    }
+
+    return article;
+  }
 
   const BRIGHTNESS_SLUG = 'luminosite-reglages';
   const BRIGHTNESS_SETTINGS_KEY = 'a11y-widget-brightness-settings:v1';
@@ -6655,6 +7432,9 @@ ${interactiveSelectors} {
     if(template === 'migraine-relief'){
       return createMigraineCard(feature);
     }
+    if(template === 'epilepsy-protection'){
+      return createEpilepsyCard(feature);
+    }
     if(template === 'brightness-settings'){
       return createBrightnessCard(feature);
     }
@@ -6786,6 +7566,7 @@ ${interactiveSelectors} {
     if(searchEmpty){ searchEmpty.hidden = true; }
     if(!keepInput && searchInput){ searchInput.value = ''; }
     pruneDetachedFeatureInputs();
+    pruneEpilepsyInstances();
     pruneDyslexiaInstances();
     pruneCursorInstances();
     const sectionsToRefresh = Array.from(renderedSections);
@@ -7099,6 +7880,10 @@ ${interactiveSelectors} {
       if(on){ ensureVisualFilterStyleElement(); }
       setColorblindFilterState(slug, on);
     });
+  });
+
+  A11yAPI.registerFeature(EPILEPSY_SLUG, on => {
+    setEpilepsyActive(on);
   });
 
   A11yAPI.registerFeature(MIGRAINE_SLUG, on => {
