@@ -4387,17 +4387,36 @@ ${interactiveSelectors} {
       const normalized = normalizeColor(value);
       return normalized === 'rgba(0,0,0,0)' || normalized === 'transparent';
     };
-    const isTransparentBackground = computed => {
+    const hasBackgroundImage = computed => {
       if(!computed){ return false; }
       const backgroundImage = computed.backgroundImage || '';
-      const hasImage = typeof backgroundImage === 'string' && backgroundImage !== 'none';
-      return !hasImage && isTransparentColor(computed.backgroundColor);
+      return typeof backgroundImage === 'string' && backgroundImage !== 'none';
+    };
+    const hasVisibleColor = computed => {
+      if(!computed){ return false; }
+      return !isTransparentColor(computed.backgroundColor);
+    };
+    const isBackgroundEmpty = computed => {
+      if(!computed){ return true; }
+      return !hasBackgroundImage(computed) && !hasVisibleColor(computed);
     };
 
     const bodyComputed = document.body ? getComputedStyle(document.body) : null;
     const docComputed = document.documentElement ? getComputedStyle(document.documentElement) : null;
-    const useDocComputed = (!bodyComputed || isTransparentBackground(bodyComputed)) && !!docComputed;
-    const sourceComputed = useDocComputed ? docComputed : (bodyComputed || docComputed);
+
+    let sourceComputed = bodyComputed || docComputed;
+    if(docComputed){
+      const bodyHasImage = hasBackgroundImage(bodyComputed);
+      const docHasImage = hasBackgroundImage(docComputed);
+      const bodyEmpty = isBackgroundEmpty(bodyComputed);
+      const docHasVisibleColor = hasVisibleColor(docComputed);
+
+      if(bodyEmpty && (docHasImage || docHasVisibleColor)){
+        sourceComputed = docComputed;
+      } else if(docHasImage && !bodyHasImage){
+        sourceComputed = docComputed;
+      }
+    }
 
     if(!sourceComputed){ return; }
 
