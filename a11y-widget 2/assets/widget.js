@@ -4450,8 +4450,8 @@ ${interactiveSelectors} {
     const scrollY = typeof window.scrollY === 'number' ? window.scrollY : window.pageYOffset || 0;
     const pageX = position.x + scrollX;
     const pageY = position.y + scrollY;
-    const left = (MONOPHTALMIE_MAGNIFIER_SIZE / (2 * zoom)) - pageX;
-    const top = (MONOPHTALMIE_MAGNIFIER_SIZE / (2 * zoom)) - pageY;
+    const left = (MONOPHTALMIE_MAGNIFIER_SIZE / 2) - (pageX * zoom);
+    const top = (MONOPHTALMIE_MAGNIFIER_SIZE / 2) - (pageY * zoom);
     monophtalmieMagnifierContent.style.transform = `scale(${zoom})`;
     monophtalmieMagnifierContent.style.left = `${left}px`;
     monophtalmieMagnifierContent.style.top = `${top}px`;
