@@ -4380,14 +4380,14 @@ ${interactiveSelectors} {
     const scope = `${selector} body`;
     const exclusions = `:not(:where(#a11y-widget-root, #a11y-widget-root *, [data-a11y-filter-exempt], [data-a11y-filter-exempt] *))`;
     styleEl.textContent = [
-      `${scope}${exclusions} { position: relative !important; background-color: #0b1120 !important; color: #e2e8f0 !important; }`,
-      `${scope}${exclusions}::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483600; background: rgba(15, 23, 42, 0.65); }`,
-      `${scope} :where(article, section, main, aside, nav, header, footer, .card, .panel, .box, .content, .container, .wrapper, .module, .layout, .card-body, .card-content)${exclusions} { background-color: #f8fafc !important; color: #0f172a !important; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18) !important; border-color: rgba(15, 23, 42, 0.12) !important; }`,
-      `${scope} :where(img, video, iframe, figure, picture)${exclusions} { box-shadow: 0 10px 32px rgba(15, 23, 42, 0.32) !important; }`,
-      `${scope} :where(button, a, input, select, textarea)${exclusions}:not([type="hidden"]) { background-color: #0ea5e9 !important; color: #022c22 !important; border: 2px solid #0369a1 !important; transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease; }`,
-      `${scope} :where(a:visited)${exclusions} { color: #022c22 !important; }`,
-      `${scope} :where(button:hover, button:focus, a:hover, a:focus, input:hover, input:focus, select:hover, select:focus, textarea:hover, textarea:focus)${exclusions}:not([type="hidden"]) { background-color: #38bdf8 !important; color: #022c22 !important; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45) !important; }`,
-      `${scope} :where(h1, h2, h3, h4, h5, h6)${exclusions} { color: #0f172a !important; text-shadow: 2px 2px 4px rgba(15, 23, 42, 0.25) !important; }`,
+      `${scope}${exclusions} { position: relative !important; background-color: #020617 !important; color: #e2e8f0 !important; }`,
+      `${scope}${exclusions}::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483600; background: rgba(2, 6, 23, 0.8); }`,
+      `${scope} :where(article, section, main, aside, nav, header, footer, .card, .panel, .box, .content, .container, .wrapper, .module, .layout, .card-body, .card-content)${exclusions} { background-color: #f1f5f9 !important; color: #020617 !important; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22) !important; border-color: rgba(15, 23, 42, 0.18) !important; }`,
+      `${scope} :where(img, video, iframe, figure, picture)${exclusions} { box-shadow: 0 12px 36px rgba(2, 6, 23, 0.42) !important; }`,
+      `${scope} :where(.wp-site-blocks a, .entry-content a, .wp-block-button__link, .wp-element-button, .wp-block-navigation__container a)${exclusions} { background-color: #0f172a !important; color: #f8fafc !important; border: 2px solid #1d4ed8 !important; transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease; text-decoration: none !important; }`,
+      `${scope} :where(.wp-site-blocks a:visited, .entry-content a:visited, .wp-block-button__link:visited, .wp-element-button:visited, .wp-block-navigation__container a:visited)${exclusions} { color: #e2e8f0 !important; }`,
+      `${scope} :where(.wp-site-blocks a:hover, .wp-site-blocks a:focus, .entry-content a:hover, .entry-content a:focus, .wp-block-button__link:hover, .wp-block-button__link:focus, .wp-element-button:hover, .wp-element-button:focus, .wp-block-navigation__container a:hover, .wp-block-navigation__container a:focus)${exclusions} { background-color: #1d4ed8 !important; color: #f8fafc !important; box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.55) !important; }`,
+      `${scope} :where(h1, h2, h3, h4, h5, h6)${exclusions} { color: #020617 !important; text-shadow: 2px 2px 6px rgba(15, 23, 42, 0.35) !important; }`,
       `${selector} #a11y-widget-root, ${selector} #a11y-widget-root * { isolation: isolate; mix-blend-mode: normal !important; position: relative; z-index: 2147483647; color: inherit !important; }`,
     ].join('\n');
   }

@@ -323,7 +323,7 @@
                     <style id="acc-mono-depth-style">
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) {
                             position: relative !important;
-                            background-color: #0b1120 !important;
+                            background-color: #020617 !important;
                             color: #e2e8f0 !important;
                         }
 
@@ -333,7 +333,7 @@
                             inset: 0;
                             pointer-events: none;
                             z-index: 2147483600;
-                            background: rgba(15, 23, 42, 0.65);
+                            background: rgba(2, 6, 23, 0.8);
                         }
 
                         #acc-widget-panel,
@@ -346,36 +346,37 @@
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(article, section, main, aside, nav, header, footer, .card, .panel, .box, .content, .container, .wrapper, .module, .layout, .card-body, .card-content) {
-                            background-color: #f8fafc !important;
-                            color: #0f172a !important;
-                            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18) !important;
-                            border-color: rgba(15, 23, 42, 0.12) !important;
+                            background-color: #f1f5f9 !important;
+                            color: #020617 !important;
+                            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22) !important;
+                            border-color: rgba(15, 23, 42, 0.18) !important;
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(img, video, iframe, figure, picture) {
-                            box-shadow: 0 10px 32px rgba(15, 23, 42, 0.32) !important;
+                            box-shadow: 0 12px 36px rgba(2, 6, 23, 0.42) !important;
                         }
 
-                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(button, a, input, select, textarea):not([type="hidden"]) {
-                            background-color: #0ea5e9 !important;
-                            color: #022c22 !important;
-                            border: 2px solid #0369a1 !important;
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(.wp-site-blocks a, .entry-content a, .wp-block-button__link, .wp-element-button, .wp-block-navigation__container a) {
+                            background-color: #0f172a !important;
+                            color: #f8fafc !important;
+                            border: 2px solid #1d4ed8 !important;
                             transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+                            text-decoration: none !important;
                         }
 
-                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(a:visited) {
-                            color: #022c22 !important;
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(.wp-site-blocks a:visited, .entry-content a:visited, .wp-block-button__link:visited, .wp-element-button:visited, .wp-block-navigation__container a:visited) {
+                            color: #e2e8f0 !important;
                         }
 
-                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(button:hover, button:focus, a:hover, a:focus, input:hover, input:focus, select:hover, select:focus, textarea:hover, textarea:focus):not([type="hidden"]) {
-                            background-color: #38bdf8 !important;
-                            color: #022c22 !important;
-                            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45) !important;
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(.wp-site-blocks a:hover, .wp-site-blocks a:focus, .entry-content a:hover, .entry-content a:focus, .wp-block-button__link:hover, .wp-block-button__link:focus, .wp-element-button:hover, .wp-element-button:focus, .wp-block-navigation__container a:hover, .wp-block-navigation__container a:focus) {
+                            background-color: #1d4ed8 !important;
+                            color: #f8fafc !important;
+                            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.55) !important;
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(h1, h2, h3, h4, h5, h6) {
-                            color: #0f172a !important;
-                            text-shadow: 2px 2px 4px rgba(15, 23, 42, 0.25) !important;
+                            color: #020617 !important;
+                            text-shadow: 2px 2px 6px rgba(15, 23, 42, 0.35) !important;
                         }
                     </style>
                 `;
