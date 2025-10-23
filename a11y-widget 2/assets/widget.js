@@ -4531,7 +4531,6 @@ ${interactiveSelectors} {
         ? cloneRoot
         : cloneRoot.querySelector('#a11y-widget-root');
       if(widgetRootClone){
-        widgetRootClone.removeAttribute('id');
         widgetRootClone.setAttribute('data-a11y-widget-clone', 'root');
       }
     }
