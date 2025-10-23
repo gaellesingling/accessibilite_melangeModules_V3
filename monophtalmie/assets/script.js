@@ -394,49 +394,60 @@
             
             if (this.settings.reduceField) {
                 let margin = '0 auto';
-                
-                switch(this.settings.fieldPosition) {
+                let alignItems = 'center';
+                let alignSelf = 'center';
+
+                switch (this.settings.fieldPosition) {
                     case 'left':
                         margin = '0 auto 0 0';
+                        alignItems = 'flex-start';
+                        alignSelf = 'flex-start';
                         break;
                     case 'right':
                         margin = '0 0 0 auto';
+                        alignItems = 'flex-end';
+                        alignSelf = 'flex-end';
                         break;
                     case 'center':
                     default:
                         margin = '0 auto';
+                        alignItems = 'center';
+                        alignSelf = 'center';
                         break;
                 }
-                
+
                 const css = `
                     <style id="acc-mono-field-style">
                         body {
                             display: flex !important;
                             flex-direction: column !important;
-                            align-items: stretch !important;
+                            align-items: ${alignItems} !important;
                         }
-                        
+
                         body > *:not(#acc-widget-panel):not(#acc-magnifier) {
                             max-width: 900px !important;
                             width: 100% !important;
                             margin: ${margin} !important;
+                            align-self: ${alignSelf} !important;
                         }
-                        
+
                         body > header,
                         body > footer,
                         body > nav {
                             max-width: 100% !important;
                         }
-                        
+
                         #page, #wrapper, .site, .container, main {
                             max-width: 900px !important;
                             margin: ${margin} !important;
+                            align-self: ${alignSelf} !important;
                         }
-                        
+
                         #acc-widget-panel,
                         #acc-magnifier {
                             max-width: none !important;
                             margin: 0 !important;
+                            align-self: stretch !important;
                         }
                     </style>
                 `;
