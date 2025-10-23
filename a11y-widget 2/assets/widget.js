@@ -4299,14 +4299,10 @@ ${interactiveSelectors} {
 
   const MONOPHTALMIE_SLUG = 'vision-monophtalmie';
   const MONOPHTALMIE_SETTINGS_KEY = 'a11y-widget-monophtalmie-settings:v1';
-  const MONOPHTALMIE_ZOOM_RANGE = { min: 150, max: 400, step: 50 };
   const MONOPHTALMIE_FIELD_POSITIONS = ['left', 'center', 'right'];
-  const MONOPHTALMIE_MAGNIFIER_SIZE = 280;
 
   function getDefaultMonophtalmieSettings(){
     return {
-      magnifier: false,
-      magnifierZoom: 200,
       depthIndicators: false,
       reduceField: false,
       fieldPosition: 'center',
@@ -4320,23 +4316,10 @@ ${interactiveSelectors} {
     return MONOPHTALMIE_FIELD_POSITIONS.includes(normalized) ? normalized : 'center';
   }
 
-  function clampMonophtalmieZoom(value){
-    const numeric = Number(value);
-    if(Number.isFinite(numeric)){
-      const step = MONOPHTALMIE_ZOOM_RANGE.step || 1;
-      const snapped = step ? Math.round(numeric / step) * step : numeric;
-      const bounded = Math.min(MONOPHTALMIE_ZOOM_RANGE.max, Math.max(MONOPHTALMIE_ZOOM_RANGE.min, snapped));
-      return Math.round(bounded);
-    }
-    return getDefaultMonophtalmieSettings().magnifierZoom;
-  }
-
   function normalizeMonophtalmieSettings(raw){
     const defaults = getDefaultMonophtalmieSettings();
     if(!raw || typeof raw !== 'object'){ return Object.assign({}, defaults); }
     return {
-      magnifier: !!raw.magnifier,
-      magnifierZoom: clampMonophtalmieZoom(raw.magnifierZoom),
       depthIndicators: !!raw.depthIndicators,
       reduceField: !!raw.reduceField,
       fieldPosition: normalizeMonophtalmieFieldPosition(raw.fieldPosition),
@@ -4363,290 +4346,10 @@ ${interactiveSelectors} {
   let monophtalmieSettings = loadMonophtalmieSettings();
   let monophtalmieActive = false;
   const monophtalmieInstances = new Set();
-  let monophtalmieMagnifierEl = null;
-  let monophtalmieMagnifierContent = null;
-  let monophtalmieMagnifierNextPosition = null;
-  let monophtalmieMagnifierLastPointer = null;
-  let monophtalmieMagnifierRaf = null;
-  let monophtalmieMagnifierRafIsTimeout = false;
-  let monophtalmieMagnifierPointerHandler = null;
-  let monophtalmieMagnifierScrollHandler = null;
-  let monophtalmieMagnifierLeaveHandler = null;
   let monophtalmieDepthStyle = null;
   let monophtalmieFieldStyle = null;
   let monophtalmieLowVisionStyle = null;
   let monophtalmieIdCounter = 0;
-
-  function applyMonophtalmieMagnifierBackgroundStyles(){
-    if(!monophtalmieMagnifierEl || !monophtalmieMagnifierContent){ return; }
-    if(typeof window === 'undefined' || typeof window.getComputedStyle !== 'function'){ return; }
-    if(!document.body && !document.documentElement){ return; }
-
-    const normalizeColor = value => typeof value === 'string' ? value.replace(/\s+/g, '').toLowerCase() : '';
-    const isTransparentColor = value => {
-      const normalized = normalizeColor(value);
-      return normalized === 'rgba(0,0,0,0)' || normalized === 'transparent';
-    };
-    const hasBackgroundImage = computed => {
-      if(!computed){ return false; }
-      const backgroundImage = computed.backgroundImage || '';
-      return typeof backgroundImage === 'string' && backgroundImage !== 'none';
-    };
-    const hasVisibleColor = computed => {
-      if(!computed){ return false; }
-      return !isTransparentColor(computed.backgroundColor);
-    };
-    const isBackgroundEmpty = computed => {
-      if(!computed){ return true; }
-      return !hasBackgroundImage(computed) && !hasVisibleColor(computed);
-    };
-
-    const bodyComputed = document.body ? getComputedStyle(document.body) : null;
-    const docComputed = document.documentElement ? getComputedStyle(document.documentElement) : null;
-
-    let sourceComputed = bodyComputed || docComputed;
-    if(docComputed){
-      const bodyHasImage = hasBackgroundImage(bodyComputed);
-      const docHasImage = hasBackgroundImage(docComputed);
-      const bodyEmpty = isBackgroundEmpty(bodyComputed);
-      const docHasVisibleColor = hasVisibleColor(docComputed);
-
-      if(bodyEmpty && (docHasImage || docHasVisibleColor)){
-        sourceComputed = docComputed;
-      } else if(docHasImage && !bodyHasImage){
-        sourceComputed = docComputed;
-      }
-    }
-
-    if(!sourceComputed){ return; }
-
-    const background = sourceComputed.background || '';
-    const backgroundColor = sourceComputed.backgroundColor || '';
-    monophtalmieMagnifierEl.style.background = background;
-    monophtalmieMagnifierEl.style.backgroundColor = backgroundColor;
-    monophtalmieMagnifierContent.style.background = background;
-    monophtalmieMagnifierContent.style.backgroundColor = backgroundColor;
-  }
-
-  function ensureMonophtalmieMagnifier(){
-    if(monophtalmieMagnifierEl && monophtalmieMagnifierEl.isConnected){ return monophtalmieMagnifierEl; }
-    if(!document.documentElement){ return null; }
-    const existing = document.getElementById('a11y-monophtalmie-magnifier');
-    if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
-    const container = document.createElement('div');
-    container.id = 'a11y-monophtalmie-magnifier';
-    container.setAttribute('aria-hidden', 'true');
-    container.style.position = 'fixed';
-    container.style.width = `${MONOPHTALMIE_MAGNIFIER_SIZE}px`;
-    container.style.height = `${MONOPHTALMIE_MAGNIFIER_SIZE}px`;
-    container.style.pointerEvents = 'none';
-    container.style.overflow = 'hidden';
-    container.style.borderRadius = '50%';
-    container.style.border = '3px solid rgba(255, 255, 255, 0.85)';
-    container.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.45)';
-    container.style.background = 'transparent';
-    container.style.backgroundColor = 'transparent';
-    container.style.opacity = '0';
-    container.style.transform = 'translate(-50%, -50%)';
-    container.style.transition = 'opacity 0.2s ease';
-    container.style.zIndex = '2147483647';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-    const content = document.createElement('div');
-    content.className = 'a11y-monophtalmie__magnifier-content';
-    content.style.position = 'absolute';
-    content.style.top = '0';
-    content.style.left = '0';
-    content.style.transformOrigin = '0 0';
-    content.style.willChange = 'transform';
-    container.appendChild(content);
-    const mountTarget = document.body || document.documentElement;
-    if(mountTarget){ mountTarget.appendChild(container); }
-    monophtalmieMagnifierEl = container;
-    monophtalmieMagnifierContent = content;
-    applyMonophtalmieMagnifierBackgroundStyles();
-    return container;
-  }
-
-  function hideMonophtalmieMagnifier(){
-    if(!monophtalmieMagnifierEl){ return; }
-    monophtalmieMagnifierEl.style.opacity = '0';
-    monophtalmieMagnifierEl.style.left = '-9999px';
-    monophtalmieMagnifierEl.style.top = '-9999px';
-  }
-
-  function requestMonophtalmieMagnifierFrame(){
-    if(monophtalmieMagnifierRaf){ return; }
-    const runner = () => {
-      monophtalmieMagnifierRaf = null;
-      if(monophtalmieMagnifierNextPosition){
-        applyMonophtalmieMagnifierPosition(monophtalmieMagnifierNextPosition);
-      } else {
-        hideMonophtalmieMagnifier();
-      }
-    };
-    if(typeof requestAnimationFrame === 'function'){
-      monophtalmieMagnifierRaf = requestAnimationFrame(runner);
-      monophtalmieMagnifierRafIsTimeout = false;
-    } else {
-      monophtalmieMagnifierRaf = setTimeout(runner, 16);
-      monophtalmieMagnifierRafIsTimeout = true;
-    }
-  }
-
-  function applyMonophtalmieMagnifierPosition(position){
-    if(!position){ hideMonophtalmieMagnifier(); return; }
-    const container = ensureMonophtalmieMagnifier();
-    if(!container || !monophtalmieMagnifierContent){ return; }
-    const zoom = clampMonophtalmieZoom(monophtalmieSettings.magnifierZoom) / 100;
-    container.style.left = `${position.x}px`;
-    container.style.top = `${position.y}px`;
-    container.style.opacity = '1';
-    const hasNumeric = value => typeof value === 'number' && !Number.isNaN(value);
-    const rawPageXOffset = typeof window.pageXOffset === 'number'
-      ? window.pageXOffset
-      : (typeof window.scrollX === 'number' ? window.scrollX : null);
-    const rawPageYOffset = typeof window.pageYOffset === 'number'
-      ? window.pageYOffset
-      : (typeof window.scrollY === 'number' ? window.scrollY : null);
-    const docEl = document.documentElement;
-    const body = document.body;
-    const fallbackScrollX = hasNumeric(docEl?.scrollLeft) ? docEl.scrollLeft
-      : (hasNumeric(body?.scrollLeft) ? body.scrollLeft : 0);
-    const fallbackScrollY = hasNumeric(docEl?.scrollTop) ? docEl.scrollTop
-      : (hasNumeric(body?.scrollTop) ? body.scrollTop : 0);
-    const pageXOffset = rawPageXOffset !== null ? rawPageXOffset : fallbackScrollX;
-    const pageYOffset = rawPageYOffset !== null ? rawPageYOffset : fallbackScrollY;
-    const rootRect = document.documentElement && document.documentElement.getBoundingClientRect
-      ? document.documentElement.getBoundingClientRect()
-      : { left: 0, top: 0 };
-    const rootOffsetLeft = typeof rootRect.left === 'number' ? rootRect.left : 0;
-    const rootOffsetTop = typeof rootRect.top === 'number' ? rootRect.top : 0;
-    const docX = position.x + pageXOffset - rootOffsetLeft;
-    const docY = position.y + pageYOffset - rootOffsetTop;
-    monophtalmieMagnifierContent.style.transform =
-      `translate(${-docX * zoom + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px, ${-docY * zoom + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px) scale(${zoom})`;
-  }
-
-  function refreshMonophtalmieMagnifierContent(){
-    if(!monophtalmieMagnifierContent){ return; }
-    const content = monophtalmieMagnifierContent;
-    content.textContent = '';
-    const sourceRoot = document.documentElement || document.body;
-    if(!sourceRoot){ return; }
-    const cloneRoot = sourceRoot.cloneNode(true);
-    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelectorAll){
-      cloneRoot.querySelectorAll('script, #a11y-monophtalmie-magnifier').forEach(el => {
-        if(el && el.parentNode){ el.parentNode.removeChild(el); }
-      });
-    }
-    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE){
-      if(cloneRoot.id === 'a11y-monophtalmie-magnifier'){
-        while(cloneRoot.firstChild){ cloneRoot.removeChild(cloneRoot.firstChild); }
-      }
-    }
-    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelector){
-      const widgetRootClone = cloneRoot.id === 'a11y-widget-root'
-        ? cloneRoot
-        : cloneRoot.querySelector('#a11y-widget-root');
-      if(widgetRootClone){
-        widgetRootClone.setAttribute('data-a11y-widget-clone', 'root');
-      }
-    }
-    if(!cloneRoot){ return; }
-    content.appendChild(cloneRoot);
-    const docEl = document.documentElement;
-    const body = document.body;
-    const width = Math.max(
-      docEl ? docEl.scrollWidth : 0,
-      body ? body.scrollWidth || 0 : 0,
-      docEl ? docEl.offsetWidth : 0,
-      body ? body.offsetWidth || 0 : 0
-    );
-    const height = Math.max(
-      docEl ? docEl.scrollHeight : 0,
-      body ? body.scrollHeight || 0 : 0,
-      docEl ? docEl.offsetHeight : 0,
-      body ? body.offsetHeight || 0 : 0
-    );
-    content.style.width = `${width}px`;
-    content.style.height = `${height}px`;
-    applyMonophtalmieMagnifierBackgroundStyles();
-  }
-
-  function updateMonophtalmieMagnifierZoom(){
-    if(!monophtalmieActive || !monophtalmieSettings.magnifier){ return; }
-    if(!monophtalmieMagnifierContent){ return; }
-    requestMonophtalmieMagnifierFrame();
-  }
-
-  function startMonophtalmieMagnifier(){
-    const container = ensureMonophtalmieMagnifier();
-    if(!container){ return; }
-    refreshMonophtalmieMagnifierContent();
-    if(!monophtalmieMagnifierPointerHandler){
-      monophtalmieMagnifierPointerHandler = event => {
-        monophtalmieMagnifierLastPointer = { x: event.clientX, y: event.clientY };
-        monophtalmieMagnifierNextPosition = { x: event.clientX, y: event.clientY };
-        requestMonophtalmieMagnifierFrame();
-      };
-      window.addEventListener('pointermove', monophtalmieMagnifierPointerHandler, { passive: true });
-    }
-    if(!monophtalmieMagnifierScrollHandler){
-      monophtalmieMagnifierScrollHandler = () => {
-        if(monophtalmieMagnifierLastPointer){
-          monophtalmieMagnifierNextPosition = { x: monophtalmieMagnifierLastPointer.x, y: monophtalmieMagnifierLastPointer.y };
-          requestMonophtalmieMagnifierFrame();
-        }
-      };
-      window.addEventListener('scroll', monophtalmieMagnifierScrollHandler, { passive: true });
-    }
-    if(!monophtalmieMagnifierLeaveHandler){
-      monophtalmieMagnifierLeaveHandler = () => {
-        monophtalmieMagnifierLastPointer = null;
-        monophtalmieMagnifierNextPosition = null;
-        hideMonophtalmieMagnifier();
-      };
-      window.addEventListener('pointerleave', monophtalmieMagnifierLeaveHandler);
-      window.addEventListener('blur', monophtalmieMagnifierLeaveHandler);
-    }
-    if(monophtalmieMagnifierLastPointer){
-      monophtalmieMagnifierNextPosition = { x: monophtalmieMagnifierLastPointer.x, y: monophtalmieMagnifierLastPointer.y };
-    } else {
-      const fallbackX = Math.round(window.innerWidth / 2);
-      const fallbackY = Math.round(window.innerHeight / 2);
-      monophtalmieMagnifierNextPosition = { x: fallbackX, y: fallbackY };
-    }
-    requestMonophtalmieMagnifierFrame();
-  }
-
-  function teardownMonophtalmieMagnifier(){
-    if(monophtalmieMagnifierPointerHandler){
-      window.removeEventListener('pointermove', monophtalmieMagnifierPointerHandler);
-      monophtalmieMagnifierPointerHandler = null;
-    }
-    if(monophtalmieMagnifierScrollHandler){
-      window.removeEventListener('scroll', monophtalmieMagnifierScrollHandler);
-      monophtalmieMagnifierScrollHandler = null;
-    }
-    if(monophtalmieMagnifierLeaveHandler){
-      window.removeEventListener('pointerleave', monophtalmieMagnifierLeaveHandler);
-      window.removeEventListener('blur', monophtalmieMagnifierLeaveHandler);
-      monophtalmieMagnifierLeaveHandler = null;
-    }
-    if(monophtalmieMagnifierRaf){
-      if(monophtalmieMagnifierRafIsTimeout){ clearTimeout(monophtalmieMagnifierRaf); }
-      else if(typeof cancelAnimationFrame === 'function'){ cancelAnimationFrame(monophtalmieMagnifierRaf); }
-      monophtalmieMagnifierRaf = null;
-    }
-    monophtalmieMagnifierNextPosition = null;
-    monophtalmieMagnifierLastPointer = null;
-    if(monophtalmieMagnifierEl && monophtalmieMagnifierEl.parentNode){
-      monophtalmieMagnifierEl.parentNode.removeChild(monophtalmieMagnifierEl);
-    }
-    monophtalmieMagnifierEl = null;
-    monophtalmieMagnifierContent = null;
-  }
 
   function ensureMonophtalmieDepthStyle(){
     if(monophtalmieDepthStyle && monophtalmieDepthStyle.isConnected){ return monophtalmieDepthStyle; }
@@ -4861,17 +4564,10 @@ ${interactiveSelectors} {
 
   function applyMonophtalmieSettings(){
     if(!monophtalmieActive){
-      teardownMonophtalmieMagnifier();
       clearMonophtalmieDepthStyle();
       clearMonophtalmieFieldStyle();
       clearMonophtalmieLowVisionStyle();
       return;
-    }
-    if(monophtalmieSettings.magnifier){
-      startMonophtalmieMagnifier();
-      updateMonophtalmieMagnifierZoom();
-    } else {
-      teardownMonophtalmieMagnifier();
     }
     updateMonophtalmieDepthStyle();
     updateMonophtalmieFieldStyle();
@@ -4888,32 +4584,6 @@ ${interactiveSelectors} {
     monophtalmieActive = next;
     applyMonophtalmieSettings();
     syncMonophtalmieInstances();
-  }
-
-  function setMonophtalmieMagnifier(value){
-    const next = !!value;
-    if(monophtalmieSettings.magnifier === next){
-      syncMonophtalmieInstances();
-      return;
-    }
-    monophtalmieSettings.magnifier = next;
-    applyMonophtalmieSettings();
-    persistMonophtalmieSettings();
-    syncMonophtalmieInstances();
-  }
-
-  function setMonophtalmieMagnifierZoom(value, options = {}){
-    const next = clampMonophtalmieZoom(value);
-    const current = clampMonophtalmieZoom(monophtalmieSettings.magnifierZoom);
-    monophtalmieSettings.magnifierZoom = next;
-    if(next !== current || options.force){
-      updateMonophtalmieMagnifierZoom();
-      if(options.persist !== false){ persistMonophtalmieSettings(); }
-      syncMonophtalmieInstances();
-    } else if(options.syncOnly){
-      syncMonophtalmieInstances();
-    }
-    return next;
   }
 
   function setMonophtalmieDepthIndicators(value){
@@ -4977,8 +4647,6 @@ ${interactiveSelectors} {
     const current = normalizeMonophtalmieSettings(monophtalmieSettings);
     const defaults = getDefaultMonophtalmieSettings();
     return (
-      current.magnifier === defaults.magnifier &&
-      current.magnifierZoom === defaults.magnifierZoom &&
       current.depthIndicators === defaults.depthIndicators &&
       current.reduceField === defaults.reduceField &&
       normalizeMonophtalmieFieldPosition(current.fieldPosition) === normalizeMonophtalmieFieldPosition(defaults.fieldPosition) &&
@@ -5018,12 +4686,6 @@ ${interactiveSelectors} {
     const {
       article,
       controls,
-      magnifierInput,
-      zoomField,
-      zoomSlider,
-      zoomValue,
-      zoomDecrease,
-      zoomIncrease,
       depthInput,
       fieldInput,
       positionField,
@@ -5031,18 +4693,14 @@ ${interactiveSelectors} {
       positionButtons,
       lowVisionInput,
       resetBtn,
-      zoomSuffix = '%',
       texts = {},
     } = instance;
     const active = monophtalmieActive;
     const snapshot = normalizeMonophtalmieSettings(monophtalmieSettings);
-    const magnifierOn = !!snapshot.magnifier;
     const depthOn = !!snapshot.depthIndicators;
     const reduceFieldOn = !!snapshot.reduceField;
     const fieldPosition = normalizeMonophtalmieFieldPosition(snapshot.fieldPosition);
     const lowVisionOn = !!snapshot.lowVisionMode;
-    const zoom = clampMonophtalmieZoom(snapshot.magnifierZoom);
-    const suffix = zoomSuffix || '%';
 
     if(article){
       if(article.isConnected){ instance.wasConnected = true; }
@@ -5052,32 +4710,6 @@ ${interactiveSelectors} {
       controls.classList.toggle('is-disabled', !active);
       if(!active){ controls.setAttribute('aria-disabled', 'true'); }
       else { controls.removeAttribute('aria-disabled'); }
-    }
-    if(magnifierInput){
-      magnifierInput.checked = magnifierOn;
-      magnifierInput.disabled = !active;
-    }
-    if(zoomField){
-      const showZoom = active && magnifierOn;
-      zoomField.hidden = !showZoom;
-      zoomField.setAttribute('aria-hidden', showZoom ? 'false' : 'true');
-    }
-    if(zoomSlider){
-      zoomSlider.disabled = !active || !magnifierOn;
-      setInputValue(zoomSlider, String(zoom));
-      zoomSlider.setAttribute('aria-valuemin', `${MONOPHTALMIE_ZOOM_RANGE.min}`);
-      zoomSlider.setAttribute('aria-valuemax', `${MONOPHTALMIE_ZOOM_RANGE.max}`);
-      zoomSlider.setAttribute('aria-valuenow', `${zoom}`);
-      zoomSlider.setAttribute('aria-valuetext', `${zoom}${suffix}`);
-    }
-    if(zoomValue){
-      zoomValue.textContent = `${zoom}${suffix}`;
-    }
-    if(zoomDecrease){
-      zoomDecrease.disabled = !active || !magnifierOn || zoom <= MONOPHTALMIE_ZOOM_RANGE.min;
-    }
-    if(zoomIncrease){
-      zoomIncrease.disabled = !active || !magnifierOn || zoom >= MONOPHTALMIE_ZOOM_RANGE.max;
     }
     if(depthInput){
       depthInput.checked = depthOn;
@@ -5160,14 +4792,6 @@ ${interactiveSelectors} {
     const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
     const texts = {
       intro: typeof settings.intro === 'string' ? settings.intro : '',
-      magnifier_label: typeof settings.magnifier_label === 'string' ? settings.magnifier_label : '',
-      magnifier_hint: typeof settings.magnifier_hint === 'string' ? settings.magnifier_hint : '',
-      magnifier_aria: typeof settings.magnifier_aria === 'string' ? settings.magnifier_aria : '',
-      zoom_label: typeof settings.zoom_label === 'string' ? settings.zoom_label : '',
-      zoom_hint: typeof settings.zoom_hint === 'string' ? settings.zoom_hint : '',
-      zoom_decrease: typeof settings.zoom_decrease === 'string' ? settings.zoom_decrease : '',
-      zoom_increase: typeof settings.zoom_increase === 'string' ? settings.zoom_increase : '',
-      zoom_value_suffix: typeof settings.zoom_value_suffix === 'string' ? settings.zoom_value_suffix : '%',
       depth_label: typeof settings.depth_label === 'string' ? settings.depth_label : '',
       depth_hint: typeof settings.depth_hint === 'string' ? settings.depth_hint : '',
       depth_aria: typeof settings.depth_aria === 'string' ? settings.depth_aria : '',
@@ -5202,86 +4826,6 @@ ${interactiveSelectors} {
     article.appendChild(controls);
 
     const baseId = `a11y-monophtalmie-${++monophtalmieIdCounter}`;
-
-    const magnifierField = document.createElement('div');
-    magnifierField.className = 'a11y-monophtalmie__field';
-    controls.appendChild(magnifierField);
-
-    const magnifierLabel = document.createElement('label');
-    magnifierLabel.className = 'a11y-monophtalmie__toggle';
-    const magnifierInput = document.createElement('input');
-    magnifierInput.type = 'checkbox';
-    magnifierInput.className = 'a11y-monophtalmie__checkbox';
-    magnifierInput.id = `${baseId}-magnifier`;
-    if(texts.magnifier_aria){ magnifierInput.setAttribute('aria-label', texts.magnifier_aria); }
-    magnifierLabel.appendChild(magnifierInput);
-    const magnifierText = document.createElement('span');
-    magnifierText.className = 'a11y-monophtalmie__toggle-text';
-    magnifierText.textContent = texts.magnifier_label || '';
-    magnifierLabel.appendChild(magnifierText);
-    magnifierField.appendChild(magnifierLabel);
-
-    if(texts.magnifier_hint){
-      const hint = document.createElement('p');
-      hint.className = 'a11y-monophtalmie__hint';
-      hint.id = `${baseId}-magnifier-hint`;
-      hint.textContent = texts.magnifier_hint;
-      magnifierField.appendChild(hint);
-      magnifierInput.setAttribute('aria-describedby', hint.id);
-    }
-
-    const zoomField = document.createElement('div');
-    zoomField.className = 'a11y-monophtalmie__field';
-    zoomField.setAttribute('data-role', 'monophtalmie-zoom');
-    zoomField.hidden = true;
-    controls.appendChild(zoomField);
-
-    const zoomLabel = document.createElement('label');
-    zoomLabel.className = 'a11y-monophtalmie__label';
-    zoomLabel.setAttribute('for', `${baseId}-zoom`);
-    zoomLabel.textContent = texts.zoom_label || '';
-    const zoomValue = document.createElement('span');
-    zoomValue.className = 'a11y-monophtalmie__value';
-    zoomLabel.appendChild(zoomValue);
-    zoomField.appendChild(zoomLabel);
-
-    if(texts.zoom_hint){
-      const zoomHint = document.createElement('p');
-      zoomHint.className = 'a11y-monophtalmie__hint';
-      zoomHint.id = `${baseId}-zoom-hint`;
-      zoomHint.textContent = texts.zoom_hint;
-      zoomField.appendChild(zoomHint);
-    }
-
-    const zoomGroup = document.createElement('div');
-    zoomGroup.className = 'a11y-monophtalmie__slider';
-    zoomField.appendChild(zoomGroup);
-
-    const zoomDecrease = document.createElement('button');
-    zoomDecrease.type = 'button';
-    zoomDecrease.className = 'a11y-monophtalmie__slider-button';
-    zoomDecrease.textContent = '−';
-    if(texts.zoom_decrease){ zoomDecrease.setAttribute('aria-label', texts.zoom_decrease); }
-    zoomGroup.appendChild(zoomDecrease);
-
-    const zoomSlider = document.createElement('input');
-    zoomSlider.type = 'range';
-    zoomSlider.className = 'a11y-monophtalmie__range';
-    zoomSlider.id = `${baseId}-zoom`;
-    zoomSlider.min = `${MONOPHTALMIE_ZOOM_RANGE.min}`;
-    zoomSlider.max = `${MONOPHTALMIE_ZOOM_RANGE.max}`;
-    zoomSlider.step = `${MONOPHTALMIE_ZOOM_RANGE.step}`;
-    zoomSlider.setAttribute('aria-valuemin', `${MONOPHTALMIE_ZOOM_RANGE.min}`);
-    zoomSlider.setAttribute('aria-valuemax', `${MONOPHTALMIE_ZOOM_RANGE.max}`);
-    if(texts.zoom_hint){ zoomSlider.setAttribute('aria-describedby', `${baseId}-zoom-hint`); }
-    zoomGroup.appendChild(zoomSlider);
-
-    const zoomIncrease = document.createElement('button');
-    zoomIncrease.type = 'button';
-    zoomIncrease.className = 'a11y-monophtalmie__slider-button';
-    zoomIncrease.textContent = '+';
-    if(texts.zoom_increase){ zoomIncrease.setAttribute('aria-label', texts.zoom_increase); }
-    zoomGroup.appendChild(zoomIncrease);
 
     const depthField = document.createElement('div');
     depthField.className = 'a11y-monophtalmie__field';
@@ -5448,47 +4992,6 @@ ${interactiveSelectors} {
     if(texts.live_region_label){ liveRegion.setAttribute('aria-label', texts.live_region_label); }
     article.appendChild(liveRegion);
 
-    magnifierInput.addEventListener('change', () => {
-      setMonophtalmieMagnifier(magnifierInput.checked);
-      const status = magnifierInput.checked ? texts.status_on : texts.status_off;
-      const label = texts.magnifier_label || texts.magnifier_aria || '';
-      announceMonophtalmie(`${label} ${status}`.trim());
-    });
-
-    zoomSlider.addEventListener('input', () => {
-      setMonophtalmieMagnifierZoom(zoomSlider.value, { persist: false });
-    });
-
-    zoomSlider.addEventListener('change', () => {
-      const value = setMonophtalmieMagnifierZoom(zoomSlider.value);
-      const label = texts.zoom_label || '';
-      announceMonophtalmie(`${label} ${value}${texts.zoom_value_suffix || '%'}`.trim());
-    });
-
-    zoomDecrease.addEventListener('click', event => {
-      event.preventDefault();
-      if(zoomSlider.disabled){ return; }
-      const current = clampMonophtalmieZoom(zoomSlider.value);
-      const step = MONOPHTALMIE_ZOOM_RANGE.step || 10;
-      const next = clampMonophtalmieZoom(current - step);
-      if(next !== current){
-        setMonophtalmieMagnifierZoom(next);
-        announceMonophtalmie(`${texts.zoom_label || ''} ${next}${texts.zoom_value_suffix || '%'}`.trim());
-      }
-    });
-
-    zoomIncrease.addEventListener('click', event => {
-      event.preventDefault();
-      if(zoomSlider.disabled){ return; }
-      const current = clampMonophtalmieZoom(zoomSlider.value);
-      const step = MONOPHTALMIE_ZOOM_RANGE.step || 10;
-      const next = clampMonophtalmieZoom(current + step);
-      if(next !== current){
-        setMonophtalmieMagnifierZoom(next);
-        announceMonophtalmie(`${texts.zoom_label || ''} ${next}${texts.zoom_value_suffix || '%'}`.trim());
-      }
-    });
-
     depthInput.addEventListener('change', () => {
       setMonophtalmieDepthIndicators(depthInput.checked);
       const label = texts.depth_label || texts.depth_aria || '';
@@ -5528,12 +5031,6 @@ ${interactiveSelectors} {
     const instance = {
       article,
       controls,
-      magnifierInput,
-      zoomField,
-      zoomSlider,
-      zoomValue,
-      zoomDecrease,
-      zoomIncrease,
       depthInput,
       fieldInput,
       positionField,
@@ -5542,7 +5039,6 @@ ${interactiveSelectors} {
       lowVisionInput,
       resetBtn,
       liveRegion,
-      zoomSuffix: texts.zoom_value_suffix || '%',
       texts,
       wasConnected: false,
     };
