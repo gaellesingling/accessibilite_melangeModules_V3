@@ -344,6 +344,700 @@
   let epilepsyFlashOverlay = null;
   let epilepsyGifPlaceholderId = 0;
 
+  const CATARACT_SLUG = 'vision-cataracte';
+  const CATARACT_SETTINGS_KEY = 'a11y-widget-cataract-settings:v1';
+  const CATARACT_INTENSITY_RANGE = { min: 10, max: 40, step: 5 };
+  const CATARACT_CHILD_SLUGS = {
+    reduceGlare: 'reduce_glare',
+    colorCorrection: 'color_correction',
+    sharpness: 'sharpness',
+    removeEffects: 'remove_effects',
+  };
+  const cataractInstances = new Set();
+  let cataractSettings = loadCataractSettings();
+  let cataractActive = false;
+  let cataractGlareStyle = null;
+  let cataractColorStyle = null;
+  let cataractSharpnessStyle = null;
+  let cataractEffectsStyle = null;
+  let cataractIdCounter = 0;
+  let cataractSyncingFeatures = false;
+
+  function getDefaultCataractSettings(){
+    return {
+      reduceGlare: false,
+      glareIntensity: 20,
+      colorCorrection: false,
+      sharpness: false,
+      removeEffects: false,
+    };
+  }
+
+  function clampCataractIntensity(value){
+    const { min, max, step } = CATARACT_INTENSITY_RANGE;
+    const numeric = Number(value);
+    if(!Number.isFinite(numeric)){ return min; }
+    const rounded = Math.round(numeric / step) * step;
+    return Math.min(max, Math.max(min, rounded));
+  }
+
+  function normalizeCataractSettings(raw){
+    const defaults = getDefaultCataractSettings();
+    if(!raw || typeof raw !== 'object'){ return Object.assign({}, defaults); }
+    return {
+      reduceGlare: !!raw.reduceGlare,
+      glareIntensity: clampCataractIntensity(Object.prototype.hasOwnProperty.call(raw, 'glareIntensity') ? raw.glareIntensity : defaults.glareIntensity),
+      colorCorrection: !!raw.colorCorrection,
+      sharpness: !!raw.sharpness,
+      removeEffects: !!raw.removeEffects,
+    };
+  }
+
+  function loadCataractSettings(){
+    const defaults = getDefaultCataractSettings();
+    try {
+      const raw = localStorage.getItem(CATARACT_SETTINGS_KEY);
+      if(!raw){ return Object.assign({}, defaults); }
+      const parsed = JSON.parse(raw);
+      return normalizeCataractSettings(parsed);
+    } catch(err){
+      return Object.assign({}, defaults);
+    }
+  }
+
+  function persistCataractSettings(){
+    try { localStorage.setItem(CATARACT_SETTINGS_KEY, JSON.stringify(cataractSettings)); } catch(err){ /* ignore */ }
+  }
+
+  function ensureCataractStyle(id){
+    let el = document.getElementById(id);
+    if(!el){
+      el = document.createElement('style');
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    return el;
+  }
+
+  function ensureCataractGlareStyle(){
+    if(cataractGlareStyle && cataractGlareStyle.isConnected){ return cataractGlareStyle; }
+    cataractGlareStyle = ensureCataractStyle('a11y-cataract-glare-style');
+    return cataractGlareStyle;
+  }
+
+  function ensureCataractColorStyle(){
+    if(cataractColorStyle && cataractColorStyle.isConnected){ return cataractColorStyle; }
+    cataractColorStyle = ensureCataractStyle('a11y-cataract-color-style');
+    return cataractColorStyle;
+  }
+
+  function ensureCataractSharpnessStyle(){
+    if(cataractSharpnessStyle && cataractSharpnessStyle.isConnected){ return cataractSharpnessStyle; }
+    cataractSharpnessStyle = ensureCataractStyle('a11y-cataract-sharpness-style');
+    return cataractSharpnessStyle;
+  }
+
+  function ensureCataractEffectsStyle(){
+    if(cataractEffectsStyle && cataractEffectsStyle.isConnected){ return cataractEffectsStyle; }
+    cataractEffectsStyle = ensureCataractStyle('a11y-cataract-effects-style');
+    return cataractEffectsStyle;
+  }
+
+  function clearCataractGlareStyle(){
+    if(cataractGlareStyle){ cataractGlareStyle.textContent = ''; }
+  }
+
+  function clearCataractColorStyle(){
+    if(cataractColorStyle){ cataractColorStyle.textContent = ''; }
+  }
+
+  function clearCataractSharpnessStyle(){
+    if(cataractSharpnessStyle){ cataractSharpnessStyle.textContent = ''; }
+  }
+
+  function clearCataractEffectsStyle(){
+    if(cataractEffectsStyle){ cataractEffectsStyle.textContent = ''; }
+  }
+
+  function clearCataractStyles(){
+    clearCataractGlareStyle();
+    clearCataractColorStyle();
+    clearCataractSharpnessStyle();
+    clearCataractEffectsStyle();
+  }
+
+  function updateCataractGlareStyle(){
+    if(!cataractActive || !cataractSettings.reduceGlare){
+      clearCataractGlareStyle();
+      return;
+    }
+    const intensity = clampCataractIntensity(cataractSettings.glareIntensity);
+    const opacity = Math.max(0, 1 - (intensity / 100));
+    const brightness = Math.max(0.5, 1 - (intensity / 100) * 0.3);
+    const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
+    const filterScope = `${selector} body :not([data-a11y-filter-exempt])`;
+    const mediaScope = `${filterScope} :is(img, picture, video, canvas, svg, iframe, embed, object, model-viewer)`;
+    const styleEl = ensureCataractGlareStyle();
+    styleEl.textContent = [
+      `${selector} body { background-color: #f5f5f5 !important; }`,
+      `${filterScope} { filter: brightness(${formatFilterNumber(brightness)}) !important; }`,
+      `${mediaScope} { opacity: ${formatFilterNumber(opacity)} !important; }`,
+      `${filterScope}[style*='background: white' i], ${filterScope}[style*='background:#fff' i], ${filterScope}[style*='background-color: white' i], ${filterScope}[style*='background-color:#fff' i] { background-color: #f5f5f5 !important; }`,
+      `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { filter: none !important; opacity: initial !important; background: initial !important; }`,
+    ].join('\n');
+  }
+
+  function updateCataractColorStyle(){
+    if(!cataractActive || !cataractSettings.colorCorrection){
+      clearCataractColorStyle();
+      return;
+    }
+    const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
+    const scope = `${selector} body :not([data-a11y-filter-exempt])`;
+    const styleEl = ensureCataractColorStyle();
+    styleEl.textContent = [
+      `${scope} { filter: saturate(1.08) contrast(1.05) hue-rotate(-3deg) !important; }`,
+      `${scope} [style*='color: navy' i], ${scope} [style*='color:#000080' i], ${scope} [style*='color: rgb(0,0,128)' i] { filter: brightness(1.15) saturate(1.1) !important; }`,
+      `${scope} [style*='color: purple' i], ${scope} [style*='#800080' i], ${scope} [style*='color: rgb(128,0,128)' i] { filter: brightness(1.1) saturate(1.15) !important; }`,
+      `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { filter: none !important; }`,
+    ].join('\n');
+  }
+
+  function updateCataractSharpnessStyle(){
+    if(!cataractActive || !cataractSettings.sharpness){
+      clearCataractSharpnessStyle();
+      return;
+    }
+    const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
+    const scope = `${selector} body :not([data-a11y-filter-exempt])`;
+    const styleEl = ensureCataractSharpnessStyle();
+    styleEl.textContent = [
+      `${scope} { text-rendering: optimizeLegibility !important; -webkit-font-smoothing: antialiased !important; -moz-osx-font-smoothing: grayscale !important; }`,
+      `${scope} :is(p, span, div, a, li) { text-shadow: 0 0 0.5px rgba(0,0,0,0.3) !important; font-weight: 500 !important; }`,
+      `${scope} :is(h1, h2, h3, h4, h5, h6) { text-shadow: 0 0 1px rgba(0,0,0,0.5) !important; font-weight: 700 !important; }`,
+      `${scope} img { image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; }`,
+      `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { text-shadow: none !important; font-weight: inherit !important; image-rendering: auto !important; }`,
+    ].join('\n');
+  }
+
+  function updateCataractEffectsStyle(){
+    if(!cataractActive || !cataractSettings.removeEffects){
+      clearCataractEffectsStyle();
+      return;
+    }
+    const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
+    const scope = `${selector} body :not([data-a11y-filter-exempt])`;
+    const styleEl = ensureCataractEffectsStyle();
+    styleEl.textContent = [
+      `${scope} { animation: none !important; transition: none !important; box-shadow: none !important; text-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border-radius: 0 !important; }`,
+      `${scope} :is(img, picture, video, canvas, svg) { opacity: 1 !important; }`,
+      `${scope} *:hover { transform: none !important; filter: none !important; }`,
+      `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { animation: initial !important; transition: initial !important; box-shadow: initial !important; text-shadow: initial !important; border-radius: initial !important; }`,
+    ].join('\n');
+  }
+
+  function applyCataractSettings(){
+    updateCataractGlareStyle();
+    updateCataractColorStyle();
+    updateCataractSharpnessStyle();
+    updateCataractEffectsStyle();
+  }
+
+  function setCataractActive(value){
+    const next = !!value;
+    if(cataractActive === next){
+      if(next){ applyCataractSettings(); }
+      syncCataractInstances();
+      return;
+    }
+    cataractActive = next;
+    if(!next){
+      clearCataractStyles();
+      syncCataractToggle(CATARACT_CHILD_SLUGS.reduceGlare, false);
+      syncCataractToggle(CATARACT_CHILD_SLUGS.colorCorrection, false);
+      syncCataractToggle(CATARACT_CHILD_SLUGS.sharpness, false);
+      syncCataractToggle(CATARACT_CHILD_SLUGS.removeEffects, false);
+    } else {
+      applyCataractSettings();
+      syncCataractToggle(CATARACT_CHILD_SLUGS.reduceGlare, cataractSettings.reduceGlare);
+      syncCataractToggle(CATARACT_CHILD_SLUGS.colorCorrection, cataractSettings.colorCorrection);
+      syncCataractToggle(CATARACT_CHILD_SLUGS.sharpness, cataractSettings.sharpness);
+      syncCataractToggle(CATARACT_CHILD_SLUGS.removeEffects, cataractSettings.removeEffects);
+    }
+    syncCataractInstances();
+  }
+
+  function setCataractReduceGlare(value, opts={}){
+    const next = !!value;
+    if(cataractSettings.reduceGlare === next && !opts.force){
+      syncCataractInstances();
+      if(cataractActive){ applyCataractSettings(); }
+      return;
+    }
+    cataractSettings.reduceGlare = next;
+    applyCataractSettings();
+    persistCataractSettings();
+    syncCataractInstances();
+    if(!opts.fromFeature){ syncCataractToggle(CATARACT_CHILD_SLUGS.reduceGlare, next); }
+  }
+
+  function setCataractGlareIntensity(value, opts={}){
+    const next = clampCataractIntensity(value);
+    if(cataractSettings.glareIntensity === next && !opts.force){
+      syncCataractInstances();
+      return;
+    }
+    cataractSettings.glareIntensity = next;
+    if(cataractActive){ updateCataractGlareStyle(); }
+    persistCataractSettings();
+    syncCataractInstances();
+  }
+
+  function setCataractColorCorrection(value, opts={}){
+    const next = !!value;
+    if(cataractSettings.colorCorrection === next && !opts.force){
+      syncCataractInstances();
+      return;
+    }
+    cataractSettings.colorCorrection = next;
+    applyCataractSettings();
+    persistCataractSettings();
+    syncCataractInstances();
+    if(!opts.fromFeature){ syncCataractToggle(CATARACT_CHILD_SLUGS.colorCorrection, next); }
+  }
+
+  function setCataractSharpness(value, opts={}){
+    const next = !!value;
+    if(cataractSettings.sharpness === next && !opts.force){
+      syncCataractInstances();
+      return;
+    }
+    cataractSettings.sharpness = next;
+    applyCataractSettings();
+    persistCataractSettings();
+    syncCataractInstances();
+    if(!opts.fromFeature){ syncCataractToggle(CATARACT_CHILD_SLUGS.sharpness, next); }
+  }
+
+  function setCataractRemoveEffects(value, opts={}){
+    const next = !!value;
+    if(cataractSettings.removeEffects === next && !opts.force){
+      syncCataractInstances();
+      return;
+    }
+    cataractSettings.removeEffects = next;
+    applyCataractSettings();
+    persistCataractSettings();
+    syncCataractInstances();
+    if(!opts.fromFeature){ syncCataractToggle(CATARACT_CHILD_SLUGS.removeEffects, next); }
+  }
+
+  function resetCataractSettings(){
+    cataractSettings = getDefaultCataractSettings();
+    applyCataractSettings();
+    persistCataractSettings();
+    syncCataractInstances();
+    syncCataractToggle(CATARACT_CHILD_SLUGS.reduceGlare, cataractSettings.reduceGlare);
+    syncCataractToggle(CATARACT_CHILD_SLUGS.colorCorrection, cataractSettings.colorCorrection);
+    syncCataractToggle(CATARACT_CHILD_SLUGS.sharpness, cataractSettings.sharpness);
+    syncCataractToggle(CATARACT_CHILD_SLUGS.removeEffects, cataractSettings.removeEffects);
+  }
+
+  function isCataractAtDefaults(){
+    const defaults = getDefaultCataractSettings();
+    return cataractSettings.reduceGlare === defaults.reduceGlare
+      && cataractSettings.glareIntensity === defaults.glareIntensity
+      && cataractSettings.colorCorrection === defaults.colorCorrection
+      && cataractSettings.sharpness === defaults.sharpness
+      && cataractSettings.removeEffects === defaults.removeEffects;
+  }
+
+  function syncCataractToggle(slug, value){
+    if(!slug){ return; }
+    if(typeof toggleFeature !== 'function'){ return; }
+    if(cataractSyncingFeatures){ return; }
+    cataractSyncingFeatures = true;
+    try {
+      toggleFeature(slug, !!value);
+    } finally {
+      cataractSyncingFeatures = false;
+    }
+  }
+
+  function pruneCataractInstances(){
+    cataractInstances.forEach(instance => {
+      if(!instance){
+        cataractInstances.delete(instance);
+        return;
+      }
+      if(instance.wasConnected && (!instance.article || !instance.article.isConnected)){
+        cataractInstances.delete(instance);
+      }
+    });
+  }
+
+  function syncCataractInstances(){
+    pruneCataractInstances();
+    cataractInstances.forEach(instance => {
+      if(!instance || !instance.article){ return; }
+      const {
+        article,
+        reduceGlareInput,
+        intensityField,
+        intensitySlider,
+        intensityValue,
+        intensityDecrease,
+        intensityIncrease,
+        colorInput,
+        sharpnessInput,
+        effectsInput,
+        resetBtn,
+        intensityUnit,
+      } = instance;
+      const active = cataractActive;
+      if(article){
+        if(active){ article.classList.remove('is-disabled'); }
+        else { article.classList.add('is-disabled'); }
+      }
+      if(reduceGlareInput){
+        reduceGlareInput.checked = !!cataractSettings.reduceGlare;
+        reduceGlareInput.disabled = !active;
+      }
+      if(intensityField){
+        const show = !!cataractSettings.reduceGlare;
+        intensityField.hidden = !show;
+        if(show){ intensityField.removeAttribute('aria-hidden'); }
+        else { intensityField.setAttribute('aria-hidden', 'true'); }
+      }
+      const sliderEnabled = active && !!cataractSettings.reduceGlare;
+      const intensityValueNumber = clampCataractIntensity(cataractSettings.glareIntensity);
+      if(intensitySlider){
+        intensitySlider.value = `${intensityValueNumber}`;
+        intensitySlider.disabled = !sliderEnabled;
+      }
+      if(intensityValue){
+        const unit = typeof intensityUnit === 'string' ? intensityUnit : '';
+        intensityValue.textContent = `${intensityValueNumber}${unit}`;
+      }
+      if(intensityDecrease){ intensityDecrease.disabled = !sliderEnabled; }
+      if(intensityIncrease){ intensityIncrease.disabled = !sliderEnabled; }
+      if(colorInput){
+        colorInput.checked = !!cataractSettings.colorCorrection;
+        colorInput.disabled = !active;
+      }
+      if(sharpnessInput){
+        sharpnessInput.checked = !!cataractSettings.sharpness;
+        sharpnessInput.disabled = !active;
+      }
+      if(effectsInput){
+        effectsInput.checked = !!cataractSettings.removeEffects;
+        effectsInput.disabled = !active;
+      }
+      if(resetBtn){
+        resetBtn.disabled = isCataractAtDefaults();
+      }
+    });
+  }
+
+  function createCataractCard(feature){
+    if(!feature || typeof feature.slug !== 'string' || !feature.slug){ return null; }
+
+    const article = document.createElement('article');
+    article.className = 'a11y-card a11y-card--cataract';
+    article.setAttribute('data-role', 'feature-card');
+
+    const header = document.createElement('div');
+    header.className = 'a11y-cataract__header';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.setAttribute('data-role', 'feature-meta');
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = feature.label || '';
+    meta.appendChild(labelEl);
+
+    if(feature.hint){
+      const hintEl = document.createElement('span');
+      hintEl.className = 'hint';
+      hintEl.textContent = feature.hint;
+      meta.appendChild(hintEl);
+    }
+
+    header.appendChild(meta);
+
+    const mainSwitch = buildSwitch(feature.slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
+    if(mainSwitch){
+      mainSwitch.classList.add('a11y-cataract__switch');
+      header.appendChild(mainSwitch);
+    }
+
+    article.appendChild(header);
+
+    const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
+    const introText = typeof settings.intro === 'string' ? settings.intro : '';
+    const resetLabel = typeof settings.reset_label === 'string' ? settings.reset_label : '';
+    const resetAria = typeof settings.reset_aria === 'string' ? settings.reset_aria : '';
+    const intensityHelp = typeof settings.intensity_help === 'string' ? settings.intensity_help : '';
+    const intensityUnit = typeof settings.intensity_unit === 'string' ? settings.intensity_unit : '%';
+    const intensityDecreaseLabel = typeof settings.intensity_decrease === 'string' ? settings.intensity_decrease : '';
+    const intensityIncreaseLabel = typeof settings.intensity_increase === 'string' ? settings.intensity_increase : '';
+
+    if(introText){
+      const intro = document.createElement('p');
+      intro.className = 'a11y-cataract__intro';
+      intro.textContent = introText;
+      article.appendChild(intro);
+    }
+
+    const controls = document.createElement('div');
+    controls.className = 'a11y-cataract__controls';
+    article.appendChild(controls);
+
+    const children = Array.isArray(feature.children) ? feature.children : [];
+    const childMap = new Map();
+    children.forEach(child => {
+      if(child && typeof child.slug === 'string' && child.slug){
+        childMap.set(child.slug, child);
+      }
+    });
+
+    const instance = {
+      article,
+      reduceGlareInput: null,
+      intensityField: null,
+      intensitySlider: null,
+      intensityValue: null,
+      intensityDecrease: null,
+      intensityIncrease: null,
+      colorInput: null,
+      sharpnessInput: null,
+      effectsInput: null,
+      resetBtn: null,
+      intensityUnit,
+      wasConnected: false,
+    };
+
+    const reduceDef = childMap.get(CATARACT_CHILD_SLUGS.reduceGlare);
+    if(reduceDef){
+      const field = document.createElement('div');
+      field.className = 'a11y-cataract__field';
+      const row = document.createElement('div');
+      row.className = 'a11y-cataract__row';
+      const text = document.createElement('span');
+      text.className = 'a11y-cataract__label';
+      text.textContent = reduceDef.label || '';
+      row.appendChild(text);
+      const toggle = buildSwitch(reduceDef.slug, reduceDef.aria_label || reduceDef.label || '', reduceDef.label || reduceDef.aria_label || '');
+      if(toggle){
+        toggle.classList.add('a11y-cataract__switch');
+        row.appendChild(toggle);
+        instance.reduceGlareInput = toggle.querySelector('input');
+      }
+      field.appendChild(row);
+      if(reduceDef.hint){
+        const hint = document.createElement('p');
+        hint.className = 'a11y-cataract__hint';
+        hint.textContent = reduceDef.hint;
+        field.appendChild(hint);
+      }
+      controls.appendChild(field);
+    }
+
+    const intensityDef = childMap.get('glare_intensity');
+    if(intensityDef){
+      const baseId = `a11y-cataract-${++cataractIdCounter}`;
+      const field = document.createElement('div');
+      field.className = 'a11y-cataract__field a11y-cataract__field--intensity';
+      instance.intensityField = field;
+
+      const label = document.createElement('label');
+      label.className = 'a11y-cataract__label';
+      label.id = `${baseId}-glare-label`;
+      label.textContent = intensityDef.label || '';
+
+      const valueDisplay = document.createElement('span');
+      valueDisplay.className = 'a11y-cataract__value';
+      valueDisplay.id = `${baseId}-glare-value`;
+      label.appendChild(valueDisplay);
+      instance.intensityValue = valueDisplay;
+
+      field.appendChild(label);
+
+      const rangeRow = document.createElement('div');
+      rangeRow.className = 'a11y-cataract__range';
+
+      const decreaseBtn = document.createElement('button');
+      decreaseBtn.type = 'button';
+      decreaseBtn.className = 'a11y-cataract__range-btn';
+      decreaseBtn.textContent = '−';
+      if(intensityDecreaseLabel){ decreaseBtn.setAttribute('aria-label', intensityDecreaseLabel); }
+      rangeRow.appendChild(decreaseBtn);
+      instance.intensityDecrease = decreaseBtn;
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      const rangeSettings = intensityDef.settings && typeof intensityDef.settings === 'object' ? intensityDef.settings : {};
+      const min = Number(rangeSettings.min) || CATARACT_INTENSITY_RANGE.min;
+      const max = Number(rangeSettings.max) || CATARACT_INTENSITY_RANGE.max;
+      const step = Number(rangeSettings.step) || CATARACT_INTENSITY_RANGE.step;
+      slider.min = `${min}`;
+      slider.max = `${max}`;
+      slider.step = `${step}`;
+      slider.id = `${baseId}-glare-range`;
+      slider.setAttribute('aria-labelledby', label.id);
+      rangeRow.appendChild(slider);
+      instance.intensitySlider = slider;
+
+      const increaseBtn = document.createElement('button');
+      increaseBtn.type = 'button';
+      increaseBtn.className = 'a11y-cataract__range-btn';
+      increaseBtn.textContent = '+';
+      if(intensityIncreaseLabel){ increaseBtn.setAttribute('aria-label', intensityIncreaseLabel); }
+      rangeRow.appendChild(increaseBtn);
+      instance.intensityIncrease = increaseBtn;
+
+      field.appendChild(rangeRow);
+
+      const hintText = intensityDef.hint || intensityHelp || '';
+      if(hintText){
+        const hint = document.createElement('p');
+        hint.className = 'a11y-cataract__hint';
+        hint.id = `${baseId}-glare-hint`;
+        hint.textContent = hintText;
+        field.appendChild(hint);
+        slider.setAttribute('aria-describedby', hint.id);
+      }
+
+      controls.appendChild(field);
+
+      slider.addEventListener('input', () => {
+        setCataractGlareIntensity(slider.value);
+      });
+
+      decreaseBtn.addEventListener('click', () => {
+        const stepValue = Number(slider.step) || CATARACT_INTENSITY_RANGE.step;
+        const minValue = Number(slider.min) || CATARACT_INTENSITY_RANGE.min;
+        const current = clampCataractIntensity(slider.value);
+        const next = Math.max(minValue, current - stepValue);
+        setCataractGlareIntensity(next, { force: true });
+      });
+
+      increaseBtn.addEventListener('click', () => {
+        const stepValue = Number(slider.step) || CATARACT_INTENSITY_RANGE.step;
+        const maxValue = Number(slider.max) || CATARACT_INTENSITY_RANGE.max;
+        const current = clampCataractIntensity(slider.value);
+        const next = Math.min(maxValue, current + stepValue);
+        setCataractGlareIntensity(next, { force: true });
+      });
+    }
+
+    const colorDef = childMap.get(CATARACT_CHILD_SLUGS.colorCorrection);
+    if(colorDef){
+      const field = document.createElement('div');
+      field.className = 'a11y-cataract__field';
+      const row = document.createElement('div');
+      row.className = 'a11y-cataract__row';
+      const text = document.createElement('span');
+      text.className = 'a11y-cataract__label';
+      text.textContent = colorDef.label || '';
+      row.appendChild(text);
+      const toggle = buildSwitch(colorDef.slug, colorDef.aria_label || colorDef.label || '', colorDef.label || colorDef.aria_label || '');
+      if(toggle){
+        toggle.classList.add('a11y-cataract__switch');
+        row.appendChild(toggle);
+        instance.colorInput = toggle.querySelector('input');
+      }
+      field.appendChild(row);
+      if(colorDef.hint){
+        const hint = document.createElement('p');
+        hint.className = 'a11y-cataract__hint';
+        hint.textContent = colorDef.hint;
+        field.appendChild(hint);
+      }
+      controls.appendChild(field);
+    }
+
+    const sharpnessDef = childMap.get(CATARACT_CHILD_SLUGS.sharpness);
+    if(sharpnessDef){
+      const field = document.createElement('div');
+      field.className = 'a11y-cataract__field';
+      const row = document.createElement('div');
+      row.className = 'a11y-cataract__row';
+      const text = document.createElement('span');
+      text.className = 'a11y-cataract__label';
+      text.textContent = sharpnessDef.label || '';
+      row.appendChild(text);
+      const toggle = buildSwitch(sharpnessDef.slug, sharpnessDef.aria_label || sharpnessDef.label || '', sharpnessDef.label || sharpnessDef.aria_label || '');
+      if(toggle){
+        toggle.classList.add('a11y-cataract__switch');
+        row.appendChild(toggle);
+        instance.sharpnessInput = toggle.querySelector('input');
+      }
+      field.appendChild(row);
+      if(sharpnessDef.hint){
+        const hint = document.createElement('p');
+        hint.className = 'a11y-cataract__hint';
+        hint.textContent = sharpnessDef.hint;
+        field.appendChild(hint);
+      }
+      controls.appendChild(field);
+    }
+
+    const effectsDef = childMap.get(CATARACT_CHILD_SLUGS.removeEffects);
+    if(effectsDef){
+      const field = document.createElement('div');
+      field.className = 'a11y-cataract__field';
+      const row = document.createElement('div');
+      row.className = 'a11y-cataract__row';
+      const text = document.createElement('span');
+      text.className = 'a11y-cataract__label';
+      text.textContent = effectsDef.label || '';
+      row.appendChild(text);
+      const toggle = buildSwitch(effectsDef.slug, effectsDef.aria_label || effectsDef.label || '', effectsDef.label || effectsDef.aria_label || '');
+      if(toggle){
+        toggle.classList.add('a11y-cataract__switch');
+        row.appendChild(toggle);
+        instance.effectsInput = toggle.querySelector('input');
+      }
+      field.appendChild(row);
+      if(effectsDef.hint){
+        const hint = document.createElement('p');
+        hint.className = 'a11y-cataract__hint';
+        hint.textContent = effectsDef.hint;
+        field.appendChild(hint);
+      }
+      controls.appendChild(field);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'a11y-cataract__actions';
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'a11y-cataract__reset';
+    resetBtn.textContent = resetLabel || 'Réinitialiser';
+    if(resetAria){ resetBtn.setAttribute('aria-label', resetAria); }
+    actions.appendChild(resetBtn);
+    instance.resetBtn = resetBtn;
+    article.appendChild(actions);
+
+    resetBtn.addEventListener('click', () => {
+      resetCataractSettings();
+    });
+
+    cataractInstances.add(instance);
+    const markConnection = () => {
+      if(instance.article && instance.article.isConnected){ instance.wasConnected = true; }
+    };
+    if(typeof requestAnimationFrame === 'function'){ requestAnimationFrame(markConnection); }
+    else { setTimeout(markConnection, 0); }
+    syncCataractInstances();
+
+    return article;
+  }
+
+
   const MIGRAINE_SLUG = 'vision-migraine';
   const MIGRAINE_SETTINGS_KEY = 'a11y-widget-migraine-settings:v1';
   const MIGRAINE_THEMES = ['none', 'grayscale', 'amber'];
@@ -7448,6 +8142,9 @@ ${interactiveSelectors} {
     if(template === 'reading-guide'){
       return createReadingGuideCard(feature);
     }
+    if(template === 'cataract-support'){
+      return createCataractCard(feature);
+    }
     return createFeaturePlaceholder(feature);
   }
 
@@ -7890,6 +8587,30 @@ ${interactiveSelectors} {
   A11yAPI.registerFeature(MIGRAINE_SLUG, on => {
     if(on){ ensureVisualFilterStyleElement(); }
     setMigraineActive(on);
+  });
+
+  A11yAPI.registerFeature(CATARACT_SLUG, on => {
+    setCataractActive(on);
+  });
+
+  A11yAPI.registerFeature(CATARACT_CHILD_SLUGS.reduceGlare, on => {
+    if(cataractSyncingFeatures){ return; }
+    setCataractReduceGlare(on, { fromFeature: true });
+  });
+
+  A11yAPI.registerFeature(CATARACT_CHILD_SLUGS.colorCorrection, on => {
+    if(cataractSyncingFeatures){ return; }
+    setCataractColorCorrection(on, { fromFeature: true });
+  });
+
+  A11yAPI.registerFeature(CATARACT_CHILD_SLUGS.sharpness, on => {
+    if(cataractSyncingFeatures){ return; }
+    setCataractSharpness(on, { fromFeature: true });
+  });
+
+  A11yAPI.registerFeature(CATARACT_CHILD_SLUGS.removeEffects, on => {
+    if(cataractSyncingFeatures){ return; }
+    setCataractRemoveEffects(on, { fromFeature: true });
   });
 
   A11yAPI.registerFeature(BRIGHTNESS_SLUG, on => {
