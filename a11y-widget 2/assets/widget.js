@@ -4422,25 +4422,33 @@ ${interactiveSelectors} {
     const styleEl = ensureMonophtalmieFieldStyle();
     const selector = `html[data-a11yVisionMonophtalmie="on"][data-a11yMonophtalmieFieldPosition]`;
     let margin;
+    let alignItems;
+    let alignSelf;
     switch(position){
       case 'left':
         margin = '0 auto 0 0';
+        alignItems = 'flex-start';
+        alignSelf = 'flex-start';
         break;
       case 'right':
         margin = '0 0 0 auto';
+        alignItems = 'flex-end';
+        alignSelf = 'flex-end';
         break;
       case 'center':
       default:
         margin = '0 auto';
+        alignItems = 'center';
+        alignSelf = 'center';
         break;
     }
     styleEl.textContent = [
-      `${selector} body { position: relative; display: flex !important; flex-direction: column !important; align-items: stretch !important; }`,
+      `${selector} body { position: relative; display: flex !important; flex-direction: column !important; align-items: ${alignItems} !important; }`,
       `${selector} body::before { content: ''; position: fixed; inset: 0; pointer-events: none; background: rgba(8, 14, 28, 0.7); mix-blend-mode: multiply; z-index: 2147483642; }`,
       `${selector}[data-a11yMonophtalmieFieldPosition="center"] body::before { clip-path: inset(0 18vw 0 18vw round 40px); }`,
       `${selector}[data-a11yMonophtalmieFieldPosition="left"] body::before { clip-path: inset(0 32vw 0 0 round 40px); }`,
       `${selector}[data-a11yMonophtalmieFieldPosition="right"] body::before { clip-path: inset(0 0 0 32vw round 40px); }`,
-      `${selector} body > *:not(#a11y-widget-root):not(#a11y-monophtalmie-magnifier) { max-width: 900px !important; width: 100% !important; margin: ${margin} !important; }`,
+      `${selector} body > *:not(#a11y-widget-root):not(#a11y-monophtalmie-magnifier) { max-width: 900px !important; width: 100% !important; margin: ${margin} !important; align-self: ${alignSelf} !important; }`,
       `${selector} body > header,`,
       `${selector} body > footer,`,
       `${selector} body > nav { max-width: 100% !important; }`,
@@ -4448,7 +4456,9 @@ ${interactiveSelectors} {
       `${selector} #wrapper,`,
       `${selector} .site,`,
       `${selector} .container,`,
-      `${selector} main { max-width: 900px !important; margin: ${margin} !important; }`,
+      `${selector} main { max-width: 900px !important; margin: ${margin} !important; align-self: ${alignSelf} !important; }`,
+      `${selector} #a11y-widget-root,`,
+      `${selector} #a11y-monophtalmie-magnifier { max-width: none !important; margin: 0 !important; align-self: stretch !important; }`
     ].join('\n');
   }
 
