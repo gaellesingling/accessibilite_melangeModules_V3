@@ -484,8 +484,7 @@
       `${mediaScope} { opacity: ${formatFilterNumber(opacity)} !important; }`,
       `${filterScope}[style*='background: white' i], ${filterScope}[style*='background:#fff' i], ${filterScope}[style*='background-color: white' i], ${filterScope}[style*='background-color:#fff' i] { background-color: #f5f5f5 !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { filter: none !important; opacity: initial !important; background: initial !important; }`,
-    ].join('
-');
+    ].join('\n');
   }
 
   function updateCataractColorStyle(){
@@ -501,8 +500,7 @@
       `${scope} [style*='color: navy' i], ${scope} [style*='color:#000080' i], ${scope} [style*='color: rgb(0,0,128)' i] { filter: brightness(1.15) saturate(1.1) !important; }`,
       `${scope} [style*='color: purple' i], ${scope} [style*='#800080' i], ${scope} [style*='color: rgb(128,0,128)' i] { filter: brightness(1.1) saturate(1.15) !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { filter: none !important; }`,
-    ].join('
-');
+    ].join('\n');
   }
 
   function updateCataractSharpnessStyle(){
@@ -519,8 +517,7 @@
       `${scope} :is(h1, h2, h3, h4, h5, h6) { text-shadow: 0 0 1px rgba(0,0,0,0.5) !important; font-weight: 700 !important; }`,
       `${scope} img { image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { text-shadow: none !important; font-weight: inherit !important; image-rendering: auto !important; }`,
-    ].join('
-');
+    ].join('\n');
   }
 
   function updateCataractEffectsStyle(){
@@ -536,8 +533,7 @@
       `${scope} :is(img, picture, video, canvas, svg) { opacity: 1 !important; }`,
       `${scope} *:hover { transform: none !important; filter: none !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { animation: initial !important; transition: initial !important; box-shadow: initial !important; text-shadow: initial !important; border-radius: initial !important; }`,
-    ].join('
-');
+    ].join('\n');
   }
 
   function applyCataractSettings(){
