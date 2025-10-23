@@ -4517,13 +4517,22 @@ ${interactiveSelectors} {
     if(!sourceRoot){ return; }
     const cloneRoot = sourceRoot.cloneNode(true);
     if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelectorAll){
-      cloneRoot.querySelectorAll('script, #a11y-widget-root, #a11y-monophtalmie-magnifier').forEach(el => {
+      cloneRoot.querySelectorAll('script, #a11y-monophtalmie-magnifier').forEach(el => {
         if(el && el.parentNode){ el.parentNode.removeChild(el); }
       });
     }
     if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE){
-      if(cloneRoot.id === 'a11y-widget-root' || cloneRoot.id === 'a11y-monophtalmie-magnifier'){
+      if(cloneRoot.id === 'a11y-monophtalmie-magnifier'){
         while(cloneRoot.firstChild){ cloneRoot.removeChild(cloneRoot.firstChild); }
+      }
+    }
+    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelector){
+      const widgetRootClone = cloneRoot.id === 'a11y-widget-root'
+        ? cloneRoot
+        : cloneRoot.querySelector('#a11y-widget-root');
+      if(widgetRootClone){
+        widgetRootClone.removeAttribute('id');
+        widgetRootClone.setAttribute('data-a11y-widget-clone', 'root');
       }
     }
     if(!cloneRoot){ return; }
