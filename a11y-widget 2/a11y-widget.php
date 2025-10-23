@@ -128,6 +128,43 @@ function a11y_widget_get_default_sections() {
                     ),
                 ),
                 array(
+                    'slug'       => 'vision-cataracte',
+                    'label'      => __( 'Cataracte', 'a11y-widget' ),
+                    'aria_label' => __( 'Activer et configurer les réglages pour la cataracte', 'a11y-widget' ),
+                    'children'   => array(
+                        array(
+                            'slug'        => 'reduce_glare',
+                            'label'       => __( 'Réduction de l’éblouissement', 'a11y-widget' ),
+                            'aria_label'  => __( 'Activer le filtre anti-éblouissement pour la cataracte', 'a11y-widget' ),
+                            'placeholder' => true,
+                        ),
+                        array(
+                            'slug'        => 'glare_intensity',
+                            'label'       => __( 'Intensité du filtre', 'a11y-widget' ),
+                            'aria_label'  => __( 'Ajuster l’intensité de la réduction d’éblouissement', 'a11y-widget' ),
+                            'placeholder' => true,
+                        ),
+                        array(
+                            'slug'        => 'color_correction',
+                            'label'       => __( 'Correction des couleurs', 'a11y-widget' ),
+                            'aria_label'  => __( 'Activer la correction des couleurs pour améliorer les contrastes', 'a11y-widget' ),
+                            'placeholder' => true,
+                        ),
+                        array(
+                            'slug'        => 'sharpness',
+                            'label'       => __( 'Netteté renforcée', 'a11y-widget' ),
+                            'aria_label'  => __( 'Augmenter la netteté du contenu pour compenser le flou lié à la cataracte', 'a11y-widget' ),
+                            'placeholder' => true,
+                        ),
+                        array(
+                            'slug'        => 'remove_effects',
+                            'label'       => __( 'Désactiver les réglages cataracte', 'a11y-widget' ),
+                            'aria_label'  => __( 'Réinitialiser tous les réglages appliqués pour la cataracte', 'a11y-widget' ),
+                            'placeholder' => true,
+                        ),
+                    ),
+                ),
+                array(
                     'slug'       => 'vision-migraine',
                     'label'      => __( 'Soulagement migraines', 'a11y-widget' ),
                     'hint'       => __( 'Filtre chaud, réduction de la lumière bleue et options anti-déclencheurs.', 'a11y-widget' ),
