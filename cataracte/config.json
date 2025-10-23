@@ -1,0 +1,91 @@
+{
+  "name": "cataracte",
+  "title": "Aide Cataracte",
+  "description": "Compense les défis visuels de la cataracte : vision floue, sensibilité à la lumière, perception des couleurs altérée",
+  "version": "1.0.1",
+  "author": "Accessibility Modular Plugin",
+  "category": "vision",
+  "icon": "👁️‍🗨️",
+  "enabled": true,
+  "priority": 6,
+  "rgaa_criteria": [
+    "3.2",
+    "3.3",
+    "10.4"
+  ],
+  "wcag_criteria": [
+    "1.4.3",
+    "1.4.6",
+    "1.4.8"
+  ],
+  "conformity_level": "AAA",
+  "features": [
+    {
+      "id": "reduce_glare",
+      "label": "Réduire l'éblouissement",
+      "type": "toggle",
+      "default": false,
+      "description": "Filtre les lumières vives et réduit l'éblouissement"
+    },
+    {
+      "id": "glare_intensity",
+      "label": "Intensité anti-éblouissement",
+      "type": "range",
+      "default": 20,
+      "min": 10,
+      "max": 40,
+      "step": 5,
+      "unit": "%",
+      "description": "Ajuste le niveau de réduction d'éblouissement"
+    },
+    {
+      "id": "color_correction",
+      "label": "Correction des couleurs",
+      "type": "toggle",
+      "default": false,
+      "description": "Compense le jaunissement et améliore la distinction des couleurs"
+    },
+    {
+      "id": "sharpness",
+      "label": "Améliorer la netteté",
+      "type": "toggle",
+      "default": false,
+      "description": "Rend le texte et les images plus nets"
+    },
+    {
+      "id": "remove_effects",
+      "label": "Supprimer les effets visuels",
+      "type": "toggle",
+      "default": false,
+      "description": "Enlève animations, ombres et effets qui créent des halos"
+    }
+  ],
+  "cookies": [
+    "acc_cataracte_reduce_glare",
+    "acc_cataracte_glare_intensity",
+    "acc_cataracte_color_correction",
+    "acc_cataracte_sharpness",
+    "acc_cataracte_remove_effects"
+  ],
+  "dependencies": [],
+  "external_resources": [],
+  "performance": {
+    "weight": "15KB",
+    "execution_time": "< 15ms",
+    "browser_compatibility": "Chrome 90+, Firefox 88+, Safari 14+"
+  },
+  "accessibility": {
+    "keyboard_navigation": true,
+    "screen_reader_support": true,
+    "aria_labels": true,
+    "focus_management": true
+  },
+  "medical_conditions": [
+    "cataracte",
+    "opacification_cristallin",
+    "vision_floue",
+    "sensibilite_lumiere",
+    "eblouissement",
+    "perception_couleurs_alteree"
+  ]
+}
