@@ -357,21 +357,22 @@
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(.wp-site-blocks a, .entry-content a, .wp-block-button__link, .wp-element-button, .wp-block-navigation__container a) {
-                            background-color: #0f172a !important;
-                            color: #f8fafc !important;
-                            border: 2px solid #1d4ed8 !important;
+                            background-color: #fbbf24 !important;
+                            color: #0b1120 !important;
+                            border: 3px solid #0b1120 !important;
                             transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
                             text-decoration: none !important;
+                            box-shadow: 0 0 0 2px rgba(11, 17, 32, 0.4) !important;
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(.wp-site-blocks a:visited, .entry-content a:visited, .wp-block-button__link:visited, .wp-element-button:visited, .wp-block-navigation__container a:visited) {
-                            color: #e2e8f0 !important;
+                            color: #0b1120 !important;
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(.wp-site-blocks a:hover, .wp-site-blocks a:focus, .entry-content a:hover, .entry-content a:focus, .wp-block-button__link:hover, .wp-block-button__link:focus, .wp-element-button:hover, .wp-element-button:focus, .wp-block-navigation__container a:hover, .wp-block-navigation__container a:focus) {
-                            background-color: #1d4ed8 !important;
-                            color: #f8fafc !important;
-                            box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.55) !important;
+                            background-color: #0b1120 !important;
+                            color: #fef3c7 !important;
+                            box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.75) !important;
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(h1, h2, h3, h4, h5, h6) {
