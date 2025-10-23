@@ -323,9 +323,8 @@
                     <style id="acc-mono-depth-style">
                         body:not(#acc-widget-panel):not(#acc-widget-panel *) {
                             position: relative !important;
-                            background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 55%), repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0 18px, rgba(0, 0, 0, 0.22) 18px 36px);
-                            background-attachment: fixed, fixed;
-                            background-blend-mode: multiply, normal;
+                            background-color: #0b1120 !important;
+                            color: #e2e8f0 !important;
                         }
 
                         body:not(#acc-widget-panel):not(#acc-widget-panel *)::before {
@@ -334,9 +333,7 @@
                             inset: 0;
                             pointer-events: none;
                             z-index: 2147483600;
-                            background: radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.45), transparent 52%), radial-gradient(circle at 78% 42%, rgba(0, 0, 0, 0.5), transparent 58%), linear-gradient(120deg, rgba(0, 0, 0, 0.4), transparent 70%);
-                            mix-blend-mode: multiply;
-                            opacity: 0.55;
+                            background: rgba(15, 23, 42, 0.65);
                         }
 
                         #acc-widget-panel,
@@ -345,36 +342,40 @@
                             mix-blend-mode: normal !important;
                             position: relative;
                             z-index: 2147483647 !important;
+                            color: inherit !important;
                         }
 
-                        img:not(#acc-widget-panel *),
-                        video:not(#acc-widget-panel *),
-                        iframe:not(#acc-widget-panel *),
-                        button:not(#acc-widget-panel *),
-                        a:not(#acc-widget-panel *),
-                        input:not(#acc-widget-panel *),
-                        select:not(#acc-widget-panel *),
-                        textarea:not(#acc-widget-panel *),
-                        .card, .box, .panel,
-                        article:not(#acc-widget-panel),
-                        section:not(#acc-widget-panel) {
-                            box-shadow: 3px 3px 8px rgba(0,0,0,0.3) !important;
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(article, section, main, aside, nav, header, footer, .card, .panel, .box, .content, .container, .wrapper, .module, .layout, .card-body, .card-content) {
+                            background-color: #f8fafc !important;
+                            color: #0f172a !important;
+                            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18) !important;
+                            border-color: rgba(15, 23, 42, 0.12) !important;
                         }
 
-                        button:not(#acc-widget-panel *),
-                        a:not(#acc-widget-panel *),
-                        input[type="button"]:not(#acc-widget-panel *),
-                        input[type="submit"]:not(#acc-widget-panel *) {
-                            border: 2px solid rgba(0,0,0,0.2) !important;
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(img, video, iframe, figure, picture) {
+                            box-shadow: 0 10px 32px rgba(15, 23, 42, 0.32) !important;
                         }
 
-                        h1:not(#acc-widget-panel *),
-                        h2:not(#acc-widget-panel *),
-                        h3:not(#acc-widget-panel *),
-                        h4:not(#acc-widget-panel *),
-                        h5:not(#acc-widget-panel *),
-                        h6:not(#acc-widget-panel *) {
-                            text-shadow: 2px 2px 4px rgba(0,0,0,0.2) !important;
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(button, a, input, select, textarea):not([type="hidden"]) {
+                            background-color: #0ea5e9 !important;
+                            color: #022c22 !important;
+                            border: 2px solid #0369a1 !important;
+                            transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+                        }
+
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(a:visited) {
+                            color: #022c22 !important;
+                        }
+
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(button:hover, button:focus, a:hover, a:focus, input:hover, input:focus, select:hover, select:focus, textarea:hover, textarea:focus):not([type="hidden"]) {
+                            background-color: #38bdf8 !important;
+                            color: #022c22 !important;
+                            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45) !important;
+                        }
+
+                        body:not(#acc-widget-panel):not(#acc-widget-panel *) :where(h1, h2, h3, h4, h5, h6) {
+                            color: #0f172a !important;
+                            text-shadow: 2px 2px 4px rgba(15, 23, 42, 0.25) !important;
                         }
                     </style>
                 `;

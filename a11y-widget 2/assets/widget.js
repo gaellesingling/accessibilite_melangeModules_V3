@@ -4671,12 +4671,15 @@ ${interactiveSelectors} {
     const scope = `${selector} body`;
     const exclusions = `:not(:where(#a11y-widget-root, #a11y-widget-root *, [data-a11y-filter-exempt], [data-a11y-filter-exempt] *))`;
     styleEl.textContent = [
-      `${scope}${exclusions} { position: relative !important; background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 55%), repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0 18px, rgba(0, 0, 0, 0.22) 18px 36px); background-attachment: fixed, fixed; background-blend-mode: multiply, normal; }`,
-      `${scope}${exclusions}::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483600; background: radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.45), transparent 52%), radial-gradient(circle at 78% 42%, rgba(0, 0, 0, 0.5), transparent 58%), linear-gradient(120deg, rgba(0, 0, 0, 0.4), transparent 70%); mix-blend-mode: multiply; opacity: 0.55; }`,
-      `${scope} :where(img, video, iframe, button, a, input, select, textarea, .card, .box, .panel, article, section)${exclusions} { box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.3) !important; }`,
-      `${scope} :where(button, a, input[type="button"], input[type="submit"])${exclusions} { border: 2px solid rgba(0, 0, 0, 0.2) !important; }`,
-      `${scope} :where(h1, h2, h3, h4, h5, h6)${exclusions} { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important; }`,
-      `${selector} #a11y-widget-root, ${selector} #a11y-widget-root * { isolation: isolate; mix-blend-mode: normal !important; position: relative; z-index: 2147483647; }`,
+      `${scope}${exclusions} { position: relative !important; background-color: #0b1120 !important; color: #e2e8f0 !important; }`,
+      `${scope}${exclusions}::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 2147483600; background: rgba(15, 23, 42, 0.65); }`,
+      `${scope} :where(article, section, main, aside, nav, header, footer, .card, .panel, .box, .content, .container, .wrapper, .module, .layout, .card-body, .card-content)${exclusions} { background-color: #f8fafc !important; color: #0f172a !important; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18) !important; border-color: rgba(15, 23, 42, 0.12) !important; }`,
+      `${scope} :where(img, video, iframe, figure, picture)${exclusions} { box-shadow: 0 10px 32px rgba(15, 23, 42, 0.32) !important; }`,
+      `${scope} :where(button, a, input, select, textarea)${exclusions}:not([type="hidden"]) { background-color: #0ea5e9 !important; color: #022c22 !important; border: 2px solid #0369a1 !important; transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease; }`,
+      `${scope} :where(a:visited)${exclusions} { color: #022c22 !important; }`,
+      `${scope} :where(button:hover, button:focus, a:hover, a:focus, input:hover, input:focus, select:hover, select:focus, textarea:hover, textarea:focus)${exclusions}:not([type="hidden"]) { background-color: #38bdf8 !important; color: #022c22 !important; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.45) !important; }`,
+      `${scope} :where(h1, h2, h3, h4, h5, h6)${exclusions} { color: #0f172a !important; text-shadow: 2px 2px 4px rgba(15, 23, 42, 0.25) !important; }`,
+      `${selector} #a11y-widget-root, ${selector} #a11y-widget-root * { isolation: isolate; mix-blend-mode: normal !important; position: relative; z-index: 2147483647; color: inherit !important; }`,
     ].join('\n');
   }
 
