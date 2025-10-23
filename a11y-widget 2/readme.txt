@@ -3,10 +3,13 @@ Contributors: chatgpt
 Tags: accessibility, a11y, widget
 Requires at least: 5.0
 Tested up to: 6.6
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 
 Un bouton flottant ouvre un module d’accessibilité avec des interrupteurs **placeholders** (rien n’est appliqué par défaut). Vous pouvez brancher vos propres styles/scripts via `data-*`, l’API JS et les CustomEvents.
+
+== Nouveautés 1.4.1 ==
+- Retrait du mode « Monophtalmie » du widget a11y.
 
 == Nouveautés 1.4.0 ==
 - Arrivée du mode « Monophtalmie » intégrant une loupe activable, des indicateurs de profondeur, un champ visuel adaptable et un mode vision basse dédié.
