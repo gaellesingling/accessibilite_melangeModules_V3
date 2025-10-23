@@ -4430,15 +4430,13 @@ ${interactiveSelectors} {
 
   function ensureMonophtalmieMagnifier(){
     if(monophtalmieMagnifierEl && monophtalmieMagnifierEl.isConnected){ return monophtalmieMagnifierEl; }
-    if(!document.body){ return null; }
+    if(!document.documentElement){ return null; }
     const existing = document.getElementById('a11y-monophtalmie-magnifier');
     if(existing && existing.parentNode){ existing.parentNode.removeChild(existing); }
     const container = document.createElement('div');
     container.id = 'a11y-monophtalmie-magnifier';
     container.setAttribute('aria-hidden', 'true');
     container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
     container.style.width = `${MONOPHTALMIE_MAGNIFIER_SIZE}px`;
     container.style.height = `${MONOPHTALMIE_MAGNIFIER_SIZE}px`;
     container.style.pointerEvents = 'none';
@@ -4446,19 +4444,24 @@ ${interactiveSelectors} {
     container.style.borderRadius = '50%';
     container.style.border = '3px solid rgba(255, 255, 255, 0.85)';
     container.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.45)';
-    container.style.backgroundColor = '#000';
+    container.style.background = 'transparent';
+    container.style.backgroundColor = 'transparent';
     container.style.opacity = '0';
-    container.style.transform = 'translate3d(-9999px, -9999px, 0)';
+    container.style.transform = 'translate(-50%, -50%)';
     container.style.transition = 'opacity 0.2s ease';
-    container.style.zIndex = '2147483646';
+    container.style.zIndex = '2147483647';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
     const content = document.createElement('div');
     content.className = 'a11y-monophtalmie__magnifier-content';
     content.style.position = 'absolute';
     content.style.top = '0';
     content.style.left = '0';
     content.style.transformOrigin = '0 0';
+    content.style.willChange = 'transform';
     container.appendChild(content);
-    document.body.appendChild(container);
+    const mountTarget = document.body || document.documentElement;
+    if(mountTarget){ mountTarget.appendChild(container); }
     monophtalmieMagnifierEl = container;
     monophtalmieMagnifierContent = content;
     applyMonophtalmieMagnifierBackgroundStyles();
@@ -4468,7 +4471,8 @@ ${interactiveSelectors} {
   function hideMonophtalmieMagnifier(){
     if(!monophtalmieMagnifierEl){ return; }
     monophtalmieMagnifierEl.style.opacity = '0';
-    monophtalmieMagnifierEl.style.transform = 'translate3d(-9999px, -9999px, 0)';
+    monophtalmieMagnifierEl.style.left = '-9999px';
+    monophtalmieMagnifierEl.style.top = '-9999px';
   }
 
   function requestMonophtalmieMagnifierFrame(){
@@ -4495,18 +4499,33 @@ ${interactiveSelectors} {
     const container = ensureMonophtalmieMagnifier();
     if(!container || !monophtalmieMagnifierContent){ return; }
     const zoom = clampMonophtalmieZoom(monophtalmieSettings.magnifierZoom) / 100;
-    const offset = MONOPHTALMIE_MAGNIFIER_SIZE / 2;
-    container.style.transform = `translate3d(${position.x - offset}px, ${position.y - offset}px, 0)`;
+    container.style.left = `${position.x}px`;
+    container.style.top = `${position.y}px`;
     container.style.opacity = '1';
-    const scrollX = typeof window.scrollX === 'number' ? window.scrollX : window.pageXOffset || 0;
-    const scrollY = typeof window.scrollY === 'number' ? window.scrollY : window.pageYOffset || 0;
-    const pageX = position.x + scrollX;
-    const pageY = position.y + scrollY;
-    const left = (MONOPHTALMIE_MAGNIFIER_SIZE / 2) - (pageX * zoom);
-    const top = (MONOPHTALMIE_MAGNIFIER_SIZE / 2) - (pageY * zoom);
-    monophtalmieMagnifierContent.style.transform = `scale(${zoom})`;
-    monophtalmieMagnifierContent.style.left = `${left}px`;
-    monophtalmieMagnifierContent.style.top = `${top}px`;
+    const hasNumeric = value => typeof value === 'number' && !Number.isNaN(value);
+    const rawPageXOffset = typeof window.pageXOffset === 'number'
+      ? window.pageXOffset
+      : (typeof window.scrollX === 'number' ? window.scrollX : null);
+    const rawPageYOffset = typeof window.pageYOffset === 'number'
+      ? window.pageYOffset
+      : (typeof window.scrollY === 'number' ? window.scrollY : null);
+    const docEl = document.documentElement;
+    const body = document.body;
+    const fallbackScrollX = hasNumeric(docEl?.scrollLeft) ? docEl.scrollLeft
+      : (hasNumeric(body?.scrollLeft) ? body.scrollLeft : 0);
+    const fallbackScrollY = hasNumeric(docEl?.scrollTop) ? docEl.scrollTop
+      : (hasNumeric(body?.scrollTop) ? body.scrollTop : 0);
+    const pageXOffset = rawPageXOffset !== null ? rawPageXOffset : fallbackScrollX;
+    const pageYOffset = rawPageYOffset !== null ? rawPageYOffset : fallbackScrollY;
+    const rootRect = document.documentElement && document.documentElement.getBoundingClientRect
+      ? document.documentElement.getBoundingClientRect()
+      : { left: 0, top: 0 };
+    const rootOffsetLeft = typeof rootRect.left === 'number' ? rootRect.left : 0;
+    const rootOffsetTop = typeof rootRect.top === 'number' ? rootRect.top : 0;
+    const docX = position.x + pageXOffset - rootOffsetLeft;
+    const docY = position.y + pageYOffset - rootOffsetTop;
+    monophtalmieMagnifierContent.style.transform =
+      `translate(${-docX * zoom + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px, ${-docY * zoom + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px) scale(${zoom})`;
   }
 
   function refreshMonophtalmieMagnifierContent(){
@@ -4517,13 +4536,21 @@ ${interactiveSelectors} {
     if(!sourceRoot){ return; }
     const cloneRoot = sourceRoot.cloneNode(true);
     if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelectorAll){
-      cloneRoot.querySelectorAll('script, #a11y-widget-root, #a11y-monophtalmie-magnifier').forEach(el => {
+      cloneRoot.querySelectorAll('script, #a11y-monophtalmie-magnifier').forEach(el => {
         if(el && el.parentNode){ el.parentNode.removeChild(el); }
       });
     }
     if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE){
-      if(cloneRoot.id === 'a11y-widget-root' || cloneRoot.id === 'a11y-monophtalmie-magnifier'){
+      if(cloneRoot.id === 'a11y-monophtalmie-magnifier'){
         while(cloneRoot.firstChild){ cloneRoot.removeChild(cloneRoot.firstChild); }
+      }
+    }
+    if(cloneRoot && cloneRoot.nodeType === Node.ELEMENT_NODE && cloneRoot.querySelector){
+      const widgetRootClone = cloneRoot.id === 'a11y-widget-root'
+        ? cloneRoot
+        : cloneRoot.querySelector('#a11y-widget-root');
+      if(widgetRootClone){
+        widgetRootClone.setAttribute('data-a11y-widget-clone', 'root');
       }
     }
     if(!cloneRoot){ return; }
