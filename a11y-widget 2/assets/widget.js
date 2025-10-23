@@ -4460,7 +4460,8 @@ ${interactiveSelectors} {
     content.style.transformOrigin = '0 0';
     content.style.willChange = 'transform';
     container.appendChild(content);
-    document.documentElement.appendChild(container);
+    const mountTarget = document.body || document.documentElement;
+    if(mountTarget){ mountTarget.appendChild(container); }
     monophtalmieMagnifierEl = container;
     monophtalmieMagnifierContent = content;
     applyMonophtalmieMagnifierBackgroundStyles();
@@ -4516,10 +4517,15 @@ ${interactiveSelectors} {
       : (hasNumeric(body?.scrollTop) ? body.scrollTop : 0);
     const pageXOffset = rawPageXOffset !== null ? rawPageXOffset : fallbackScrollX;
     const pageYOffset = rawPageYOffset !== null ? rawPageYOffset : fallbackScrollY;
-    const docX = position.x + pageXOffset;
-    const docY = position.y + pageYOffset;
+    const rootRect = document.documentElement && document.documentElement.getBoundingClientRect
+      ? document.documentElement.getBoundingClientRect()
+      : { left: 0, top: 0 };
+    const rootOffsetLeft = typeof rootRect.left === 'number' ? rootRect.left : 0;
+    const rootOffsetTop = typeof rootRect.top === 'number' ? rootRect.top : 0;
+    const docX = position.x + pageXOffset - rootOffsetLeft;
+    const docY = position.y + pageYOffset - rootOffsetTop;
     monophtalmieMagnifierContent.style.transform =
-      `translate(${-docX + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px, ${-docY + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px) scale(${zoom})`;
+      `translate(${-docX * zoom + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px, ${-docY * zoom + (MONOPHTALMIE_MAGNIFIER_SIZE / 2)}px) scale(${zoom})`;
   }
 
   function refreshMonophtalmieMagnifierContent(){
