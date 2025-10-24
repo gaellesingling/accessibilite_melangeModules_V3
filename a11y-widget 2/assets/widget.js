@@ -2775,6 +2775,878 @@
     updateColorblindToggleAvailability();
   }
 
+  const BRAILLE_SLUGS = {
+    contracted: 'braille-contracte',
+    uncontracted: 'braille-decontracte',
+  };
+  const BRAILLE_TEMPLATE_NAME = 'braille-translator';
+  const BRAILLE_SETTINGS_KEY = 'a11y-widget-braille-settings:v1';
+  const BRAILLE_SELECTION_MAX_LENGTH = 600;
+  const BRAILLE_MANUAL_MAX_LENGTH = 1200;
+
+  // Tables issues des wrappers PHP braille contracté et non contracté.
+  const BRAILLE_CONTRACTED_BASE_TABLE = {
+    // Lettres minuscules
+    'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙', 'e': '⠑',
+    'f': '⠋', 'g': '⠛', 'h': '⠓', 'i': '⠊', 'j': '⠚',
+    'k': '⠅', 'l': '⠇', 'm': '⠍', 'n': '⠝', 'o': '⠕',
+    'p': '⠏', 'q': '⠟', 'r': '⠗', 's': '⠎', 't': '⠞',
+    'u': '⠥', 'v': '⠧', 'w': '⠺', 'x': '⠭', 'y': '⠽',
+    'z': '⠵',
+
+    // Ponctuation et symboles
+    ' ': ' ', '\n': '\n', '\r': '', '\t': '\t', ' ': ' ',
+    '.': '⠲', ',': '⠂', ';': '⠆', ':': '⠒', '!': '⠖', '?': '⠦',
+    '"': '⠐⠄', '\'': '⠄', '(': '⠐⠣', ')': '⠐⠜', '[': '⠨⠣', ']': '⠨⠜',
+    '{': '⠸⠣', '}': '⠸⠜', '-': '⠤', '_': '⠸⠤', '/': '⠌', '\\': '⠸⠌',
+    '@': '⠈⠁', '#': '⠼', '$': '⠈⠎', '%': '⠨⠴', '&': '⠈⠯',
+    '*': '⠐⠔', '+': '⠐⠖', '=': '⠐⠶', '|': '⠸⠳', '~': '⠐⠐',
+    '`': '⠈⠄', '^': '⠘',
+
+    // Symboles spéciaux
+    '€': '⠈⠑', '§': '⠨⠎', '¶': '⠨⠏', '†': '⠨⠞', '‡': '⠨⠉',
+    '•': '⠐⠂', '…': '⠐⠆', '©': '⠨⠉', '®': '⠨⠗', '™': '⠨⠞⠍',
+    '«': '⠐⠦', '»': '⠐⠴', '‘': '⠄', '’': '⠄', '“': '⠐⠄', '”': '⠐⠄',
+    '–': '⠤', '—': '⠸⠤',
+
+    // Chiffres
+    '0': '⠼⠴', '1': '⠼⠁', '2': '⠼⠃', '3': '⠼⠉', '4': '⠼⠙',
+    '5': '⠼⠑', '6': '⠼⠋', '7': '⠼⠛', '8': '⠼⠓', '9': '⠼⠊',
+
+    // Accents français
+    'à': '⠁', 'â': '⠡', 'ä': '⠡', 'é': '⠑', 'è': '⠑', 'ê': '⠑', 'ë': '⠑',
+    'î': '⠊', 'ï': '⠊', 'ô': '⠕', 'ö': '⠕', 'ù': '⠥', 'û': '⠥', 'ü': '⠳', 'ç': '⠉',
+    'œ': '⠡⠑', 'æ': '⠡⠑'
+  };
+
+  const BRAILLE_NON_CONTRACTED_TABLE = Object.assign({}, BRAILLE_CONTRACTED_BASE_TABLE);
+
+  // Contractions issues du wrapper PHP braille contracté.
+  const BRAILLE_CONTRACTION_PAIRS = [
+    ['eaux', '⠑⠡'],
+    ['aux', '⠡⠥'],
+    ['eau', '⠑⠡'],
+    ['eur', '⠑⠥⠗'],
+    ['eux', '⠑⠥'],
+    ['oin', '⠕⠊⠝'],
+    ['ien', '⠊⠑⠝'],
+    ['ion', '⠊⠕⠝'],
+    ['qui', '⠟⠥⠊'],
+    ['que', '⠟⠥⠑'],
+    ['pour', '⠏⠥⠗'],
+    ['dans', '⠙⠁⠝⠎'],
+    ['plus', '⠏⠇⠥⠎'],
+    ['comme', '⠉⠕⠍⠍⠑'],
+    ['ses', '⠎⠑⠎'],
+    ['ces', '⠉⠑⠎'],
+    ['mes', '⠍⠑⠎'],
+    ['tes', '⠞⠑⠎'],
+    ['les', '⠇⠎'],
+    ['des', '⠙⠎'],
+    ['pas', '⠏⠁⠎'],
+    ['sur', '⠎⠥⠗'],
+    ['avec', '⠁⠧⠉'],
+    ['mais', '⠍⠁⠊⠎'],
+    ['par', '⠏⠗'],
+    ['ch', '⠡'],
+    ['ou', '⠳'],
+    ['st', '⠌'],
+    ['au', '⠡⠥'],
+    ['ea', '⠑'],
+    ['ui', '⠥⠊'],
+    ['en', '⠑⠝'],
+    ['in', '⠊⠝'],
+    ['an', '⠁⠝'],
+    ['oi', '⠕⠊'],
+    ['on', '⠕⠝'],
+    ['un', '⠥⠝'],
+    ['eu', '⠑⠥'],
+    ['qu', '⠟⠥'],
+    ['gu', '⠛⠥'],
+    ['gn', '⠛⠝'],
+    ['ph', '⠏⠓'],
+    ['th', '⠞⠓'],
+    ['le', '⠇'],
+    ['la', '⠇'],
+    ['de', '⠙'],
+    ['et', '⠑'],
+    ['du', '⠙⠥'],
+    ['ce', '⠉⠑'],
+    ['ci', '⠉⠊'],
+    ['je', '⠚⠑'],
+    ['me', '⠍⠑'],
+    ['ne', '⠝⠑'],
+    ['se', '⠎⠑'],
+    ['te', '⠞⠑']
+  ];
+  const BRAILLE_CONTRACTIONS = BRAILLE_CONTRACTION_PAIRS
+    .slice()
+    .sort((a, b) => b[0].length - a[0].length);
+
+  const brailleInstances = new Map();
+  const brailleModeBySlug = new Map();
+  let brailleSettings = loadBrailleSettings();
+  const brailleActiveSlugs = new Set();
+  let brailleSelectionState = { text: '', truncated: false };
+  let brailleSelectionHandler = null;
+  let brailleSelectionTriggerHandler = null;
+  let brailleIdCounter = 0;
+
+  function clampBrailleManualText(text){
+    if(typeof text !== 'string'){ return ''; }
+    if(text.length > BRAILLE_MANUAL_MAX_LENGTH){
+      return text.slice(0, BRAILLE_MANUAL_MAX_LENGTH);
+    }
+    return text;
+  }
+
+  function clampBrailleSelectionText(text){
+    if(typeof text !== 'string'){ return ''; }
+    const trimmed = text.trim();
+    if(trimmed.length > BRAILLE_SELECTION_MAX_LENGTH){
+      return trimmed.slice(0, BRAILLE_SELECTION_MAX_LENGTH);
+    }
+    return trimmed;
+  }
+
+  function getDefaultBrailleFeatureState(){
+    return {
+      manualText: '',
+      lastOriginal: '',
+      lastBraille: '',
+      lastOrigin: '',
+    };
+  }
+
+  function getDefaultBrailleSettings(){
+    return {};
+  }
+
+  function normalizeBrailleFeatureState(raw){
+    const defaults = getDefaultBrailleFeatureState();
+    if(!raw || typeof raw !== 'object'){ return defaults; }
+    return {
+      manualText: typeof raw.manualText === 'string' ? clampBrailleManualText(raw.manualText) : '',
+      lastOriginal: typeof raw.lastOriginal === 'string' ? raw.lastOriginal : '',
+      lastBraille: typeof raw.lastBraille === 'string' ? raw.lastBraille : '',
+      lastOrigin: raw.lastOrigin === 'manual' || raw.lastOrigin === 'selection' ? raw.lastOrigin : '',
+    };
+  }
+
+  function loadBrailleSettings(){
+    try {
+      const raw = localStorage.getItem(BRAILLE_SETTINGS_KEY);
+      if(!raw){ return getDefaultBrailleSettings(); }
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object'){ return getDefaultBrailleSettings(); }
+      const normalized = {};
+      Object.keys(parsed).forEach(slug => {
+        normalized[slug] = normalizeBrailleFeatureState(parsed[slug]);
+      });
+      return normalized;
+    } catch(err){
+      return getDefaultBrailleSettings();
+    }
+  }
+
+  function persistBrailleSettings(){
+    try { localStorage.setItem(BRAILLE_SETTINGS_KEY, JSON.stringify(brailleSettings)); } catch(err){}
+  }
+
+  function getBrailleFeatureState(slug){
+    if(typeof slug !== 'string' || !slug){ return getDefaultBrailleFeatureState(); }
+    if(!brailleSettings || typeof brailleSettings !== 'object'){ brailleSettings = getDefaultBrailleSettings(); }
+    if(!Object.prototype.hasOwnProperty.call(brailleSettings, slug)){
+      brailleSettings[slug] = getDefaultBrailleFeatureState();
+    }
+    const state = brailleSettings[slug];
+    if(!state || typeof state !== 'object'){
+      brailleSettings[slug] = getDefaultBrailleFeatureState();
+      return brailleSettings[slug];
+    }
+    return state;
+  }
+
+  function pruneBrailleInstances(){
+    brailleInstances.forEach((set, slug) => {
+      if(!(set instanceof Set)){ return; }
+      set.forEach(instance => {
+        if(!instance || !instance.article){
+          set.delete(instance);
+          return;
+        }
+        if(instance.article.isConnected){
+          instance.wasConnected = true;
+          return;
+        }
+        if(instance.wasConnected){
+          set.delete(instance);
+        }
+      });
+      if(!set.size){
+        brailleInstances.delete(slug);
+      }
+    });
+  }
+
+  function syncBrailleInstances(){
+    pruneBrailleInstances();
+    brailleInstances.forEach((set, slug) => {
+      const state = getBrailleFeatureState(slug);
+      set.forEach(instance => syncSingleBrailleInstance(instance, state));
+    });
+    updateBrailleSelectionPreview();
+  }
+
+  function syncSingleBrailleInstance(instance, state){
+    if(!instance){ return; }
+    const {
+      article,
+      manualTextarea,
+      manualTranslateBtn,
+      manualClearBtn,
+      selectionButton,
+      resultEmpty,
+      resultContainer,
+      resultOriginal,
+      resultCells,
+      srResult,
+      texts,
+    } = instance;
+    const active = brailleActiveSlugs.has(instance.slug);
+    if(article){
+      article.classList.toggle('is-disabled', !active);
+    }
+    if(manualTextarea){
+      const nextValue = state.manualText || '';
+      if(manualTextarea.value !== nextValue){
+        manualTextarea.value = nextValue;
+      }
+      manualTextarea.disabled = !active;
+    }
+    if(manualTranslateBtn){
+      const hasManual = !!(state.manualText && state.manualText.trim());
+      manualTranslateBtn.disabled = !active || !hasManual;
+    }
+    if(manualClearBtn){
+      manualClearBtn.disabled = !active || !(state.manualText && state.manualText.length);
+    }
+    if(selectionButton){
+      selectionButton.disabled = !active || !brailleSelectionState.text;
+    }
+    const hasResult = !!(state.lastBraille && state.lastBraille.length && state.lastOriginal && state.lastOriginal.length);
+    if(resultEmpty){
+      resultEmpty.hidden = hasResult;
+    }
+    if(resultContainer){
+      resultContainer.hidden = !hasResult;
+      if(resultContainer.hidden){ resultContainer.setAttribute('aria-hidden', 'true'); }
+      else { resultContainer.removeAttribute('aria-hidden'); }
+    }
+    if(hasResult){
+      if(resultOriginal){ resultOriginal.textContent = state.lastOriginal; }
+      if(resultCells){ buildBrailleCells(resultCells, state.lastBraille); }
+      const announcement = `${texts.sr_result_prefix || ''} ${state.lastBraille}`.trim();
+      if(srResult && srResult.textContent !== announcement){
+        srResult.textContent = announcement;
+      }
+    } else {
+      if(resultOriginal){ resultOriginal.textContent = ''; }
+      if(resultCells){ resultCells.textContent = ''; }
+      if(srResult && srResult.textContent !== (texts.sr_result_cleared || '')){
+        srResult.textContent = texts.sr_result_cleared || '';
+      }
+    }
+  }
+
+  function updateBrailleSelectionPreview(){
+    pruneBrailleInstances();
+    const selectionText = brailleSelectionState.text;
+    const truncated = brailleSelectionState.truncated;
+    const previewText = selectionText ? (truncated ? `${selectionText}…` : selectionText) : '';
+    brailleInstances.forEach(set => {
+      set.forEach(instance => {
+        const { selectionPreview, selectionHint, selectionButton, texts } = instance;
+        if(selectionPreview){
+          if(previewText){
+            selectionPreview.textContent = previewText;
+            selectionPreview.classList.remove('is-empty');
+          } else {
+            selectionPreview.textContent = texts.selection_empty || '';
+            selectionPreview.classList.add('is-empty');
+          }
+        }
+        if(selectionHint){
+          if(texts.selection_hint){
+            selectionHint.textContent = texts.selection_hint;
+            selectionHint.hidden = false;
+          } else {
+            selectionHint.textContent = '';
+            selectionHint.hidden = true;
+          }
+        }
+        if(selectionButton){
+          const active = brailleActiveSlugs.has(instance.slug);
+          selectionButton.disabled = !active || !selectionText;
+        }
+      });
+    });
+  }
+
+  function selectionBelongsToWidget(selection){
+    if(!selection){ return false; }
+    const anchor = selection.anchorNode;
+    const focus = selection.focusNode;
+    if(root && (root.contains(anchor) || root.contains(focus))){
+      return true;
+    }
+    return false;
+  }
+
+  function updateBrailleSelectionStateFromDocument(){
+    if(typeof window === 'undefined' || typeof document === 'undefined'){ return; }
+    const selection = typeof window.getSelection === 'function' ? window.getSelection() : null;
+    if(!selection || !selection.rangeCount){
+      if(brailleSelectionState.text){
+        brailleSelectionState = { text: '', truncated: false };
+        updateBrailleSelectionPreview();
+      }
+      return;
+    }
+    if(selectionBelongsToWidget(selection)){
+      if(brailleSelectionState.text){
+        brailleSelectionState = { text: '', truncated: false };
+        updateBrailleSelectionPreview();
+      }
+      return;
+    }
+    const raw = selection.toString();
+    const trimmed = clampBrailleSelectionText(typeof raw === 'string' ? raw : '');
+    if(!trimmed){
+      if(brailleSelectionState.text){
+        brailleSelectionState = { text: '', truncated: false };
+        updateBrailleSelectionPreview();
+      }
+      return;
+    }
+    const truncated = trimmed.length >= BRAILLE_SELECTION_MAX_LENGTH && raw && raw.trim().length > trimmed.length;
+    if(trimmed === brailleSelectionState.text && truncated === brailleSelectionState.truncated){
+      return;
+    }
+    brailleSelectionState = { text: trimmed, truncated };
+    updateBrailleSelectionPreview();
+    if(trimmed){
+      translateSelectionForActiveBraille({ skipIfSame: true });
+    }
+  }
+
+  const BRAILLE_SELECTION_TRIGGER_EVENTS = ['mouseup', 'keyup', 'touchend'];
+
+  function scheduleBrailleSelectionUpdate(){
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(() => updateBrailleSelectionStateFromDocument());
+    } else {
+      setTimeout(() => updateBrailleSelectionStateFromDocument(), 0);
+    }
+  }
+
+  function startBrailleSelectionTracking(){
+    if(typeof document === 'undefined'){ return; }
+    if(!brailleSelectionHandler){
+      brailleSelectionHandler = () => updateBrailleSelectionStateFromDocument();
+      document.addEventListener('selectionchange', brailleSelectionHandler);
+    }
+    if(!brailleSelectionTriggerHandler){
+      brailleSelectionTriggerHandler = () => scheduleBrailleSelectionUpdate();
+      BRAILLE_SELECTION_TRIGGER_EVENTS.forEach(eventName => {
+        document.addEventListener(eventName, brailleSelectionTriggerHandler);
+      });
+    }
+    updateBrailleSelectionStateFromDocument();
+  }
+
+  function stopBrailleSelectionTracking(){
+    if(typeof document !== 'undefined'){
+      if(brailleSelectionHandler){
+        document.removeEventListener('selectionchange', brailleSelectionHandler);
+        brailleSelectionHandler = null;
+      }
+      if(brailleSelectionTriggerHandler){
+        BRAILLE_SELECTION_TRIGGER_EVENTS.forEach(eventName => {
+          document.removeEventListener(eventName, brailleSelectionTriggerHandler);
+        });
+        brailleSelectionTriggerHandler = null;
+      }
+    }
+    brailleSelectionState = { text: '', truncated: false };
+    updateBrailleSelectionPreview();
+  }
+
+  function isUppercaseLetter(char){
+    if(typeof char !== 'string' || !char){ return false; }
+    const lower = char.toLowerCase();
+    const upper = char.toUpperCase();
+    if(lower === upper){ return false; }
+    return char === upper;
+  }
+
+  function resolveBrailleGlyph(table, char){
+    if(char === '\r'){ return ''; }
+    if(char === '\n' || char === '\t'){ return char; }
+    if(char === ' ' || char === ' '){ return ' '; }
+    const direct = table[char];
+    if(typeof direct === 'string'){ return direct; }
+    if(isUppercaseLetter(char)){
+      const lower = char.toLowerCase();
+      const lowerGlyph = table[lower];
+      if(typeof lowerGlyph === 'string'){ return '⠠' + lowerGlyph; }
+    }
+    const lower = char.toLowerCase();
+    if(lower !== char){
+      const lowerGlyph = table[lower];
+      if(typeof lowerGlyph === 'string'){ return lowerGlyph; }
+    }
+    return '?';
+  }
+
+  function translateBrailleContracted(text){
+    if(typeof text !== 'string' || !text){ return ''; }
+    let output = '';
+    let index = 0;
+    while(index < text.length){
+      let matched = false;
+      for(let i=0; i<BRAILLE_CONTRACTIONS.length; i++){
+        const pair = BRAILLE_CONTRACTIONS[i];
+        if(!pair || !pair[0]){ continue; }
+        if(text.startsWith(pair[0], index)){
+          output += pair[1] || '';
+          index += pair[0].length;
+          matched = true;
+          break;
+        }
+      }
+      if(matched){ continue; }
+      const codePoint = text.codePointAt(index);
+      const char = String.fromCodePoint(codePoint);
+      output += resolveBrailleGlyph(BRAILLE_CONTRACTED_BASE_TABLE, char);
+      index += char.length;
+    }
+    return output;
+  }
+
+  function translateBrailleUncontracted(text){
+    if(typeof text !== 'string' || !text){ return ''; }
+    let output = '';
+    for(let index = 0; index < text.length;){
+      const codePoint = text.codePointAt(index);
+      const char = String.fromCodePoint(codePoint);
+      output += resolveBrailleGlyph(BRAILLE_NON_CONTRACTED_TABLE, char);
+      index += char.length;
+    }
+    return output;
+  }
+
+  function translateBrailleText(text, mode){
+    return mode === 'contracted'
+      ? translateBrailleContracted(text)
+      : translateBrailleUncontracted(text);
+  }
+
+  function buildBrailleCells(container, brailleText){
+    if(!container){ return; }
+    container.innerHTML = '';
+    if(typeof brailleText !== 'string' || !brailleText){ return; }
+    for(let index = 0; index < brailleText.length;){
+      const codePoint = brailleText.codePointAt(index);
+      const char = String.fromCodePoint(codePoint);
+      const advance = char.length;
+      if(codePoint >= 0x2800 && codePoint <= 0x28FF){
+        const cell = document.createElement('span');
+        cell.className = 'a11y-braille__cell';
+        cell.setAttribute('aria-hidden', 'true');
+        cell.textContent = char;
+        container.appendChild(cell);
+      } else {
+        container.appendChild(document.createTextNode(char));
+      }
+      index += advance;
+    }
+  }
+
+  function updateBrailleManualText(slug, value){
+    const state = getBrailleFeatureState(slug);
+    const normalized = clampBrailleManualText(value);
+    if(state.manualText === normalized){ return; }
+    state.manualText = normalized;
+    persistBrailleSettings();
+    syncBrailleInstances();
+  }
+
+  function setBrailleResult(slug, original, brailleText, origin='selection'){
+    const state = getBrailleFeatureState(slug);
+    const normalizedOriginal = typeof original === 'string' ? original : '';
+    state.lastOriginal = normalizedOriginal;
+    state.lastBraille = typeof brailleText === 'string' ? brailleText : '';
+    if(normalizedOriginal){
+      state.lastOrigin = origin === 'manual' ? 'manual' : 'selection';
+    } else {
+      state.lastOrigin = '';
+    }
+    persistBrailleSettings();
+    syncBrailleInstances();
+  }
+
+  function setBrailleMessage(instance, text='', variant='info'){
+    if(!instance || !instance.message){ return; }
+    const { message } = instance;
+    message.classList.remove('a11y-braille__message--error', 'a11y-braille__message--info');
+    if(!text){
+      message.textContent = '';
+      message.hidden = true;
+      return;
+    }
+    message.textContent = text;
+    message.hidden = false;
+    const variantClass = variant === 'error' ? 'a11y-braille__message--error' : 'a11y-braille__message--info';
+    message.classList.add(variantClass);
+  }
+
+  function announceBraille(instance, brailleText){
+    if(!instance || !instance.srResult){ return; }
+    const message = brailleText
+      ? `${instance.texts.sr_result_prefix || ''} ${brailleText}`.trim()
+      : (instance.texts.sr_result_cleared || '');
+    const target = instance.srResult;
+    target.textContent = '';
+    const update = () => { target.textContent = message; };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(update);
+    } else {
+      setTimeout(update, 0);
+    }
+  }
+
+  function translateBrailleFromSelection(instance, options={}){
+    if(!instance){ return false; }
+    const { showMissingError = true, skipIfSame = true } = options || {};
+    const source = brailleSelectionState.text || '';
+    const truncated = !!brailleSelectionState.truncated;
+    const truncatedMessage = truncated ? (instance.texts.selection_truncated || '') : '';
+    if(!source){
+      if(showMissingError){
+        setBrailleMessage(instance, instance.texts.selection_missing || instance.texts.manual_empty || '', 'error');
+      } else if(truncatedMessage){
+        setBrailleMessage(instance, truncatedMessage, 'info');
+      } else {
+        setBrailleMessage(instance, '', 'info');
+      }
+      return false;
+    }
+    const state = getBrailleFeatureState(instance.slug);
+    const lastFromSelection = state.lastOrigin === 'selection';
+    if(skipIfSame && lastFromSelection && state.lastOriginal === source){
+      if(truncatedMessage){
+        setBrailleMessage(instance, truncatedMessage, 'info');
+      } else if(!showMissingError){
+        setBrailleMessage(instance, '', 'info');
+      }
+      return false;
+    }
+    const brailleText = translateBrailleText(source, instance.mode);
+    setBrailleResult(instance.slug, source, brailleText, 'selection');
+    announceBraille(instance, brailleText);
+    if(truncatedMessage){
+      setBrailleMessage(instance, truncatedMessage, 'info');
+    } else {
+      setBrailleMessage(instance, '', 'info');
+    }
+    return true;
+  }
+
+  function translateSelectionForActiveBraille(options={}){
+    const source = brailleSelectionState.text || '';
+    if(!source){ return; }
+    const mergedOptions = Object.assign({ showMissingError: false }, options || {});
+    pruneBrailleInstances();
+    brailleActiveSlugs.forEach(slug => {
+      const instances = brailleInstances.get(slug);
+      if(instances instanceof Set && instances.size){
+        instances.forEach(instance => {
+          if(!instance){ return; }
+          translateBrailleFromSelection(instance, mergedOptions);
+        });
+        return;
+      }
+      const state = getBrailleFeatureState(slug);
+      if(mergedOptions.skipIfSame !== false && state.lastOrigin === 'selection' && state.lastOriginal === source){
+        return;
+      }
+      const mode = brailleModeBySlug.get(slug) || (slug === BRAILLE_SLUGS.contracted ? 'contracted' : 'uncontracted');
+      const brailleText = translateBrailleText(source, mode);
+      setBrailleResult(slug, source, brailleText, 'selection');
+    });
+  }
+
+  function translateBrailleFromManual(instance){
+    if(!instance || !instance.manualTextarea){ return; }
+    const rawValue = clampBrailleManualText(instance.manualTextarea.value || '');
+    if(!rawValue.trim()){
+      setBrailleMessage(instance, instance.texts.manual_empty || '', 'error');
+      if(instance.manualTextarea && instance.manualTextarea.focus){ instance.manualTextarea.focus(); }
+      return;
+    }
+    updateBrailleManualText(instance.slug, rawValue);
+    const brailleText = translateBrailleText(rawValue, instance.mode);
+    setBrailleResult(instance.slug, rawValue, brailleText, 'manual');
+    announceBraille(instance, brailleText);
+    setBrailleMessage(instance, '', 'info');
+  }
+
+  function setBrailleActive(slug, active){
+    if(typeof slug !== 'string' || !slug){ return; }
+    const normalized = !!active;
+    if(normalized){
+      brailleActiveSlugs.add(slug);
+    } else {
+      brailleActiveSlugs.delete(slug);
+    }
+    if(brailleActiveSlugs.size){
+      startBrailleSelectionTracking();
+      if(normalized && brailleSelectionState.text){
+        translateSelectionForActiveBraille({ skipIfSame: false });
+      }
+    } else {
+      stopBrailleSelectionTracking();
+    }
+    syncBrailleInstances();
+  }
+
+  function createBrailleCard(feature){
+    if(!feature || typeof feature.slug !== 'string' || !feature.slug){ return null; }
+
+    const slug = feature.slug;
+    const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
+    const modeSetting = typeof settings.mode === 'string' ? settings.mode.toLowerCase() : '';
+    const mode = modeSetting === 'contracted' ? 'contracted' : 'uncontracted';
+    brailleModeBySlug.set(slug, mode);
+    const texts = {
+      intro: typeof settings.intro === 'string' ? settings.intro : '',
+      selection_label: typeof settings.selection_label === 'string' ? settings.selection_label : '',
+      selection_empty: typeof settings.selection_empty === 'string' ? settings.selection_empty : '',
+      selection_hint: typeof settings.selection_hint === 'string' ? settings.selection_hint : '',
+      selection_button: typeof settings.selection_button === 'string' ? settings.selection_button : '',
+      selection_missing: typeof settings.selection_missing === 'string' ? settings.selection_missing : '',
+      selection_truncated: typeof settings.selection_truncated === 'string' ? settings.selection_truncated : '',
+      manual_label: typeof settings.manual_label === 'string' ? settings.manual_label : '',
+      manual_placeholder: typeof settings.manual_placeholder === 'string' ? settings.manual_placeholder : '',
+      manual_button: typeof settings.manual_button === 'string' ? settings.manual_button : '',
+      manual_clear: typeof settings.manual_clear === 'string' ? settings.manual_clear : '',
+      manual_empty: typeof settings.manual_empty === 'string' ? settings.manual_empty : '',
+      result_label: typeof settings.result_label === 'string' ? settings.result_label : '',
+      result_empty: typeof settings.result_empty === 'string' ? settings.result_empty : '',
+      result_aria: typeof settings.result_aria === 'string' ? settings.result_aria : '',
+      live_label: typeof settings.live_label === 'string' ? settings.live_label : '',
+      sr_result_prefix: typeof settings.sr_result_prefix === 'string' ? settings.sr_result_prefix : '',
+      sr_result_cleared: typeof settings.sr_result_cleared === 'string' ? settings.sr_result_cleared : '',
+    };
+
+    const article = document.createElement('article');
+    article.className = 'a11y-card a11y-card--braille';
+    article.setAttribute('data-role', 'feature-card');
+
+    const header = document.createElement('div');
+    header.className = 'a11y-braille__header';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.setAttribute('data-role', 'feature-meta');
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = feature.label || '';
+    meta.appendChild(labelEl);
+    if(feature.hint){
+      const hintEl = document.createElement('span');
+      hintEl.className = 'hint';
+      hintEl.textContent = feature.hint;
+      meta.appendChild(hintEl);
+    }
+    header.appendChild(meta);
+
+    const switchEl = buildSwitch(slug, feature.aria_label || feature.label || '', feature.label || feature.aria_label || '');
+    if(switchEl){
+      switchEl.classList.add('a11y-braille__switch');
+      header.appendChild(switchEl);
+    }
+
+    article.appendChild(header);
+
+    if(texts.intro){
+      const intro = document.createElement('p');
+      intro.className = 'a11y-braille__intro';
+      intro.textContent = texts.intro;
+      article.appendChild(intro);
+    }
+
+    const selectionSection = document.createElement('section');
+    selectionSection.className = 'a11y-braille__section a11y-braille__section--selection';
+    const selectionTitle = document.createElement('p');
+    selectionTitle.className = 'a11y-braille__title';
+    selectionTitle.textContent = texts.selection_label || '';
+    selectionSection.appendChild(selectionTitle);
+    const selectionHint = document.createElement('p');
+    selectionHint.className = 'a11y-braille__hint';
+    if(texts.selection_hint){
+      selectionHint.textContent = texts.selection_hint;
+    } else {
+      selectionHint.hidden = true;
+    }
+    selectionSection.appendChild(selectionHint);
+    const selectionPreview = document.createElement('p');
+    selectionPreview.className = 'a11y-braille__selection is-empty';
+    selectionPreview.textContent = texts.selection_empty || '';
+    selectionSection.appendChild(selectionPreview);
+    const selectionActions = document.createElement('div');
+    selectionActions.className = 'a11y-braille__actions';
+    const selectionButton = document.createElement('button');
+    selectionButton.type = 'button';
+    selectionButton.className = 'a11y-braille__action';
+    selectionButton.textContent = texts.selection_button || '';
+    selectionButton.disabled = true;
+    selectionActions.appendChild(selectionButton);
+    selectionSection.appendChild(selectionActions);
+    article.appendChild(selectionSection);
+
+    const manualSection = document.createElement('section');
+    manualSection.className = 'a11y-braille__section a11y-braille__section--manual';
+    const manualId = `a11y-braille-${++brailleIdCounter}`;
+    const manualLabel = document.createElement('label');
+    manualLabel.className = 'a11y-braille__title';
+    manualLabel.setAttribute('for', manualId);
+    manualLabel.textContent = texts.manual_label || '';
+    manualSection.appendChild(manualLabel);
+    const manualTextarea = document.createElement('textarea');
+    manualTextarea.id = manualId;
+    manualTextarea.className = 'a11y-braille__textarea';
+    manualTextarea.rows = 4;
+    if(texts.manual_placeholder){ manualTextarea.placeholder = texts.manual_placeholder; }
+    manualSection.appendChild(manualTextarea);
+    const manualActions = document.createElement('div');
+    manualActions.className = 'a11y-braille__actions';
+    const manualTranslateBtn = document.createElement('button');
+    manualTranslateBtn.type = 'button';
+    manualTranslateBtn.className = 'a11y-braille__submit';
+    manualTranslateBtn.textContent = texts.manual_button || '';
+    manualTranslateBtn.disabled = true;
+    manualActions.appendChild(manualTranslateBtn);
+    const manualClearBtn = document.createElement('button');
+    manualClearBtn.type = 'button';
+    manualClearBtn.className = 'a11y-braille__clear';
+    manualClearBtn.textContent = texts.manual_clear || '';
+    manualClearBtn.disabled = true;
+    manualActions.appendChild(manualClearBtn);
+    manualSection.appendChild(manualActions);
+    const message = document.createElement('p');
+    message.className = 'a11y-braille__message';
+    message.hidden = true;
+    manualSection.appendChild(message);
+    article.appendChild(manualSection);
+
+    const resultSection = document.createElement('section');
+    resultSection.className = 'a11y-braille__section a11y-braille__section--result';
+    const resultTitle = document.createElement('p');
+    resultTitle.className = 'a11y-braille__title';
+    resultTitle.textContent = texts.result_label || '';
+    resultSection.appendChild(resultTitle);
+    const resultEmpty = document.createElement('p');
+    resultEmpty.className = 'a11y-braille__empty';
+    resultEmpty.textContent = texts.result_empty || '';
+    resultSection.appendChild(resultEmpty);
+    const resultContainer = document.createElement('div');
+    resultContainer.className = 'a11y-braille__result';
+    resultContainer.hidden = true;
+    if(texts.result_aria){ resultContainer.setAttribute('aria-label', texts.result_aria); }
+    const resultOriginal = document.createElement('p');
+    resultOriginal.className = 'a11y-braille__original';
+    resultContainer.appendChild(resultOriginal);
+    const resultCells = document.createElement('div');
+    resultCells.className = 'a11y-braille__cells';
+    resultCells.setAttribute('aria-hidden', 'true');
+    resultContainer.appendChild(resultCells);
+    const srResult = document.createElement('div');
+    srResult.setAttribute('data-sr-only', '');
+    srResult.setAttribute('role', 'status');
+    srResult.setAttribute('aria-live', 'polite');
+    if(texts.live_label){ srResult.setAttribute('aria-label', texts.live_label); }
+    resultContainer.appendChild(srResult);
+    resultSection.appendChild(resultContainer);
+    article.appendChild(resultSection);
+
+    const instance = {
+      slug,
+      mode,
+      article,
+      texts,
+      selectionPreview,
+      selectionHint,
+      selectionButton,
+      manualTextarea,
+      manualTranslateBtn,
+      manualClearBtn,
+      message,
+      resultEmpty,
+      resultContainer,
+      resultOriginal,
+      resultCells,
+      srResult,
+      wasConnected: false,
+    };
+
+    if(!brailleInstances.has(slug)){
+      brailleInstances.set(slug, new Set());
+    }
+    brailleInstances.get(slug).add(instance);
+
+    const markConnection = () => {
+      if(instance.article && instance.article.isConnected){
+        instance.wasConnected = true;
+      }
+    };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(markConnection);
+    } else {
+      setTimeout(markConnection, 0);
+    }
+
+    manualTextarea.addEventListener('input', () => {
+      const sanitized = clampBrailleManualText(manualTextarea.value || '');
+      if(manualTextarea.value !== sanitized){
+        const pos = manualTextarea.selectionStart;
+        manualTextarea.value = sanitized;
+        if(typeof manualTextarea.setSelectionRange === 'function'){
+          const nextPos = typeof pos === 'number' ? Math.min(pos, sanitized.length) : sanitized.length;
+          manualTextarea.setSelectionRange(nextPos, nextPos);
+        }
+      }
+      updateBrailleManualText(slug, sanitized);
+      if(sanitized.trim()){
+        setBrailleMessage(instance, '', 'info');
+      }
+    });
+
+    manualTranslateBtn.addEventListener('click', () => translateBrailleFromManual(instance));
+    manualClearBtn.addEventListener('click', () => {
+      manualTextarea.value = '';
+      updateBrailleManualText(slug, '');
+      setBrailleResult(slug, '', '', 'manual');
+      announceBraille(instance, '');
+      setBrailleMessage(instance, '', 'info');
+    });
+    selectionButton.addEventListener('click', () => translateBrailleFromSelection(instance, { showMissingError: true, skipIfSame: false }));
+
+    syncBrailleInstances();
+    return article;
+  }
+
   const DYSLEXIA_SLUG = 'cognitif-dyslexie';
   const DYSLEXIA_SETTINGS_KEY = 'a11y-widget-dyslexie-settings:v1';
   const DYSLEXIA_DEFAULT_COLOR = '#ffeb3b';
@@ -8154,6 +9026,9 @@ ${interactiveSelectors} {
     if(template === 'cataract-support'){
       return createCataractCard(feature);
     }
+    if(template === BRAILLE_TEMPLATE_NAME){
+      return createBrailleCard(feature);
+    }
     return createFeaturePlaceholder(feature);
   }
 
@@ -8638,6 +9513,14 @@ ${interactiveSelectors} {
   A11yAPI.registerFeature(BUTTONS_SLUG, on => {
     if(on){ ensureButtonStyleElement(); }
     setButtonActive(on);
+  });
+
+  A11yAPI.registerFeature(BRAILLE_SLUGS.contracted, on => {
+    setBrailleActive(BRAILLE_SLUGS.contracted, on);
+  });
+
+  A11yAPI.registerFeature(BRAILLE_SLUGS.uncontracted, on => {
+    setBrailleActive(BRAILLE_SLUGS.uncontracted, on);
   });
 
   A11yAPI.registerFeature(CURSOR_SLUG, on => {
