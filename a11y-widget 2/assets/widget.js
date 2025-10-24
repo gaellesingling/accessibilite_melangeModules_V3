@@ -363,6 +363,11 @@
   let cataractIdCounter = 0;
   let cataractSyncingFeatures = false;
 
+  function joinSelectors(base, selectors){
+    if(!Array.isArray(selectors) || !selectors.length){ return base; }
+    return selectors.map(selector => `${base} ${selector}`).join(', ');
+  }
+
   function getDefaultCataractSettings(){
     return {
       reduceGlare: false,
@@ -476,7 +481,7 @@
     const brightness = Math.max(0.5, 1 - (intensity / 100) * 0.3);
     const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
     const filterScope = `${selector} body :not([data-a11y-filter-exempt])`;
-    const mediaScope = `${filterScope} :is(img, picture, video, canvas, svg, iframe, embed, object, model-viewer)`;
+    const mediaScope = joinSelectors(filterScope, ['img', 'picture', 'video', 'canvas', 'svg', 'iframe', 'embed', 'object', 'model-viewer']);
     const styleEl = ensureCataractGlareStyle();
     styleEl.textContent = [
       `${selector} body { background-color: #f5f5f5 !important; }`,
@@ -510,12 +515,15 @@
     }
     const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
     const scope = `${selector} body :not([data-a11y-filter-exempt])`;
+    const textElements = joinSelectors(scope, ['p', 'span', 'div', 'a', 'li']);
+    const headingElements = joinSelectors(scope, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+    const imageElements = joinSelectors(scope, ['img']);
     const styleEl = ensureCataractSharpnessStyle();
     styleEl.textContent = [
       `${scope} { text-rendering: optimizeLegibility !important; -webkit-font-smoothing: antialiased !important; -moz-osx-font-smoothing: grayscale !important; }`,
-      `${scope} :is(p, span, div, a, li) { text-shadow: 0 0 0.5px rgba(0,0,0,0.3) !important; font-weight: 500 !important; }`,
-      `${scope} :is(h1, h2, h3, h4, h5, h6) { text-shadow: 0 0 1px rgba(0,0,0,0.5) !important; font-weight: 700 !important; }`,
-      `${scope} img { image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; }`,
+      `${textElements} { text-shadow: 0 0 0.5px rgba(0,0,0,0.3) !important; font-weight: 500 !important; }`,
+      `${headingElements} { text-shadow: 0 0 1px rgba(0,0,0,0.5) !important; font-weight: 700 !important; }`,
+      `${imageElements} { image-rendering: -webkit-optimize-contrast !important; image-rendering: crisp-edges !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { text-shadow: none !important; font-weight: inherit !important; image-rendering: auto !important; }`,
     ].join('\n');
   }
@@ -527,10 +535,11 @@
     }
     const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
     const scope = `${selector} body :not([data-a11y-filter-exempt])`;
+    const mediaElements = joinSelectors(scope, ['img', 'picture', 'video', 'canvas', 'svg']);
     const styleEl = ensureCataractEffectsStyle();
     styleEl.textContent = [
       `${scope} { animation: none !important; transition: none !important; box-shadow: none !important; text-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border-radius: 0 !important; }`,
-      `${scope} :is(img, picture, video, canvas, svg) { opacity: 1 !important; }`,
+      `${mediaElements} { opacity: 1 !important; }`,
       `${scope} *:hover { transform: none !important; filter: none !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { animation: initial !important; transition: initial !important; box-shadow: initial !important; text-shadow: initial !important; border-radius: initial !important; }`,
     ].join('\n');
