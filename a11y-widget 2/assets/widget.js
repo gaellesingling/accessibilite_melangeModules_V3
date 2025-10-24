@@ -2885,6 +2885,7 @@
   const brailleActiveSlugs = new Set();
   let brailleSelectionState = { text: '', truncated: false };
   let brailleSelectionHandler = null;
+  let brailleSelectionTriggerHandler = null;
   let brailleIdCounter = 0;
 
   function clampBrailleManualText(text){
@@ -3127,17 +3128,44 @@
     }
   }
 
+  const BRAILLE_SELECTION_TRIGGER_EVENTS = ['mouseup', 'keyup', 'touchend'];
+
+  function scheduleBrailleSelectionUpdate(){
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(() => updateBrailleSelectionStateFromDocument());
+    } else {
+      setTimeout(() => updateBrailleSelectionStateFromDocument(), 0);
+    }
+  }
+
   function startBrailleSelectionTracking(){
-    if(brailleSelectionHandler || typeof document === 'undefined'){ return; }
-    brailleSelectionHandler = () => updateBrailleSelectionStateFromDocument();
-    document.addEventListener('selectionchange', brailleSelectionHandler);
+    if(typeof document === 'undefined'){ return; }
+    if(!brailleSelectionHandler){
+      brailleSelectionHandler = () => updateBrailleSelectionStateFromDocument();
+      document.addEventListener('selectionchange', brailleSelectionHandler);
+    }
+    if(!brailleSelectionTriggerHandler){
+      brailleSelectionTriggerHandler = () => scheduleBrailleSelectionUpdate();
+      BRAILLE_SELECTION_TRIGGER_EVENTS.forEach(eventName => {
+        document.addEventListener(eventName, brailleSelectionTriggerHandler);
+      });
+    }
     updateBrailleSelectionStateFromDocument();
   }
 
   function stopBrailleSelectionTracking(){
-    if(!brailleSelectionHandler || typeof document === 'undefined'){ return; }
-    document.removeEventListener('selectionchange', brailleSelectionHandler);
-    brailleSelectionHandler = null;
+    if(typeof document !== 'undefined'){
+      if(brailleSelectionHandler){
+        document.removeEventListener('selectionchange', brailleSelectionHandler);
+        brailleSelectionHandler = null;
+      }
+      if(brailleSelectionTriggerHandler){
+        BRAILLE_SELECTION_TRIGGER_EVENTS.forEach(eventName => {
+          document.removeEventListener(eventName, brailleSelectionTriggerHandler);
+        });
+        brailleSelectionTriggerHandler = null;
+      }
+    }
     brailleSelectionState = { text: '', truncated: false };
     updateBrailleSelectionPreview();
   }
