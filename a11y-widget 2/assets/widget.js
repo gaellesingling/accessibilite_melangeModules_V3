@@ -2784,8 +2784,50 @@
   const BRAILLE_SELECTION_MAX_LENGTH = 600;
   const BRAILLE_MANUAL_MAX_LENGTH = 1200;
 
-  // Table issue du module braille contracté d’origine (Modules-braille-finaux-main).
-  const BRAILLE_BASE_MAP = new Map(Object.entries({
+  // Tables issues des wrappers PHP braille contracté et non contracté.
+  const BRAILLE_CONTRACTED_BASE_MAP = new Map(Object.entries({
+    // Lettres minuscules
+    'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙', 'e': '⠑',
+    'f': '⠋', 'g': '⠛', 'h': '⠓', 'i': '⠊', 'j': '⠚',
+    'k': '⠅', 'l': '⠇', 'm': '⠍', 'n': '⠝', 'o': '⠕',
+    'p': '⠏', 'q': '⠟', 'r': '⠗', 's': '⠎', 't': '⠞',
+    'u': '⠥', 'v': '⠧', 'w': '⠺', 'x': '⠭', 'y': '⠽',
+    'z': '⠵',
+
+    // Majuscules (précédées de ⠠)
+    'A': '⠠⠁', 'B': '⠠⠃', 'C': '⠠⠉', 'D': '⠠⠙', 'E': '⠠⠑',
+    'F': '⠠⠋', 'G': '⠠⠛', 'H': '⠠⠓', 'I': '⠠⠊', 'J': '⠠⠚',
+    'K': '⠠⠅', 'L': '⠠⠇', 'M': '⠠⠍', 'N': '⠠⠝', 'O': '⠠⠕',
+    'P': '⠠⠏', 'Q': '⠠⠟', 'R': '⠠⠗', 'S': '⠠⠎', 'T': '⠠⠞',
+    'U': '⠠⠥', 'V': '⠠⠧', 'W': '⠠⠺', 'X': '⠠⠭', 'Y': '⠠⠽',
+    'Z': '⠠⠵',
+
+    // Ponctuation et symboles
+    ' ': ' ', '\n': '\n', '\r': '', '\t': '\t', ' ': ' ',
+    '.': '⠲', ',': '⠂', ';': '⠆', ':': '⠒', '!': '⠖', '?': '⠦',
+    '"': '⠐⠄', '\'': '⠄', '(': '⠐⠣', ')': '⠐⠜', '[': '⠨⠣', ']': '⠨⠜',
+    '{': '⠸⠣', '}': '⠸⠜', '-': '⠤', '_': '⠸⠤', '/': '⠌', '\\': '⠸⠌',
+    '@': '⠈⠁', '#': '⠼', '$': '⠈⠎', '%': '⠨⠴', '&': '⠈⠯',
+    '*': '⠐⠔', '+': '⠐⠖', '=': '⠐⠶', '|': '⠸⠳', '~': '⠐⠐',
+    '`': '⠈⠄', '^': '⠘',
+
+    // Symboles spéciaux
+    '€': '⠈⠑', '§': '⠨⠎', '¶': '⠨⠏', '†': '⠨⠞', '‡': '⠨⠉',
+    '•': '⠐⠂', '…': '⠐⠆', '©': '⠨⠉', '®': '⠨⠗', '™': '⠨⠞⠍',
+    '«': '⠐⠦', '»': '⠐⠴', '‘': '⠄', '’': '⠄', '“': '⠐⠄', '”': '⠐⠄',
+    '–': '⠤', '—': '⠸⠤',
+
+    // Chiffres
+    '0': '⠼⠴', '1': '⠼⠁', '2': '⠼⠃', '3': '⠼⠉', '4': '⠼⠙',
+    '5': '⠼⠑', '6': '⠼⠋', '7': '⠼⠛', '8': '⠼⠓', '9': '⠼⠊',
+
+    // Accents français
+    'à': '⠁', 'â': '⠡', 'ä': '⠡', 'é': '⠑', 'è': '⠑', 'ê': '⠑', 'ë': '⠑',
+    'î': '⠊', 'ï': '⠊', 'ô': '⠕', 'ö': '⠕', 'ù': '⠥', 'û': '⠥', 'ü': '⠳', 'ç': '⠉',
+    'œ': '⠡⠑', 'æ': '⠡⠑', 'Æ': '⠠⠡⠑', 'Œ': '⠠⠡⠑'
+  }));
+
+  const BRAILLE_NON_CONTRACTED_MAP = new Map(Object.entries({
     // Lettres minuscules
     'a': '⠁', 'b': '⠃', 'c': '⠉', 'd': '⠙', 'e': '⠑',
     'f': '⠋', 'g': '⠛', 'h': '⠓', 'i': '⠊', 'j': '⠚',
@@ -3199,6 +3241,7 @@
   function translateBrailleText(text, mode){
     if(typeof text !== 'string' || !text){ return ''; }
     const useContractions = mode === 'contracted';
+    const table = useContractions ? BRAILLE_CONTRACTED_BASE_MAP : BRAILLE_NON_CONTRACTED_MAP;
     let output = '';
     let index = 0;
     while(index < text.length){
@@ -3225,14 +3268,14 @@
       if(char === '\r'){ index += advance; continue; }
       if(isUppercaseLetter(char)){
         const lower = char.toLowerCase();
-        const base = BRAILLE_BASE_MAP.get(lower);
+        const base = table.get(lower);
         if(base){ mapped = '⠠' + base; }
       }
       if(mapped === null){
-        mapped = BRAILLE_BASE_MAP.get(char);
+        mapped = table.get(char);
         if(!mapped){
           const lower = char.toLowerCase();
-          if(lower !== char){ mapped = BRAILLE_BASE_MAP.get(lower); }
+          if(lower !== char){ mapped = table.get(lower); }
         }
       }
       if(!mapped){
