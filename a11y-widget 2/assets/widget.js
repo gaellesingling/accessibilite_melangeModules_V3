@@ -2880,6 +2880,7 @@
     .sort((a, b) => b[0].length - a[0].length);
 
   const brailleInstances = new Map();
+  const brailleModeBySlug = new Map();
   let brailleSettings = loadBrailleSettings();
   const brailleActiveSlugs = new Set();
   let brailleSelectionState = { text: '', truncated: false };
@@ -2908,6 +2909,7 @@
       manualText: '',
       lastOriginal: '',
       lastBraille: '',
+      lastOrigin: '',
     };
   }
 
@@ -2922,6 +2924,7 @@
       manualText: typeof raw.manualText === 'string' ? clampBrailleManualText(raw.manualText) : '',
       lastOriginal: typeof raw.lastOriginal === 'string' ? raw.lastOriginal : '',
       lastBraille: typeof raw.lastBraille === 'string' ? raw.lastBraille : '',
+      lastOrigin: raw.lastOrigin === 'manual' || raw.lastOrigin === 'selection' ? raw.lastOrigin : '',
     };
   }
 
@@ -3119,6 +3122,9 @@
     }
     brailleSelectionState = { text: trimmed, truncated };
     updateBrailleSelectionPreview();
+    if(trimmed){
+      translateSelectionForActiveBraille({ skipIfSame: true });
+    }
   }
 
   function startBrailleSelectionTracking(){
@@ -3224,10 +3230,16 @@
     syncBrailleInstances();
   }
 
-  function setBrailleResult(slug, original, brailleText){
+  function setBrailleResult(slug, original, brailleText, origin='selection'){
     const state = getBrailleFeatureState(slug);
-    state.lastOriginal = typeof original === 'string' ? original : '';
+    const normalizedOriginal = typeof original === 'string' ? original : '';
+    state.lastOriginal = normalizedOriginal;
     state.lastBraille = typeof brailleText === 'string' ? brailleText : '';
+    if(normalizedOriginal){
+      state.lastOrigin = origin === 'manual' ? 'manual' : 'selection';
+    } else {
+      state.lastOrigin = '';
+    }
     persistBrailleSettings();
     syncBrailleInstances();
   }
@@ -3262,17 +3274,65 @@
     }
   }
 
-  function translateBrailleFromSelection(instance){
-    if(!instance){ return; }
-    if(!brailleSelectionState.text){
-      setBrailleMessage(instance, instance.texts.selection_missing || instance.texts.manual_empty || '', 'error');
-      return;
+  function translateBrailleFromSelection(instance, options={}){
+    if(!instance){ return false; }
+    const { showMissingError = true, skipIfSame = true } = options || {};
+    const source = brailleSelectionState.text || '';
+    const truncated = !!brailleSelectionState.truncated;
+    const truncatedMessage = truncated ? (instance.texts.selection_truncated || '') : '';
+    if(!source){
+      if(showMissingError){
+        setBrailleMessage(instance, instance.texts.selection_missing || instance.texts.manual_empty || '', 'error');
+      } else if(truncatedMessage){
+        setBrailleMessage(instance, truncatedMessage, 'info');
+      } else {
+        setBrailleMessage(instance, '', 'info');
+      }
+      return false;
     }
-    const source = brailleSelectionState.text;
+    const state = getBrailleFeatureState(instance.slug);
+    const lastFromSelection = state.lastOrigin === 'selection';
+    if(skipIfSame && lastFromSelection && state.lastOriginal === source){
+      if(truncatedMessage){
+        setBrailleMessage(instance, truncatedMessage, 'info');
+      } else if(!showMissingError){
+        setBrailleMessage(instance, '', 'info');
+      }
+      return false;
+    }
     const brailleText = translateBrailleText(source, instance.mode);
-    setBrailleResult(instance.slug, source, brailleText);
+    setBrailleResult(instance.slug, source, brailleText, 'selection');
     announceBraille(instance, brailleText);
-    setBrailleMessage(instance, '', 'info');
+    if(truncatedMessage){
+      setBrailleMessage(instance, truncatedMessage, 'info');
+    } else {
+      setBrailleMessage(instance, '', 'info');
+    }
+    return true;
+  }
+
+  function translateSelectionForActiveBraille(options={}){
+    const source = brailleSelectionState.text || '';
+    if(!source){ return; }
+    const mergedOptions = Object.assign({ showMissingError: false }, options || {});
+    pruneBrailleInstances();
+    brailleActiveSlugs.forEach(slug => {
+      const instances = brailleInstances.get(slug);
+      if(instances instanceof Set && instances.size){
+        instances.forEach(instance => {
+          if(!instance){ return; }
+          translateBrailleFromSelection(instance, mergedOptions);
+        });
+        return;
+      }
+      const state = getBrailleFeatureState(slug);
+      if(mergedOptions.skipIfSame !== false && state.lastOrigin === 'selection' && state.lastOriginal === source){
+        return;
+      }
+      const mode = brailleModeBySlug.get(slug) || (slug === BRAILLE_SLUGS.contracted ? 'contracted' : 'uncontracted');
+      const brailleText = translateBrailleText(source, mode);
+      setBrailleResult(slug, source, brailleText, 'selection');
+    });
   }
 
   function translateBrailleFromManual(instance){
@@ -3285,7 +3345,7 @@
     }
     updateBrailleManualText(instance.slug, rawValue);
     const brailleText = translateBrailleText(rawValue, instance.mode);
-    setBrailleResult(instance.slug, rawValue, brailleText);
+    setBrailleResult(instance.slug, rawValue, brailleText, 'manual');
     announceBraille(instance, brailleText);
     setBrailleMessage(instance, '', 'info');
   }
@@ -3300,6 +3360,9 @@
     }
     if(brailleActiveSlugs.size){
       startBrailleSelectionTracking();
+      if(normalized && brailleSelectionState.text){
+        translateSelectionForActiveBraille({ skipIfSame: false });
+      }
     } else {
       stopBrailleSelectionTracking();
     }
@@ -3313,6 +3376,7 @@
     const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
     const modeSetting = typeof settings.mode === 'string' ? settings.mode.toLowerCase() : '';
     const mode = modeSetting === 'contracted' ? 'contracted' : 'uncontracted';
+    brailleModeBySlug.set(slug, mode);
     const texts = {
       intro: typeof settings.intro === 'string' ? settings.intro : '',
       selection_label: typeof settings.selection_label === 'string' ? settings.selection_label : '',
@@ -3320,6 +3384,7 @@
       selection_hint: typeof settings.selection_hint === 'string' ? settings.selection_hint : '',
       selection_button: typeof settings.selection_button === 'string' ? settings.selection_button : '',
       selection_missing: typeof settings.selection_missing === 'string' ? settings.selection_missing : '',
+      selection_truncated: typeof settings.selection_truncated === 'string' ? settings.selection_truncated : '',
       manual_label: typeof settings.manual_label === 'string' ? settings.manual_label : '',
       manual_placeholder: typeof settings.manual_placeholder === 'string' ? settings.manual_placeholder : '',
       manual_button: typeof settings.manual_button === 'string' ? settings.manual_button : '',
@@ -3508,11 +3573,11 @@
     manualClearBtn.addEventListener('click', () => {
       manualTextarea.value = '';
       updateBrailleManualText(slug, '');
-      setBrailleResult(slug, '', '');
+      setBrailleResult(slug, '', '', 'manual');
       announceBraille(instance, '');
       setBrailleMessage(instance, '', 'info');
     });
-    selectionButton.addEventListener('click', () => translateBrailleFromSelection(instance));
+    selectionButton.addEventListener('click', () => translateBrailleFromSelection(instance, { showMissingError: true, skipIfSame: false }));
 
     syncBrailleInstances();
     return article;
