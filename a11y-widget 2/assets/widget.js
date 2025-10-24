@@ -2977,7 +2977,15 @@
     brailleInstances.forEach((set, slug) => {
       if(!(set instanceof Set)){ return; }
       set.forEach(instance => {
-        if(!instance || !instance.article || !instance.article.isConnected){
+        if(!instance || !instance.article){
+          set.delete(instance);
+          return;
+        }
+        if(instance.article.isConnected){
+          instance.wasConnected = true;
+          return;
+        }
+        if(instance.wasConnected){
           set.delete(instance);
         }
       });
@@ -3584,12 +3592,24 @@
       resultOriginal,
       resultCells,
       srResult,
+      wasConnected: false,
     };
 
     if(!brailleInstances.has(slug)){
       brailleInstances.set(slug, new Set());
     }
     brailleInstances.get(slug).add(instance);
+
+    const markConnection = () => {
+      if(instance.article && instance.article.isConnected){
+        instance.wasConnected = true;
+      }
+    };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(markConnection);
+    } else {
+      setTimeout(markConnection, 0);
+    }
 
     manualTextarea.addEventListener('input', () => {
       const sanitized = clampBrailleManualText(manualTextarea.value || '');
