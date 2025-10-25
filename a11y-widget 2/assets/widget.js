@@ -2782,7 +2782,6 @@
   const BRAILLE_TEMPLATE_NAME = 'braille-translator';
   const BRAILLE_SETTINGS_KEY = 'a11y-widget-braille-settings:v1';
   const BRAILLE_SELECTION_MAX_LENGTH = 600;
-  const BRAILLE_MANUAL_MAX_LENGTH = 1200;
 
   // Tables issues des wrappers PHP braille contracté et non contracté.
   const BRAILLE_CONTRACTED_BASE_TABLE = {
@@ -2890,15 +2889,6 @@
   let brailleSelectionState = { text: '', truncated: false };
   let brailleSelectionHandler = null;
   let brailleSelectionTriggerHandler = null;
-  let brailleIdCounter = 0;
-
-  function clampBrailleManualText(text){
-    if(typeof text !== 'string'){ return ''; }
-    if(text.length > BRAILLE_MANUAL_MAX_LENGTH){
-      return text.slice(0, BRAILLE_MANUAL_MAX_LENGTH);
-    }
-    return text;
-  }
 
   function clampBrailleSelectionText(text){
     if(typeof text !== 'string'){ return ''; }
@@ -2911,7 +2901,6 @@
 
   function getDefaultBrailleFeatureState(){
     return {
-      manualText: '',
       lastOriginal: '',
       lastBraille: '',
       lastOrigin: '',
@@ -2926,10 +2915,9 @@
     const defaults = getDefaultBrailleFeatureState();
     if(!raw || typeof raw !== 'object'){ return defaults; }
     return {
-      manualText: typeof raw.manualText === 'string' ? clampBrailleManualText(raw.manualText) : '',
       lastOriginal: typeof raw.lastOriginal === 'string' ? raw.lastOriginal : '',
       lastBraille: typeof raw.lastBraille === 'string' ? raw.lastBraille : '',
-      lastOrigin: raw.lastOrigin === 'manual' || raw.lastOrigin === 'selection' ? raw.lastOrigin : '',
+      lastOrigin: raw.lastOrigin === 'selection' ? 'selection' : '',
     };
   }
 
@@ -3002,9 +2990,6 @@
     if(!instance){ return; }
     const {
       article,
-      manualTextarea,
-      manualTranslateBtn,
-      manualClearBtn,
       selectionButton,
       resultEmpty,
       resultContainer,
@@ -3016,20 +3001,6 @@
     const active = brailleActiveSlugs.has(instance.slug);
     if(article){
       article.classList.toggle('is-disabled', !active);
-    }
-    if(manualTextarea){
-      const nextValue = state.manualText || '';
-      if(manualTextarea.value !== nextValue){
-        manualTextarea.value = nextValue;
-      }
-      manualTextarea.disabled = !active;
-    }
-    if(manualTranslateBtn){
-      const hasManual = !!(state.manualText && state.manualText.trim());
-      manualTranslateBtn.disabled = !active || !hasManual;
-    }
-    if(manualClearBtn){
-      manualClearBtn.disabled = !active || !(state.manualText && state.manualText.length);
     }
     if(selectionButton){
       selectionButton.disabled = !active || !brailleSelectionState.text;
@@ -3273,22 +3244,13 @@
     }
   }
 
-  function updateBrailleManualText(slug, value){
-    const state = getBrailleFeatureState(slug);
-    const normalized = clampBrailleManualText(value);
-    if(state.manualText === normalized){ return; }
-    state.manualText = normalized;
-    persistBrailleSettings();
-    syncBrailleInstances();
-  }
-
-  function setBrailleResult(slug, original, brailleText, origin='selection'){
+  function setBrailleResult(slug, original, brailleText){
     const state = getBrailleFeatureState(slug);
     const normalizedOriginal = typeof original === 'string' ? original : '';
     state.lastOriginal = normalizedOriginal;
     state.lastBraille = typeof brailleText === 'string' ? brailleText : '';
     if(normalizedOriginal){
-      state.lastOrigin = origin === 'manual' ? 'manual' : 'selection';
+      state.lastOrigin = 'selection';
     } else {
       state.lastOrigin = '';
     }
@@ -3334,7 +3296,7 @@
     const truncatedMessage = truncated ? (instance.texts.selection_truncated || '') : '';
     if(!source){
       if(showMissingError){
-        setBrailleMessage(instance, instance.texts.selection_missing || instance.texts.manual_empty || '', 'error');
+        setBrailleMessage(instance, instance.texts.selection_missing || '', 'error');
       } else if(truncatedMessage){
         setBrailleMessage(instance, truncatedMessage, 'info');
       } else {
@@ -3353,7 +3315,7 @@
       return false;
     }
     const brailleText = translateBrailleText(source, instance.mode);
-    setBrailleResult(instance.slug, source, brailleText, 'selection');
+    setBrailleResult(instance.slug, source, brailleText);
     announceBraille(instance, brailleText);
     if(truncatedMessage){
       setBrailleMessage(instance, truncatedMessage, 'info');
@@ -3383,23 +3345,8 @@
       }
       const mode = brailleModeBySlug.get(slug) || (slug === BRAILLE_SLUGS.contracted ? 'contracted' : 'uncontracted');
       const brailleText = translateBrailleText(source, mode);
-      setBrailleResult(slug, source, brailleText, 'selection');
+      setBrailleResult(slug, source, brailleText);
     });
-  }
-
-  function translateBrailleFromManual(instance){
-    if(!instance || !instance.manualTextarea){ return; }
-    const rawValue = clampBrailleManualText(instance.manualTextarea.value || '');
-    if(!rawValue.trim()){
-      setBrailleMessage(instance, instance.texts.manual_empty || '', 'error');
-      if(instance.manualTextarea && instance.manualTextarea.focus){ instance.manualTextarea.focus(); }
-      return;
-    }
-    updateBrailleManualText(instance.slug, rawValue);
-    const brailleText = translateBrailleText(rawValue, instance.mode);
-    setBrailleResult(instance.slug, rawValue, brailleText, 'manual');
-    announceBraille(instance, brailleText);
-    setBrailleMessage(instance, '', 'info');
   }
 
   function setBrailleActive(slug, active){
@@ -3437,11 +3384,6 @@
       selection_button: typeof settings.selection_button === 'string' ? settings.selection_button : '',
       selection_missing: typeof settings.selection_missing === 'string' ? settings.selection_missing : '',
       selection_truncated: typeof settings.selection_truncated === 'string' ? settings.selection_truncated : '',
-      manual_label: typeof settings.manual_label === 'string' ? settings.manual_label : '',
-      manual_placeholder: typeof settings.manual_placeholder === 'string' ? settings.manual_placeholder : '',
-      manual_button: typeof settings.manual_button === 'string' ? settings.manual_button : '',
-      manual_clear: typeof settings.manual_clear === 'string' ? settings.manual_clear : '',
-      manual_empty: typeof settings.manual_empty === 'string' ? settings.manual_empty : '',
       result_label: typeof settings.result_label === 'string' ? settings.result_label : '',
       result_empty: typeof settings.result_empty === 'string' ? settings.result_empty : '',
       result_aria: typeof settings.result_aria === 'string' ? settings.result_aria : '',
@@ -3514,42 +3456,11 @@
     selectionButton.disabled = true;
     selectionActions.appendChild(selectionButton);
     selectionSection.appendChild(selectionActions);
-    article.appendChild(selectionSection);
-
-    const manualSection = document.createElement('section');
-    manualSection.className = 'a11y-braille__section a11y-braille__section--manual';
-    const manualId = `a11y-braille-${++brailleIdCounter}`;
-    const manualLabel = document.createElement('label');
-    manualLabel.className = 'a11y-braille__title';
-    manualLabel.setAttribute('for', manualId);
-    manualLabel.textContent = texts.manual_label || '';
-    manualSection.appendChild(manualLabel);
-    const manualTextarea = document.createElement('textarea');
-    manualTextarea.id = manualId;
-    manualTextarea.className = 'a11y-braille__textarea';
-    manualTextarea.rows = 4;
-    if(texts.manual_placeholder){ manualTextarea.placeholder = texts.manual_placeholder; }
-    manualSection.appendChild(manualTextarea);
-    const manualActions = document.createElement('div');
-    manualActions.className = 'a11y-braille__actions';
-    const manualTranslateBtn = document.createElement('button');
-    manualTranslateBtn.type = 'button';
-    manualTranslateBtn.className = 'a11y-braille__submit';
-    manualTranslateBtn.textContent = texts.manual_button || '';
-    manualTranslateBtn.disabled = true;
-    manualActions.appendChild(manualTranslateBtn);
-    const manualClearBtn = document.createElement('button');
-    manualClearBtn.type = 'button';
-    manualClearBtn.className = 'a11y-braille__clear';
-    manualClearBtn.textContent = texts.manual_clear || '';
-    manualClearBtn.disabled = true;
-    manualActions.appendChild(manualClearBtn);
-    manualSection.appendChild(manualActions);
     const message = document.createElement('p');
     message.className = 'a11y-braille__message';
     message.hidden = true;
-    manualSection.appendChild(message);
-    article.appendChild(manualSection);
+    selectionSection.appendChild(message);
+    article.appendChild(selectionSection);
 
     const resultSection = document.createElement('section');
     resultSection.className = 'a11y-braille__section a11y-braille__section--result';
@@ -3589,9 +3500,6 @@
       selectionPreview,
       selectionHint,
       selectionButton,
-      manualTextarea,
-      manualTranslateBtn,
-      manualClearBtn,
       message,
       resultEmpty,
       resultContainer,
@@ -3617,30 +3525,6 @@
       setTimeout(markConnection, 0);
     }
 
-    manualTextarea.addEventListener('input', () => {
-      const sanitized = clampBrailleManualText(manualTextarea.value || '');
-      if(manualTextarea.value !== sanitized){
-        const pos = manualTextarea.selectionStart;
-        manualTextarea.value = sanitized;
-        if(typeof manualTextarea.setSelectionRange === 'function'){
-          const nextPos = typeof pos === 'number' ? Math.min(pos, sanitized.length) : sanitized.length;
-          manualTextarea.setSelectionRange(nextPos, nextPos);
-        }
-      }
-      updateBrailleManualText(slug, sanitized);
-      if(sanitized.trim()){
-        setBrailleMessage(instance, '', 'info');
-      }
-    });
-
-    manualTranslateBtn.addEventListener('click', () => translateBrailleFromManual(instance));
-    manualClearBtn.addEventListener('click', () => {
-      manualTextarea.value = '';
-      updateBrailleManualText(slug, '');
-      setBrailleResult(slug, '', '', 'manual');
-      announceBraille(instance, '');
-      setBrailleMessage(instance, '', 'info');
-    });
     selectionButton.addEventListener('click', () => translateBrailleFromSelection(instance, { showMissingError: true, skipIfSame: false }));
 
     syncBrailleInstances();
