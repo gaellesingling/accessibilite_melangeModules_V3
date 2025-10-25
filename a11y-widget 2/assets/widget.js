@@ -3006,8 +3006,9 @@
       selectionButton.disabled = !active || !brailleSelectionState.text;
     }
     const hasResult = !!(state.lastBraille && state.lastBraille.length && state.lastOriginal && state.lastOriginal.length);
+    const hasPlaceholder = !!(texts.result_empty && texts.result_empty.length);
     if(resultEmpty){
-      resultEmpty.hidden = hasResult;
+      resultEmpty.hidden = hasResult || !hasPlaceholder;
     }
     if(resultContainer){
       resultContainer.hidden = !hasResult;
@@ -3042,9 +3043,12 @@
           if(previewText){
             selectionPreview.textContent = previewText;
             selectionPreview.classList.remove('is-empty');
+            selectionPreview.hidden = false;
           } else {
             selectionPreview.textContent = texts.selection_empty || '';
             selectionPreview.classList.add('is-empty');
+            const hasFallback = !!(texts.selection_empty && texts.selection_empty.length);
+            selectionPreview.hidden = !hasFallback;
           }
         }
         if(selectionHint){
@@ -3446,6 +3450,7 @@
     const selectionPreview = document.createElement('p');
     selectionPreview.className = 'a11y-braille__selection is-empty';
     selectionPreview.textContent = texts.selection_empty || '';
+    if(!selectionPreview.textContent){ selectionPreview.hidden = true; }
     selectionSection.appendChild(selectionPreview);
     const selectionActions = document.createElement('div');
     selectionActions.className = 'a11y-braille__actions';
@@ -3471,6 +3476,7 @@
     const resultEmpty = document.createElement('p');
     resultEmpty.className = 'a11y-braille__empty';
     resultEmpty.textContent = texts.result_empty || '';
+    if(!resultEmpty.textContent){ resultEmpty.hidden = true; }
     resultSection.appendChild(resultEmpty);
     const resultContainer = document.createElement('div');
     resultContainer.className = 'a11y-braille__result';
