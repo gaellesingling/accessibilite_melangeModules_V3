@@ -536,10 +536,12 @@
     const selector = `html[data-a11y-${CATARACT_SLUG}='on']`;
     const scope = `${selector} body :not([data-a11y-filter-exempt])`;
     const mediaElements = joinSelectors(scope, ['img', 'picture', 'video', 'canvas', 'svg']);
+    const nonMediaElements = joinSelectors(scope, [":not(:is(img, picture, video, canvas, svg, iframe, embed, object, model-viewer))"]);
     const styleEl = ensureCataractEffectsStyle();
     styleEl.textContent = [
       `${scope} { animation: none !important; transition: none !important; box-shadow: none !important; text-shadow: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border-radius: 0 !important; }`,
-      `${mediaElements} { opacity: 1 !important; }`,
+      `${mediaElements} { opacity: 1 !important; filter: none !important; }`,
+      `${nonMediaElements} { opacity: 1 !important; background-image: none !important; }`,
       `${scope} *:hover { transform: none !important; filter: none !important; }`,
       `${selector} [data-a11y-filter-exempt], ${selector} [data-a11y-filter-exempt] * { animation: initial !important; transition: initial !important; box-shadow: initial !important; text-shadow: initial !important; border-radius: initial !important; }`,
     ].join('\n');
@@ -869,6 +871,7 @@
       const valueDisplay = document.createElement('span');
       valueDisplay.className = 'a11y-cataract__value';
       valueDisplay.id = `${baseId}-glare-value`;
+      valueDisplay.setAttribute('aria-live', 'polite');
       label.appendChild(valueDisplay);
       instance.intensityValue = valueDisplay;
 
