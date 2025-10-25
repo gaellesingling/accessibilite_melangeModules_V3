@@ -436,7 +436,6 @@ function a11y_widget_get_default_sections() {
                     'settings'   => array(
                         'mode'               => 'contracted',
                         'selection_label'    => __( 'Texte sélectionné', 'a11y-widget' ),
-                        'selection_button'   => __( 'Traduire la sélection', 'a11y-widget' ),
                         'selection_missing'  => __( 'Aucun texte n’est sélectionné pour le moment.', 'a11y-widget' ),
                         'selection_truncated' => __( 'Seuls les 600 premiers caractères de la sélection ont été traduits.', 'a11y-widget' ),
                         'result_label'       => __( 'Résultat', 'a11y-widget' ),
@@ -454,7 +453,6 @@ function a11y_widget_get_default_sections() {
                     'settings'   => array(
                         'mode'               => 'uncontracted',
                         'selection_label'    => __( 'Texte sélectionné', 'a11y-widget' ),
-                        'selection_button'   => __( 'Traduire la sélection', 'a11y-widget' ),
                         'selection_missing'  => __( 'Aucun texte n’est sélectionné pour le moment.', 'a11y-widget' ),
                         'selection_truncated' => __( 'Seuls les 600 premiers caractères de la sélection ont été traduits.', 'a11y-widget' ),
                         'result_label'       => __( 'Résultat', 'a11y-widget' ),

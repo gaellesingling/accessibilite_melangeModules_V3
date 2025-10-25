@@ -2990,7 +2990,6 @@
     if(!instance){ return; }
     const {
       article,
-      selectionButton,
       resultEmpty,
       resultContainer,
       resultOriginal,
@@ -3001,9 +3000,6 @@
     const active = brailleActiveSlugs.has(instance.slug);
     if(article){
       article.classList.toggle('is-disabled', !active);
-    }
-    if(selectionButton){
-      selectionButton.disabled = !active || !brailleSelectionState.text;
     }
     const hasResult = !!(state.lastBraille && state.lastBraille.length && state.lastOriginal && state.lastOriginal.length);
     const hasPlaceholder = !!(texts.result_empty && texts.result_empty.length);
@@ -3038,7 +3034,7 @@
     const previewText = selectionText ? (truncated ? `${selectionText}…` : selectionText) : '';
     brailleInstances.forEach(set => {
       set.forEach(instance => {
-        const { selectionPreview, selectionHint, selectionButton, texts } = instance;
+        const { selectionPreview, selectionHint, texts } = instance;
         if(selectionPreview){
           if(previewText){
             selectionPreview.textContent = previewText;
@@ -3059,10 +3055,6 @@
             selectionHint.textContent = '';
             selectionHint.hidden = true;
           }
-        }
-        if(selectionButton){
-          const active = brailleActiveSlugs.has(instance.slug);
-          selectionButton.disabled = !active || !selectionText;
         }
       });
     });
@@ -3385,7 +3377,6 @@
       selection_label: typeof settings.selection_label === 'string' ? settings.selection_label : '',
       selection_empty: typeof settings.selection_empty === 'string' ? settings.selection_empty : '',
       selection_hint: typeof settings.selection_hint === 'string' ? settings.selection_hint : '',
-      selection_button: typeof settings.selection_button === 'string' ? settings.selection_button : '',
       selection_missing: typeof settings.selection_missing === 'string' ? settings.selection_missing : '',
       selection_truncated: typeof settings.selection_truncated === 'string' ? settings.selection_truncated : '',
       result_label: typeof settings.result_label === 'string' ? settings.result_label : '',
@@ -3452,15 +3443,6 @@
     selectionPreview.textContent = texts.selection_empty || '';
     if(!selectionPreview.textContent){ selectionPreview.hidden = true; }
     selectionSection.appendChild(selectionPreview);
-    const selectionActions = document.createElement('div');
-    selectionActions.className = 'a11y-braille__actions';
-    const selectionButton = document.createElement('button');
-    selectionButton.type = 'button';
-    selectionButton.className = 'a11y-braille__action';
-    selectionButton.textContent = texts.selection_button || '';
-    selectionButton.disabled = true;
-    selectionActions.appendChild(selectionButton);
-    selectionSection.appendChild(selectionActions);
     const message = document.createElement('p');
     message.className = 'a11y-braille__message';
     message.hidden = true;
@@ -3505,7 +3487,6 @@
       texts,
       selectionPreview,
       selectionHint,
-      selectionButton,
       message,
       resultEmpty,
       resultContainer,
@@ -3530,9 +3511,6 @@
     } else {
       setTimeout(markConnection, 0);
     }
-
-    selectionButton.addEventListener('click', () => translateBrailleFromSelection(instance, { showMissingError: true, skipIfSame: false }));
-
     syncBrailleInstances();
     return article;
   }
