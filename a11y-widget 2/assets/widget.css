@@ -498,6 +498,14 @@
 .a11y-card--brightness.is-disabled {
   opacity: .85;
 }
+.a11y-card--braille {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+.a11y-card--braille.is-disabled {
+  opacity: .85;
+}
 .a11y-brightness__header {
   display: flex;
   flex-wrap: wrap;
@@ -647,6 +655,126 @@
 .a11y-cataract__reset:not(:disabled):hover {
   background: #dce5ff;
   color: #112a7f;
+}
+.a11y-braille__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.a11y-braille__switch {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.a11y-braille__intro {
+  margin: 0;
+  font-size: .9rem;
+  color: var(--a11y-text-subtle);
+}
+.a11y-braille__section {
+  display: grid;
+  gap: 10px;
+}
+.a11y-braille__title {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 600;
+}
+.a11y-braille__hint {
+  margin: 0;
+  font-size: .82rem;
+  color: var(--a11y-text-subtle);
+}
+.a11y-braille__selection {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--a11y-border);
+  background: var(--a11y-surface);
+  min-height: 48px;
+  font-size: .9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.a11y-braille__selection.is-empty {
+  color: var(--a11y-text-subtle);
+  font-style: italic;
+}
+.a11y-braille__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.a11y-braille__action {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .15s ease, background-color .2s ease, color .2s ease, box-shadow .2s ease;
+  background: var(--a11y-primary);
+  color: var(--a11y-primary-contrast);
+  box-shadow: 0 4px 8px rgba(214, 30, 91, 0.18);
+}
+.a11y-braille__action:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+.a11y-braille__action:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.a11y-braille__message {
+  margin: 4px 0 0;
+  font-size: .82rem;
+  display: none;
+}
+.a11y-braille__message[hidden] {
+  display: none;
+}
+.a11y-braille__message--info {
+  display: block;
+  color: var(--a11y-text-subtle);
+}
+.a11y-braille__message--error {
+  display: block;
+  color: #b42318;
+}
+.a11y-braille__result {
+  border: 1px solid var(--a11y-border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--a11y-surface);
+  display: grid;
+  gap: 10px;
+}
+.a11y-braille__result[hidden] {
+  display: none;
+}
+.a11y-braille__original {
+  margin: 0;
+  font-size: .84rem;
+  color: var(--a11y-text-subtle);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.a11y-braille__cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 1.6rem;
+  line-height: 1.4;
+}
+.a11y-braille__cell {
+  min-width: 1ch;
+}
+.a11y-braille__empty {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--a11y-text-subtle);
+  font-style: italic;
 }
 .a11y-brightness__label {
   margin: 0;
