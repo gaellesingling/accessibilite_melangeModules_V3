@@ -1,0 +1,59 @@
+{
+  "name": "text-to-speech",
+  "title": "Text-to-Speech",
+  "description": "Synthèse vocale pour lire le contenu de la page à voix haute",
+  "version": "1.2.0",
+  "author": "Accessibility Modular Team",
+  "category": "lecture",
+  "icon": "🔊",
+  "enabled": true,
+  "requires_api": false,
+  "api_config": {
+    "key_name": "acc_tts_api_key",
+    "key_label": "Clé API Text-to-Speech (optionnelle)",
+    "key_description": "Clé API optionnelle pour services cloud premium. Le module fonctionne sans clé API avec Web Speech API native.",
+    "key_placeholder": "Entrez votre clé API Google Cloud TTS (optionnelle)"
+  },
+  "settings": {
+    "default_volume": 100,
+    "default_rate": 1.0,
+    "default_pitch": 1.0,
+    "enable_keyboard_shortcuts": true
+  },
+  "rgaa": {
+    "criteria": ["4.1", "10.7", "12.8", "13.1"],
+    "level": "AA",
+    "wcag": ["1.2.1", "2.1.1", "2.4.3", "2.4.7"]
+  },
+  "compatibility": {
+    "browsers": {
+      "chrome": "33+",
+      "firefox": "49+",
+      "safari": "7+",
+      "edge": "14+",
+      "ie": false
+    },
+    "wordpress": "5.8+",
+    "php": "7.4+"
+  },
+  "dependencies": {
+    "jquery": true,
+    "acc-utils": true,
+    "web-speech-api": "native"
+  },
+  "features": [
+    "Lecture du texte sélectionné",
+    "Lecture de la page entière",
+    "Contrôles lecture/pause/stop",
+    "Réglage volume et vitesse",
+    "Choix de la voix",
+    "Raccourcis clavier",
+    "Sauvegarde préférences"
+  ],
+  "cookies": [
+    "acc_tts_enabled",
+    "acc_tts_volume",
+    "acc_tts_rate",
+    "acc_tts_voice"
+  ]
+}
