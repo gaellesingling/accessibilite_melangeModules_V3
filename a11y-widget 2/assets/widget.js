@@ -2812,6 +2812,1094 @@
     return article;
   }
 
+  const TTS_SLUG = 'audition-text-to-speech';
+  const TTS_TEMPLATE_NAME = 'text-to-speech';
+  const TTS_STORAGE_KEY = 'a11y-widget-tts-settings:v1';
+  const TTS_DEFAULTS = { mode: 'selection', volume: 1, rate: 1, voice: '' };
+  const TTS_DEFAULT_TEXTS = {
+    intro: '',
+    mode_label: 'Mode de lecture',
+    mode_hint: 'Sélectionnez un mode de lecture.',
+    mode_selection: 'Sélection',
+    mode_page: 'Page entière',
+    controls_label: 'Contrôles',
+    play_label: 'Lire',
+    pause_label: 'Pause',
+    stop_label: 'Stop',
+    status_ready: 'Prêt à lire',
+    status_selection: 'Sélectionnez du texte puis appuyez sur « Lire ».',
+    status_page: 'Prêt à lire la page entière.',
+    status_playing: 'Lecture en cours…',
+    status_paused: 'Lecture en pause',
+    status_stopped: 'Lecture arrêtée',
+    status_finished: 'Lecture terminée',
+    status_error: 'Erreur de lecture',
+    volume_label: 'Volume',
+    volume_decrease: 'Diminuer le volume',
+    volume_increase: 'Augmenter le volume',
+    rate_label: 'Vitesse de lecture',
+    rate_hint: '0,5x = lent • 1x = normal • 2x = rapide',
+    rate_decrease: 'Diminuer la vitesse de lecture',
+    rate_increase: 'Augmenter la vitesse de lecture',
+    voice_label: 'Voix',
+    voice_hint: 'Les voix disponibles dépendent de votre système.',
+    voice_default: 'Voix du navigateur (auto)',
+    voice_loading: 'Chargement des voix…',
+    info_tip: '',
+    info_shortcuts: '',
+    error_no_text: 'Aucun texte à lire pour le moment.',
+    unsupported: 'La synthèse vocale n’est pas disponible sur ce navigateur.',
+    announce_enabled: '',
+    announce_disabled: '',
+    announce_started: '',
+    announce_paused: '',
+    announce_resumed: '',
+    announce_stopped: '',
+    announce_finished: '',
+    announce_voice: '',
+  };
+  const TTS_STATUS_TYPES = ['info', 'playing', 'paused', 'stopped', 'success', 'error'];
+  const TTS_STATUS_ICONS = {
+    info: 'ℹ️',
+    playing: '🔊',
+    paused: '⏸️',
+    stopped: '⏹️',
+    success: '✓',
+    error: '❌',
+  };
+
+  const ttsInstances = new Set();
+  let ttsSettings = loadTtsSettings();
+  let ttsActive = false;
+  const ttsSupport = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+  const ttsSynth = ttsSupport ? window.speechSynthesis : null;
+  let ttsVoices = [];
+  let ttsVoiceSignature = '';
+  let ttsUtterance = null;
+  let ttsIsPlaying = false;
+  let ttsIsPaused = false;
+  let ttsIsStopping = false;
+  let ttsSuppressStopStatus = false;
+  let ttsSelectionText = '';
+  let ttsSelectionHandler = null;
+  let ttsKeyboardHandler = null;
+  let ttsTexts = Object.assign({}, TTS_DEFAULT_TEXTS);
+  let ttsStatus = { text: ttsTexts.status_ready, type: 'info' };
+
+  function loadTtsSettings(){
+    const defaults = Object.assign({}, TTS_DEFAULTS);
+    if(typeof localStorage === 'undefined'){ return defaults; }
+    try {
+      const raw = localStorage.getItem(TTS_STORAGE_KEY);
+      if(!raw){ return defaults; }
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object'){ return defaults; }
+      const settings = Object.assign({}, defaults);
+      if(typeof parsed.mode === 'string'){
+        settings.mode = parsed.mode === 'page' ? 'page' : 'selection';
+      }
+      if(Object.prototype.hasOwnProperty.call(parsed, 'volume')){
+        settings.volume = clampVolume(parsed.volume);
+      }
+      if(Object.prototype.hasOwnProperty.call(parsed, 'rate')){
+        settings.rate = clampRate(parsed.rate);
+      }
+      if(typeof parsed.voice === 'string'){
+        settings.voice = parsed.voice;
+      }
+      return settings;
+    } catch(err){
+      return defaults;
+    }
+  }
+
+  function persistTtsSettings(){
+    if(typeof localStorage === 'undefined'){ return; }
+    try {
+      localStorage.setItem(TTS_STORAGE_KEY, JSON.stringify(ttsSettings));
+    } catch(err){ /* ignore */ }
+  }
+
+  function clampVolume(value){
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    if(!isFinite(num)){ return 1; }
+    return Math.min(Math.max(num, 0), 1);
+  }
+
+  function clampRate(value){
+    const num = typeof value === 'number' ? value : parseFloat(value);
+    if(!isFinite(num)){ return 1; }
+    return Math.min(Math.max(num, 0.5), 2);
+  }
+
+  function updateTtsSettings(partial, options={}){
+    if(!partial || typeof partial !== 'object'){ return; }
+    const next = Object.assign({}, ttsSettings);
+    let changed = false;
+    if(Object.prototype.hasOwnProperty.call(partial, 'mode')){
+      const mode = partial.mode === 'page' ? 'page' : 'selection';
+      if(next.mode !== mode){
+        next.mode = mode;
+        changed = true;
+      }
+    }
+    if(Object.prototype.hasOwnProperty.call(partial, 'volume')){
+      const volume = clampVolume(partial.volume);
+      if(next.volume !== volume){
+        next.volume = volume;
+        changed = true;
+      }
+    }
+    if(Object.prototype.hasOwnProperty.call(partial, 'rate')){
+      const rate = clampRate(partial.rate);
+      if(next.rate !== rate){
+        next.rate = rate;
+        changed = true;
+      }
+    }
+    if(Object.prototype.hasOwnProperty.call(partial, 'voice')){
+      const voice = typeof partial.voice === 'string' ? partial.voice : '';
+      if(next.voice !== voice){
+        next.voice = voice;
+        changed = true;
+      }
+    }
+    if(!changed){ return; }
+    ttsSettings = next;
+    if(options.persist !== false){
+      persistTtsSettings();
+    }
+    if(Object.prototype.hasOwnProperty.call(partial, 'mode')){
+      ensureTtsSelectionTracking();
+    }
+    ensureTtsIdleStatus();
+    syncTtsInstances();
+  }
+
+  function setTtsMode(mode){
+    updateTtsSettings({ mode: mode === 'page' ? 'page' : 'selection' });
+  }
+
+  function ensureTtsSelectionTracking(){
+    if(typeof document === 'undefined'){ return; }
+    const shouldListen = ttsSupport && ttsActive && ttsSettings.mode === 'selection';
+    if(shouldListen){
+      if(!ttsSelectionHandler){
+        ttsSelectionHandler = () => { updateTtsSelectionText(); };
+        document.addEventListener('selectionchange', ttsSelectionHandler);
+        document.addEventListener('mouseup', ttsSelectionHandler);
+        document.addEventListener('keyup', ttsSelectionHandler);
+      }
+      updateTtsSelectionText();
+    } else if(ttsSelectionHandler){
+      document.removeEventListener('selectionchange', ttsSelectionHandler);
+      document.removeEventListener('mouseup', ttsSelectionHandler);
+      document.removeEventListener('keyup', ttsSelectionHandler);
+      ttsSelectionHandler = null;
+      ttsSelectionText = '';
+    }
+  }
+
+  function updateTtsSelectionText(){
+    const text = getCurrentSelectionText();
+    if(text === ttsSelectionText){
+      if(ttsSettings.mode === 'selection' && ttsActive){
+        syncTtsInstances();
+      }
+      return;
+    }
+    ttsSelectionText = text;
+    ensureTtsIdleStatus();
+    syncTtsInstances();
+  }
+
+  function getCurrentSelectionText(){
+    if(typeof window === 'undefined' || !window.getSelection){ return ''; }
+    const selection = window.getSelection();
+    if(!selection){ return ''; }
+    const text = selection.toString();
+    if(!text){ return ''; }
+    return text.replace(/\s+/g, ' ').trim();
+  }
+
+  function ensureTtsKeyboardShortcuts(){
+    if(typeof document === 'undefined'){ return; }
+    const shouldListen = ttsSupport && ttsActive;
+    if(shouldListen){
+      if(!ttsKeyboardHandler){
+        ttsKeyboardHandler = event => handleTtsKeydown(event);
+        document.addEventListener('keydown', ttsKeyboardHandler);
+      }
+    } else if(ttsKeyboardHandler){
+      document.removeEventListener('keydown', ttsKeyboardHandler);
+      ttsKeyboardHandler = null;
+    }
+  }
+
+  function handleTtsKeydown(event){
+    if(!ttsActive || !ttsSupport){ return; }
+    if(!panel || panel.getAttribute('aria-hidden') === 'true'){ return; }
+    if(event.defaultPrevented){ return; }
+    const target = event.target;
+    if(target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)){
+      return;
+    }
+    if(event.key === ' '){
+      event.preventDefault();
+      if(ttsIsPlaying && !ttsIsPaused){
+        ttsPause();
+      } else {
+        ttsPlay();
+      }
+    } else if(event.key === 'Escape'){
+      event.preventDefault();
+      ttsStop();
+    }
+  }
+
+  function ttsAnnounce(message){
+    if(!message || typeof document === 'undefined' || !document.body){ return; }
+    const region = document.createElement('div');
+    region.setAttribute('role', 'status');
+    region.setAttribute('aria-live', 'polite');
+    region.setAttribute('data-sr-only', '');
+    region.className = 'a11y-sr-only';
+    region.textContent = message;
+    document.body.appendChild(region);
+    setTimeout(() => { region.remove(); }, 1000);
+  }
+
+  function updateTtsStatus(text, type='info', options={}){
+    const sanitizedType = TTS_STATUS_TYPES.includes(type) ? type : 'info';
+    const sanitizedText = typeof text === 'string' ? text : '';
+    ttsStatus = { text: sanitizedText, type: sanitizedType };
+    syncTtsInstances();
+    if(options.announce && sanitizedText){
+      ttsAnnounce(sanitizedText);
+    }
+  }
+
+  function ensureTtsIdleStatus(){
+    if(ttsIsPlaying || ttsIsPaused){
+      return;
+    }
+    if(!ttsActive){
+      updateTtsStatus(ttsTexts.status_ready || TTS_DEFAULT_TEXTS.status_ready, 'info');
+      return;
+    }
+    if(!ttsSupport){
+      updateTtsStatus(ttsTexts.unsupported || TTS_DEFAULT_TEXTS.unsupported, 'error');
+      return;
+    }
+    if(ttsSettings.mode === 'page'){
+      updateTtsStatus(ttsTexts.status_page || TTS_DEFAULT_TEXTS.status_page, 'info');
+    } else {
+      updateTtsStatus(ttsTexts.status_selection || TTS_DEFAULT_TEXTS.status_selection, 'info');
+    }
+  }
+
+  function pruneTtsInstances(){
+    ttsInstances.forEach(instance => {
+      if(!instance || !instance.article){
+        ttsInstances.delete(instance);
+        return;
+      }
+      if(!instance.article.isConnected && instance.wasConnected){
+        ttsInstances.delete(instance);
+      }
+    });
+  }
+
+  function applyTtsStatusClass(element, type){
+    if(!element){ return; }
+    TTS_STATUS_TYPES.forEach(status => {
+      element.classList.remove(`a11y-tts__status--${status}`);
+    });
+    if(TTS_STATUS_TYPES.includes(type)){
+      element.classList.add(`a11y-tts__status--${type}`);
+    }
+  }
+
+  function syncTtsInstances(){
+    pruneTtsInstances();
+    ttsInstances.forEach(instance => syncTtsInstance(instance));
+  }
+
+  function syncTtsInstance(instance){
+    if(!instance){ return; }
+    const support = ttsSupport;
+    const active = ttsActive;
+    const controlsEnabled = support && active;
+    if(instance.body){
+      const visible = !!active;
+      instance.body.hidden = !visible;
+      instance.body.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    }
+    if(instance.article){
+      instance.article.classList.toggle('is-active', !!active);
+    }
+    const isSelectionMode = ttsSettings.mode === 'selection';
+    if(instance.modeSelectionBtn){
+      instance.modeSelectionBtn.classList.toggle('is-active', isSelectionMode);
+      instance.modeSelectionBtn.setAttribute('aria-pressed', isSelectionMode ? 'true' : 'false');
+    }
+    if(instance.modePageBtn){
+      instance.modePageBtn.classList.toggle('is-active', !isSelectionMode);
+      instance.modePageBtn.setAttribute('aria-pressed', !isSelectionMode ? 'true' : 'false');
+    }
+    if(instance.playBtn){
+      let disabled = !controlsEnabled;
+      if(!disabled){
+        if(ttsIsPlaying && !ttsIsPaused){
+          disabled = true;
+        } else if(isSelectionMode && !ttsSelectionText){
+          disabled = true;
+        }
+      }
+      instance.playBtn.disabled = disabled;
+    }
+    if(instance.pauseBtn){
+      instance.pauseBtn.disabled = !controlsEnabled || !ttsIsPlaying || ttsIsPaused;
+    }
+    if(instance.stopBtn){
+      instance.stopBtn.disabled = !controlsEnabled || (!ttsIsPlaying && !ttsIsPaused);
+    }
+    const volumePercent = Math.round(clampVolume(ttsSettings.volume) * 100);
+    if(instance.volumeSlider){
+      instance.volumeSlider.value = `${volumePercent}`;
+      instance.volumeSlider.disabled = !controlsEnabled;
+    }
+    if(instance.volumeValue){
+      instance.volumeValue.textContent = `${volumePercent}%`;
+    }
+    if(instance.volumeMinus){
+      instance.volumeMinus.disabled = !controlsEnabled;
+    }
+    if(instance.volumePlus){
+      instance.volumePlus.disabled = !controlsEnabled;
+    }
+    const rateValue = clampRate(ttsSettings.rate);
+    if(instance.rateSlider){
+      instance.rateSlider.value = rateValue.toFixed(1);
+      instance.rateSlider.disabled = !controlsEnabled;
+    }
+    if(instance.rateValue){
+      instance.rateValue.textContent = `${rateValue.toFixed(1)}x`;
+    }
+    if(instance.rateMinus){
+      instance.rateMinus.disabled = !controlsEnabled;
+    }
+    if(instance.ratePlus){
+      instance.ratePlus.disabled = !controlsEnabled;
+    }
+    if(instance.voiceSelect){
+      instance.voiceSelect.disabled = !controlsEnabled || !ttsVoices.length;
+      if(ttsVoices.length){
+        const target = typeof ttsSettings.voice === 'string' ? ttsSettings.voice : '';
+        if(target && Array.from(instance.voiceSelect.options).some(option => option.value === target)){
+          instance.voiceSelect.value = target;
+        } else if(!target){
+          instance.voiceSelect.value = '';
+        }
+      }
+    }
+    if(instance.voiceInfo){
+      if(!support){
+        instance.voiceInfo.textContent = '';
+      } else if(!ttsVoices.length){
+        instance.voiceInfo.textContent = instance.texts.voice_hint || '';
+      } else {
+        instance.voiceInfo.textContent = instance.texts.voice_hint || '';
+      }
+    }
+    if(instance.statusEl){
+      applyTtsStatusClass(instance.statusEl, ttsStatus.type);
+    }
+    if(instance.statusIcon){
+      instance.statusIcon.textContent = TTS_STATUS_ICONS[ttsStatus.type] || TTS_STATUS_ICONS.info;
+    }
+    if(instance.statusText){
+      instance.statusText.textContent = ttsStatus.text || '';
+    }
+  }
+
+  function getReadablePageText(){
+    if(typeof document === 'undefined' || !document.body){ return ''; }
+    let text = '';
+    if(typeof document.body.innerText === 'string'){
+      text = document.body.innerText;
+    } else if(typeof document.body.textContent === 'string'){
+      text = document.body.textContent;
+    }
+    const widget = document.getElementById('a11y-widget-root');
+    if(widget){
+      const widgetText = widget.innerText || widget.textContent || '';
+      if(widgetText){
+        text = text.replace(widgetText, ' ');
+      }
+    }
+    text = text.replace(/\s+/g, ' ').trim();
+    if(text.length > 60000){
+      text = text.slice(0, 60000);
+    }
+    return text;
+  }
+
+  function cancelCurrentUtterance(options={}){
+    if(!ttsSupport || !ttsSynth){ return; }
+    if(ttsIsPlaying || ttsIsPaused){
+      ttsIsStopping = true;
+      ttsSuppressStopStatus = options.silent === true;
+      try { ttsSynth.cancel(); } catch(err){ /* ignore */ }
+    }
+  }
+
+  function dispatchTtsEvent(target, type){
+    if(!target || !type){ return; }
+    try {
+      if(typeof Event === 'function'){
+        target.dispatchEvent(new Event(type));
+        return;
+      }
+    } catch(err){ /* ignore */ }
+    if(typeof document !== 'undefined' && document.createEvent){
+      const evt = document.createEvent('Event');
+      evt.initEvent(type, false, false);
+      target.dispatchEvent(evt);
+    }
+  }
+
+  function ttsPlay(){
+    if(!ttsSupport || !ttsSynth || !ttsActive){ return; }
+    if(ttsIsPlaying && !ttsIsPaused){ return; }
+    if(ttsIsPaused && ttsSynth.paused){
+      try { ttsSynth.resume(); } catch(err){ /* ignore */ }
+      return;
+    }
+    if(ttsSettings.mode === 'selection'){
+      updateTtsSelectionText();
+    }
+    const text = ttsSettings.mode === 'selection' ? ttsSelectionText : getReadablePageText();
+    if(!text){
+      const message = ttsTexts.error_no_text || TTS_DEFAULT_TEXTS.error_no_text;
+      updateTtsStatus(message, 'error');
+      ttsAnnounce(message);
+      return;
+    }
+    cancelCurrentUtterance({ silent: true });
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.volume = clampVolume(ttsSettings.volume);
+    utterance.rate = clampRate(ttsSettings.rate);
+    utterance.pitch = 1;
+    const voice = getTtsVoiceByName(ttsSettings.voice);
+    if(voice){ utterance.voice = voice; }
+    ttsUtterance = utterance;
+    ttsIsPlaying = true;
+    ttsIsPaused = false;
+    ttsIsStopping = false;
+    ttsSuppressStopStatus = false;
+    syncTtsInstances();
+    utterance.onstart = () => {
+      ttsUtterance = utterance;
+      ttsIsPlaying = true;
+      ttsIsPaused = false;
+      ttsIsStopping = false;
+      ttsSuppressStopStatus = false;
+      updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
+      if(ttsTexts.announce_started){ ttsAnnounce(ttsTexts.announce_started); }
+    };
+    utterance.onpause = () => {
+      ttsIsPaused = true;
+      updateTtsStatus(ttsTexts.status_paused || TTS_DEFAULT_TEXTS.status_paused, 'paused');
+      if(ttsTexts.announce_paused){ ttsAnnounce(ttsTexts.announce_paused); }
+    };
+    utterance.onresume = () => {
+      ttsIsPaused = false;
+      updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
+      if(ttsTexts.announce_resumed){ ttsAnnounce(ttsTexts.announce_resumed); }
+    };
+    utterance.onend = () => {
+      const suppressed = ttsSuppressStopStatus;
+      const stoppedManually = ttsIsStopping;
+      ttsUtterance = null;
+      ttsIsPlaying = false;
+      ttsIsPaused = false;
+      ttsIsStopping = false;
+      ttsSuppressStopStatus = false;
+      if(suppressed){
+        ensureTtsIdleStatus();
+        return;
+      }
+      if(stoppedManually){
+        updateTtsStatus(ttsTexts.status_stopped || TTS_DEFAULT_TEXTS.status_stopped, 'stopped');
+        if(ttsTexts.announce_stopped){ ttsAnnounce(ttsTexts.announce_stopped); }
+      } else {
+        updateTtsStatus(ttsTexts.status_finished || TTS_DEFAULT_TEXTS.status_finished, 'success');
+        if(ttsTexts.announce_finished){ ttsAnnounce(ttsTexts.announce_finished); }
+      }
+    };
+    utterance.onerror = event => {
+      if(ttsSuppressStopStatus || ttsIsStopping){ return; }
+      if(event && (event.error === 'canceled' || event.error === 'interrupted')){
+        return;
+      }
+      ttsUtterance = null;
+      ttsIsPlaying = false;
+      ttsIsPaused = false;
+      ttsIsStopping = false;
+      const message = ttsTexts.status_error || TTS_DEFAULT_TEXTS.status_error;
+      updateTtsStatus(message, 'error');
+      ttsAnnounce(message);
+    };
+    try {
+      ttsSynth.speak(utterance);
+    } catch(err){
+      const message = ttsTexts.status_error || TTS_DEFAULT_TEXTS.status_error;
+      ttsUtterance = null;
+      ttsIsPlaying = false;
+      ttsIsPaused = false;
+      ttsIsStopping = false;
+      updateTtsStatus(message, 'error');
+      ttsAnnounce(message);
+    }
+  }
+
+  function ttsPause(){
+    if(!ttsSupport || !ttsSynth){ return; }
+    if(!ttsIsPlaying || ttsIsPaused){ return; }
+    try { ttsSynth.pause(); } catch(err){ /* ignore */ }
+  }
+
+  function ttsStop(options={}){
+    if(!ttsSupport || !ttsSynth){ return; }
+    if(!ttsIsPlaying && !ttsIsPaused){
+      if(options.silent !== true){
+        ensureTtsIdleStatus();
+      }
+      return;
+    }
+    ttsIsStopping = true;
+    ttsSuppressStopStatus = options.silent === true;
+    try { ttsSynth.cancel(); } catch(err){ /* ignore */ }
+  }
+
+  function getTtsVoiceByName(name){
+    if(!name){ return null; }
+    return ttsVoices.find(voice => voice && voice.name === name) || null;
+  }
+
+  function populateTtsVoiceSelect(instance){
+    if(!instance || !instance.voiceSelect){ return; }
+    const select = instance.voiceSelect;
+    select.innerHTML = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = instance.texts.voice_default || TTS_DEFAULT_TEXTS.voice_default;
+    select.appendChild(defaultOption);
+    if(!ttsSupport || !ttsVoices.length){
+      if(!ttsVoices.length){
+        const loading = document.createElement('option');
+        loading.value = '';
+        loading.textContent = instance.texts.voice_loading || TTS_DEFAULT_TEXTS.voice_loading;
+        loading.disabled = true;
+        select.appendChild(loading);
+      }
+      return;
+    }
+    const french = ttsVoices.filter(voice => typeof voice.lang === 'string' && voice.lang.toLowerCase().startsWith('fr'));
+    const others = ttsVoices.filter(voice => !french.includes(voice));
+    const addGroup = (label, list) => {
+      if(!list.length){ return; }
+      list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')).forEach(voice => {
+        const option = document.createElement('option');
+        option.value = voice.name || '';
+        option.textContent = voice.name || voice.lang || '';
+        option.dataset.lang = voice.lang || '';
+        if(label){
+          let group = Array.from(select.children).find(child => child.tagName === 'OPTGROUP' && child.label === label);
+          if(!group){
+            group = document.createElement('optgroup');
+            group.label = label;
+            select.appendChild(group);
+          }
+          group.appendChild(option);
+        } else {
+          select.appendChild(option);
+        }
+      });
+    };
+    addGroup(french.length ? '🇫🇷 Français' : '', french);
+    addGroup(others.length ? '🌍 Autres langues' : '', others);
+    const target = typeof ttsSettings.voice === 'string' ? ttsSettings.voice : '';
+    if(target && Array.from(select.options).some(option => option.value === target)){
+      select.value = target;
+    } else {
+      select.value = '';
+    }
+  }
+
+  function syncTtsVoiceOptions(){
+    pruneTtsInstances();
+    ttsInstances.forEach(instance => populateTtsVoiceSelect(instance));
+  }
+
+  function loadTtsVoices(){
+    if(!ttsSupport || !ttsSynth){ return; }
+    try {
+      const voices = ttsSynth.getVoices();
+      if(!Array.isArray(voices)){ return; }
+      const signature = voices.map(voice => `${voice.name}|${voice.lang}`).join(',');
+      if(signature === ttsVoiceSignature){ return; }
+      ttsVoices = voices.slice();
+      ttsVoiceSignature = signature;
+      syncTtsVoiceOptions();
+      ensureTtsIdleStatus();
+    } catch(err){ /* ignore */ }
+  }
+
+  function setTtsActive(on){
+    const next = !!on;
+    if(ttsActive === next){
+      ensureTtsSelectionTracking();
+      ensureTtsKeyboardShortcuts();
+      ensureTtsIdleStatus();
+      syncTtsInstances();
+      return;
+    }
+    ttsActive = next;
+    if(next){
+      if(ttsSupport){
+        ensureTtsSelectionTracking();
+        ensureTtsKeyboardShortcuts();
+        ensureTtsIdleStatus();
+      } else {
+        updateTtsStatus(ttsTexts.unsupported || TTS_DEFAULT_TEXTS.unsupported, 'error');
+      }
+      if(ttsTexts.announce_enabled){ ttsAnnounce(ttsTexts.announce_enabled); }
+    } else {
+      if(ttsSupport){
+        ttsStop({ silent: true });
+      }
+      ensureTtsSelectionTracking();
+      ensureTtsKeyboardShortcuts();
+      ensureTtsIdleStatus();
+      if(ttsTexts.announce_disabled){ ttsAnnounce(ttsTexts.announce_disabled); }
+    }
+    syncTtsInstances();
+  }
+
+  function createTtsCard(feature){
+    if(!feature){ return null; }
+    const slug = typeof feature.slug === 'string' && feature.slug ? feature.slug : TTS_SLUG;
+    const article = document.createElement('article');
+    article.className = 'a11y-card a11y-card--tts';
+    article.setAttribute('data-role', 'feature-card');
+
+    const header = document.createElement('div');
+    header.className = 'a11y-tts__header';
+    article.appendChild(header);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.setAttribute('data-role', 'feature-meta');
+    header.appendChild(meta);
+
+    const labelEl = document.createElement('span');
+    labelEl.className = 'label';
+    labelEl.textContent = feature.label || '';
+    meta.appendChild(labelEl);
+
+    if(feature.hint){
+      const hintEl = document.createElement('span');
+      hintEl.className = 'hint';
+      hintEl.textContent = feature.hint;
+      meta.appendChild(hintEl);
+    }
+
+    const switchEl = buildSwitch(slug, feature.aria_label || feature.label || '', feature.label || '');
+    if(switchEl){
+      header.appendChild(switchEl);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'a11y-tts__body';
+    body.hidden = true;
+    body.setAttribute('aria-hidden', 'true');
+    article.appendChild(body);
+
+    const settings = feature.settings && typeof feature.settings === 'object' ? feature.settings : {};
+    const instanceTexts = Object.assign({}, TTS_DEFAULT_TEXTS);
+    Object.keys(settings).forEach(key => {
+      if(typeof settings[key] === 'string' && settings[key]){
+        instanceTexts[key] = settings[key];
+      }
+    });
+    ttsTexts = Object.assign({}, instanceTexts);
+    ensureTtsIdleStatus();
+
+    if(instanceTexts.intro){
+      const intro = document.createElement('p');
+      intro.className = 'a11y-tts__intro';
+      intro.textContent = instanceTexts.intro;
+      body.appendChild(intro);
+    }
+
+    const baseId = `a11y-tts-${Math.random().toString(36).slice(2, 9)}`;
+
+    const modeGroup = document.createElement('div');
+    modeGroup.className = 'a11y-tts__group';
+    body.appendChild(modeGroup);
+
+    const modeLabel = document.createElement('p');
+    modeLabel.className = 'a11y-tts__label';
+    modeLabel.textContent = instanceTexts.mode_label || '';
+    modeGroup.appendChild(modeLabel);
+
+    const modeButtons = document.createElement('div');
+    modeButtons.className = 'a11y-tts__modes';
+    modeGroup.appendChild(modeButtons);
+
+    const modeSelectionBtn = document.createElement('button');
+    modeSelectionBtn.type = 'button';
+    modeSelectionBtn.className = 'a11y-tts__mode';
+    modeSelectionBtn.textContent = instanceTexts.mode_selection || 'Sélection';
+    modeSelectionBtn.setAttribute('aria-pressed', 'false');
+    modeButtons.appendChild(modeSelectionBtn);
+
+    const modePageBtn = document.createElement('button');
+    modePageBtn.type = 'button';
+    modePageBtn.className = 'a11y-tts__mode';
+    modePageBtn.textContent = instanceTexts.mode_page || 'Page entière';
+    modePageBtn.setAttribute('aria-pressed', 'false');
+    modeButtons.appendChild(modePageBtn);
+
+    if(instanceTexts.mode_hint){
+      const modeHint = document.createElement('p');
+      modeHint.className = 'a11y-tts__hint';
+      modeHint.textContent = instanceTexts.mode_hint;
+      modeGroup.appendChild(modeHint);
+    }
+
+    const controlsGroup = document.createElement('div');
+    controlsGroup.className = 'a11y-tts__group';
+    body.appendChild(controlsGroup);
+
+    const controlsLabel = document.createElement('p');
+    controlsLabel.className = 'a11y-tts__label';
+    controlsLabel.textContent = instanceTexts.controls_label || '';
+    controlsGroup.appendChild(controlsLabel);
+
+    const controls = document.createElement('div');
+    controls.className = 'a11y-tts__controls';
+    controlsGroup.appendChild(controls);
+
+    const playBtn = document.createElement('button');
+    playBtn.type = 'button';
+    playBtn.className = 'a11y-tts__button a11y-tts__button--play';
+    playBtn.setAttribute('aria-label', instanceTexts.play_label || 'Lire');
+    const playIcon = document.createElement('span');
+    playIcon.className = 'a11y-tts__button-icon';
+    playIcon.textContent = '▶️';
+    playBtn.appendChild(playIcon);
+    const playLabel = document.createElement('span');
+    playLabel.className = 'a11y-tts__button-label';
+    playLabel.textContent = instanceTexts.play_label || 'Lire';
+    playBtn.appendChild(playLabel);
+    controls.appendChild(playBtn);
+
+    const pauseBtn = document.createElement('button');
+    pauseBtn.type = 'button';
+    pauseBtn.className = 'a11y-tts__button a11y-tts__button--pause';
+    pauseBtn.setAttribute('aria-label', instanceTexts.pause_label || 'Pause');
+    const pauseIcon = document.createElement('span');
+    pauseIcon.className = 'a11y-tts__button-icon';
+    pauseIcon.textContent = '⏸️';
+    pauseBtn.appendChild(pauseIcon);
+    const pauseLabel = document.createElement('span');
+    pauseLabel.className = 'a11y-tts__button-label';
+    pauseLabel.textContent = instanceTexts.pause_label || 'Pause';
+    pauseBtn.appendChild(pauseLabel);
+    controls.appendChild(pauseBtn);
+
+    const stopBtn = document.createElement('button');
+    stopBtn.type = 'button';
+    stopBtn.className = 'a11y-tts__button a11y-tts__button--stop';
+    stopBtn.setAttribute('aria-label', instanceTexts.stop_label || 'Stop');
+    const stopIcon = document.createElement('span');
+    stopIcon.className = 'a11y-tts__button-icon';
+    stopIcon.textContent = '⏹️';
+    stopBtn.appendChild(stopIcon);
+    const stopLabel = document.createElement('span');
+    stopLabel.className = 'a11y-tts__button-label';
+    stopLabel.textContent = instanceTexts.stop_label || 'Stop';
+    stopBtn.appendChild(stopLabel);
+    controls.appendChild(stopBtn);
+
+    const status = document.createElement('div');
+    status.className = 'a11y-tts__status';
+    const statusIcon = document.createElement('span');
+    statusIcon.className = 'a11y-tts__status-icon';
+    statusIcon.textContent = TTS_STATUS_ICONS[ttsStatus.type] || TTS_STATUS_ICONS.info;
+    status.appendChild(statusIcon);
+    const statusText = document.createElement('span');
+    statusText.className = 'a11y-tts__status-text';
+    statusText.textContent = ttsStatus.text || '';
+    status.appendChild(statusText);
+    body.appendChild(status);
+
+    const volumeGroup = document.createElement('div');
+    volumeGroup.className = 'a11y-tts__group';
+    body.appendChild(volumeGroup);
+
+    const volumeLabel = document.createElement('label');
+    volumeLabel.className = 'a11y-tts__label';
+    const volumeLabelId = `${baseId}-volume-label`;
+    volumeLabel.id = volumeLabelId;
+    volumeLabel.textContent = instanceTexts.volume_label || '';
+    volumeGroup.appendChild(volumeLabel);
+
+    const volumeValue = document.createElement('span');
+    volumeValue.className = 'a11y-tts__value';
+    volumeValue.id = `${baseId}-volume-value`;
+    volumeLabel.appendChild(volumeValue);
+
+    const volumeControls = document.createElement('div');
+    volumeControls.className = 'a11y-tts__slider';
+    volumeGroup.appendChild(volumeControls);
+
+    const volumeMinus = document.createElement('button');
+    volumeMinus.type = 'button';
+    volumeMinus.className = 'a11y-tts__slider-btn';
+    volumeMinus.textContent = '−';
+    volumeMinus.setAttribute('aria-label', instanceTexts.volume_decrease || 'Diminuer le volume');
+    volumeControls.appendChild(volumeMinus);
+
+    const volumeSlider = document.createElement('input');
+    volumeSlider.type = 'range';
+    volumeSlider.className = 'a11y-tts__range';
+    volumeSlider.id = `${baseId}-volume`;
+    volumeSlider.min = '0';
+    volumeSlider.max = '100';
+    volumeSlider.step = '5';
+    volumeSlider.setAttribute('aria-labelledby', `${volumeLabelId} ${volumeValue.id}`);
+    volumeControls.appendChild(volumeSlider);
+
+    const volumePlus = document.createElement('button');
+    volumePlus.type = 'button';
+    volumePlus.className = 'a11y-tts__slider-btn';
+    volumePlus.textContent = '+';
+    volumePlus.setAttribute('aria-label', instanceTexts.volume_increase || 'Augmenter le volume');
+    volumeControls.appendChild(volumePlus);
+
+    const rateGroup = document.createElement('div');
+    rateGroup.className = 'a11y-tts__group';
+    body.appendChild(rateGroup);
+
+    const rateLabel = document.createElement('label');
+    rateLabel.className = 'a11y-tts__label';
+    const rateLabelId = `${baseId}-rate-label`;
+    rateLabel.id = rateLabelId;
+    rateLabel.textContent = instanceTexts.rate_label || '';
+    rateGroup.appendChild(rateLabel);
+
+    const rateValue = document.createElement('span');
+    rateValue.className = 'a11y-tts__value';
+    rateValue.id = `${baseId}-rate-value`;
+    rateLabel.appendChild(rateValue);
+
+    if(instanceTexts.rate_hint){
+      const rateHint = document.createElement('p');
+      rateHint.className = 'a11y-tts__hint';
+      rateHint.textContent = instanceTexts.rate_hint;
+      rateGroup.appendChild(rateHint);
+    }
+
+    const rateControls = document.createElement('div');
+    rateControls.className = 'a11y-tts__slider';
+    rateGroup.appendChild(rateControls);
+
+    const rateMinus = document.createElement('button');
+    rateMinus.type = 'button';
+    rateMinus.className = 'a11y-tts__slider-btn';
+    rateMinus.textContent = '−';
+    rateMinus.setAttribute('aria-label', instanceTexts.rate_decrease || 'Diminuer la vitesse');
+    rateControls.appendChild(rateMinus);
+
+    const rateSlider = document.createElement('input');
+    rateSlider.type = 'range';
+    rateSlider.className = 'a11y-tts__range';
+    rateSlider.id = `${baseId}-rate`;
+    rateSlider.min = '0.5';
+    rateSlider.max = '2';
+    rateSlider.step = '0.1';
+    rateSlider.setAttribute('aria-labelledby', `${rateLabelId} ${rateValue.id}`);
+    rateControls.appendChild(rateSlider);
+
+    const ratePlus = document.createElement('button');
+    ratePlus.type = 'button';
+    ratePlus.className = 'a11y-tts__slider-btn';
+    ratePlus.textContent = '+';
+    ratePlus.setAttribute('aria-label', instanceTexts.rate_increase || 'Augmenter la vitesse');
+    rateControls.appendChild(ratePlus);
+
+    const voiceGroup = document.createElement('div');
+    voiceGroup.className = 'a11y-tts__group';
+    body.appendChild(voiceGroup);
+
+    const voiceLabel = document.createElement('label');
+    voiceLabel.className = 'a11y-tts__label';
+    const voiceLabelId = `${baseId}-voice-label`;
+    voiceLabel.id = voiceLabelId;
+    voiceLabel.setAttribute('for', `${baseId}-voice`);
+    voiceLabel.textContent = instanceTexts.voice_label || '';
+    voiceGroup.appendChild(voiceLabel);
+
+    const voiceSelect = document.createElement('select');
+    voiceSelect.className = 'a11y-tts__select';
+    voiceSelect.id = `${baseId}-voice`;
+    voiceSelect.setAttribute('aria-labelledby', voiceLabelId);
+    voiceGroup.appendChild(voiceSelect);
+
+    const voiceInfo = document.createElement('p');
+    voiceInfo.className = 'a11y-tts__hint';
+    voiceInfo.textContent = instanceTexts.voice_hint || '';
+    voiceGroup.appendChild(voiceInfo);
+
+    if(instanceTexts.info_tip){
+      const tip = document.createElement('p');
+      tip.className = 'a11y-tts__info';
+      tip.textContent = instanceTexts.info_tip;
+      body.appendChild(tip);
+    }
+
+    if(instanceTexts.info_shortcuts){
+      const shortcuts = document.createElement('p');
+      shortcuts.className = 'a11y-tts__info a11y-tts__info--muted';
+      shortcuts.textContent = instanceTexts.info_shortcuts;
+      body.appendChild(shortcuts);
+    }
+
+    const instance = {
+      slug,
+      article,
+      body,
+      texts: instanceTexts,
+      modeSelectionBtn,
+      modePageBtn,
+      playBtn,
+      pauseBtn,
+      stopBtn,
+      statusEl: status,
+      statusIcon,
+      statusText,
+      volumeSlider,
+      volumeValue,
+      volumeMinus,
+      volumePlus,
+      rateSlider,
+      rateValue,
+      rateMinus,
+      ratePlus,
+      voiceSelect,
+      voiceInfo,
+      wasConnected: false,
+    };
+
+    modeSelectionBtn.addEventListener('click', () => setTtsMode('selection'));
+    modePageBtn.addEventListener('click', () => setTtsMode('page'));
+    playBtn.addEventListener('click', () => ttsPlay());
+    pauseBtn.addEventListener('click', () => ttsPause());
+    stopBtn.addEventListener('click', () => ttsStop());
+
+    volumeSlider.addEventListener('input', () => {
+      const value = clampVolume(parseFloat(volumeSlider.value) / 100);
+      updateTtsSettings({ volume: value }, { persist: false });
+      if(ttsUtterance){ ttsUtterance.volume = value; }
+    });
+    volumeSlider.addEventListener('change', () => {
+      const value = clampVolume(parseFloat(volumeSlider.value) / 100);
+      updateTtsSettings({ volume: value });
+      if(ttsUtterance){ ttsUtterance.volume = value; }
+    });
+    volumeMinus.addEventListener('click', () => {
+      const current = parseFloat(volumeSlider.value) || 0;
+      const next = Math.max(0, current - 5);
+      volumeSlider.value = `${next}`;
+      dispatchTtsEvent(volumeSlider, 'input');
+      dispatchTtsEvent(volumeSlider, 'change');
+    });
+    volumePlus.addEventListener('click', () => {
+      const current = parseFloat(volumeSlider.value) || 0;
+      const next = Math.min(100, current + 5);
+      volumeSlider.value = `${next}`;
+      dispatchTtsEvent(volumeSlider, 'input');
+      dispatchTtsEvent(volumeSlider, 'change');
+    });
+
+    rateSlider.addEventListener('input', () => {
+      const value = clampRate(parseFloat(rateSlider.value));
+      updateTtsSettings({ rate: value }, { persist: false });
+      if(ttsUtterance){ ttsUtterance.rate = value; }
+    });
+    rateSlider.addEventListener('change', () => {
+      const value = clampRate(parseFloat(rateSlider.value));
+      updateTtsSettings({ rate: value });
+      if(ttsUtterance){ ttsUtterance.rate = value; }
+    });
+    rateMinus.addEventListener('click', () => {
+      const current = parseFloat(rateSlider.value) || 1;
+      const next = clampRate(current - 0.1);
+      rateSlider.value = next.toFixed(1);
+      dispatchTtsEvent(rateSlider, 'input');
+      dispatchTtsEvent(rateSlider, 'change');
+    });
+    ratePlus.addEventListener('click', () => {
+      const current = parseFloat(rateSlider.value) || 1;
+      const next = clampRate(current + 0.1);
+      rateSlider.value = next.toFixed(1);
+      dispatchTtsEvent(rateSlider, 'input');
+      dispatchTtsEvent(rateSlider, 'change');
+    });
+
+    voiceSelect.addEventListener('change', () => {
+      const value = voiceSelect.value || '';
+      updateTtsSettings({ voice: value });
+      const voice = getTtsVoiceByName(value);
+      if(ttsUtterance && voice){
+        ttsUtterance.voice = voice;
+      }
+      if(ttsTexts.announce_voice){ ttsAnnounce(ttsTexts.announce_voice); }
+    });
+
+    const markConnection = () => {
+      if(instance.article && instance.article.isConnected){
+        instance.wasConnected = true;
+      }
+    };
+    if(typeof requestAnimationFrame === 'function'){
+      requestAnimationFrame(markConnection);
+    } else {
+      setTimeout(markConnection, 0);
+    }
+
+    ttsInstances.add(instance);
+    populateTtsVoiceSelect(instance);
+    syncTtsInstances();
+    return article;
+  }
+
+  if(ttsSupport && ttsSynth){
+    const previousHandler = typeof ttsSynth.onvoiceschanged === 'function' ? ttsSynth.onvoiceschanged : null;
+    ttsSynth.onvoiceschanged = () => {
+      if(previousHandler){
+        try { previousHandler.call(ttsSynth); } catch(err){ /* ignore */ }
+      }
+      loadTtsVoices();
+    };
+    loadTtsVoices();
+  }
+  ensureTtsIdleStatus();
+
   const DYSLEXIA_SLUG = 'cognitif-dyslexie';
   const DYSLEXIA_SETTINGS_KEY = 'a11y-widget-dyslexie-settings:v1';
   const DYSLEXIA_DEFAULT_COLOR = '#ffeb3b';
@@ -8188,6 +9276,9 @@ ${interactiveSelectors} {
     if(template === 'reading-guide'){
       return createReadingGuideCard(feature);
     }
+    if(template === TTS_TEMPLATE_NAME){
+      return createTtsCard(feature);
+    }
     if(template === BRAILLE_TEMPLATE_NAME){
       return createBrailleCard(feature);
     }
@@ -8651,6 +9742,10 @@ ${interactiveSelectors} {
   A11yAPI.registerFeature(BUTTONS_SLUG, on => {
     if(on){ ensureButtonStyleElement(); }
     setButtonActive(on);
+  });
+
+  A11yAPI.registerFeature(TTS_SLUG, on => {
+    setTtsActive(on);
   });
 
   A11yAPI.registerFeature(BRAILLE_SLUGS.contracted, on => {
