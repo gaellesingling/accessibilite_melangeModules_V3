@@ -6,6 +6,19 @@
 (function($) {
     'use strict';
 
+    const ensureSrOnlyStyles = () => {
+        const styleId = 'acc-tts-sr-only-style';
+
+        if (document.getElementById(styleId)) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = '.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0;}';
+        document.head.appendChild(style);
+    };
+
     class TextToSpeech {
         constructor() {
             // Éléments DOM
@@ -530,6 +543,7 @@
 
     // Initialiser le module au chargement du DOM
     $(document).ready(function() {
+        ensureSrOnlyStyles();
         new TextToSpeech();
     });
 
