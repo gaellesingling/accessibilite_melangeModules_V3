@@ -468,10 +468,15 @@ class ACC_Module_Text_To_Speech {
                     </th>
                     <td>
                         <label class="acc-module-toggle">
-                            <input 
-                                type="checkbox" 
-                                id="acc_tts_enabled" 
-                                name="acc_tts_enabled" 
+                            <input
+                                type="hidden"
+                                name="acc_tts_enabled"
+                                value="0"
+                            />
+                            <input
+                                type="checkbox"
+                                id="acc_tts_enabled"
+                                name="acc_tts_enabled"
                                 value="1"
                                 <?php checked($enabled, true); ?>
                             />
@@ -489,10 +494,15 @@ class ACC_Module_Text_To_Speech {
                     </th>
                     <td>
                         <label class="acc-module-toggle">
-                            <input 
-                                type="checkbox" 
-                                id="acc_tts_auto_rotate" 
-                                name="acc_tts_auto_rotate" 
+                            <input
+                                type="hidden"
+                                name="acc_tts_auto_rotate"
+                                value="0"
+                            />
+                            <input
+                                type="checkbox"
+                                id="acc_tts_auto_rotate"
+                                name="acc_tts_auto_rotate"
                                 value="1"
                                 <?php checked($auto_rotate, true); ?>
                             />
