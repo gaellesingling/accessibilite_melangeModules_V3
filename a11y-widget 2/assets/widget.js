@@ -3261,20 +3261,67 @@
 
   function getReadablePageText(){
     if(typeof document === 'undefined' || !document.body){ return ''; }
-    let text = '';
-    if(typeof document.body.innerText === 'string'){
-      text = document.body.innerText;
-    } else if(typeof document.body.textContent === 'string'){
-      text = document.body.textContent;
-    }
-    const widget = document.getElementById('a11y-widget-root');
-    if(widget){
-      const widgetText = widget.innerText || widget.textContent || '';
-      if(widgetText){
-        text = text.replace(widgetText, ' ');
+
+    const filterConstants = (typeof NodeFilter !== 'undefined')
+      ? NodeFilter
+      : { FILTER_ACCEPT: 1, FILTER_REJECT: 2, FILTER_SKIP: 3, SHOW_TEXT: 4 };
+
+    const parts = [];
+
+    try {
+      if(typeof document.createTreeWalker === 'function'){
+        const walker = document.createTreeWalker(
+          document.body,
+          filterConstants.SHOW_TEXT || 4,
+          {
+            acceptNode(node){
+              if(!node || !node.nodeValue){ return filterConstants.FILTER_REJECT || 2; }
+              if(isNodeInsideWidget(node)){ return filterConstants.FILTER_REJECT || 2; }
+              if(!node.nodeValue.trim()){ return filterConstants.FILTER_REJECT || 2; }
+              return filterConstants.FILTER_ACCEPT || 1;
+            }
+          }
+        );
+
+        let current = walker.nextNode();
+        while(current){
+          const value = typeof current.nodeValue === 'string' ? current.nodeValue.replace(/\s+/g, ' ').trim() : '';
+          if(value){
+            parts.push(value);
+          }
+          current = walker.nextNode();
+        }
+      } else {
+        throw new Error('TreeWalker not supported');
+      }
+    } catch(err){
+      if(typeof document.body.innerText === 'string'){
+        parts.push(document.body.innerText);
+      } else if(typeof document.body.textContent === 'string'){
+        parts.push(document.body.textContent);
       }
     }
-    text = text.replace(/\s+/g, ' ').trim();
+
+    const stripWidgetCopy = (source => {
+      const value = typeof source === 'string' ? source : '';
+      if(!value){ return ''; }
+      const widget = document.getElementById('a11y-widget-root');
+      if(!widget){ return value; }
+      const widgetCopy = (widget.innerText || widget.textContent || '').replace(/\s+/g, ' ').trim();
+      if(!widgetCopy){ return value; }
+      if(value.endsWith(widgetCopy)){
+        return value.slice(0, value.length - widgetCopy.length).replace(/\s+/g, ' ').trim();
+      }
+      const lastIndex = value.lastIndexOf(widgetCopy);
+      if(lastIndex >= 0 && (value.length - lastIndex - widgetCopy.length) < 50){
+        const before = value.slice(0, lastIndex);
+        const after = value.slice(lastIndex + widgetCopy.length);
+        return `${before} ${after}`.replace(/\s+/g, ' ').trim();
+      }
+      return value;
+    });
+
+    let text = stripWidgetCopy(parts.join(' ').replace(/\s+/g, ' ').trim());
     if(text.length > 60000){
       text = text.slice(0, 60000);
     }
