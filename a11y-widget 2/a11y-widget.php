@@ -423,7 +423,7 @@ function a11y_widget_get_default_sections() {
                     'aria_label' => __( 'Activer la lecture à voix haute', 'a11y-widget' ),
                     'template'   => 'text-to-speech',
                     'settings'   => array(
-                        'intro'             => __( 'Sélectionnez du texte ou faites lire toute la page automatiquement. Compatible avec la Web Speech API des navigateurs.', 'a11y-widget' ),
+                        'intro'             => __( 'Sélectionnez du texte ou faites lire toute la page automatiquement. Fonctionne grâce à la Web Speech API native, gratuite et disponible hors connexion dans la plupart des navigateurs modernes.', 'a11y-widget' ),
                         'mode_label'        => __( 'Mode de lecture', 'a11y-widget' ),
                         'mode_hint'         => __( '« Sélection » lit uniquement le texte mis en évidence. « Page entière » lit tout le contenu principal.', 'a11y-widget' ),
                         'mode_selection'    => __( 'Sélection', 'a11y-widget' ),

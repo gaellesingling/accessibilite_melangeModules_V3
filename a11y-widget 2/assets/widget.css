@@ -1381,6 +1381,7 @@ html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, pict
 .a11y-btn:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 
 /* Visually hidden utility */
+.sr-only,
 .a11y-sr-only,
 .a11y-panel [data-sr-only] { position: absolute; width: 1px; height: 1px; margin: -1px; border: 0; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 
