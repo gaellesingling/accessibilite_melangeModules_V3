@@ -2883,6 +2883,9 @@
   let ttsSelectionText = '';
   let ttsSelectionHandler = null;
   let ttsKeyboardHandler = null;
+  let ttsCurrentSourceText = '';
+  let ttsLastBoundary = null;
+  let ttsPendingRestart = null;
   let ttsTexts = Object.assign({}, TTS_DEFAULT_TEXTS);
   let ttsStatus = { text: ttsTexts.status_ready, type: 'info' };
 
@@ -2980,6 +2983,19 @@
     updateTtsSettings({ mode: mode === 'page' ? 'page' : 'selection' });
   }
 
+  function isNodeInsideWidget(node){
+    if(!node || !root){ return false; }
+    let current = node;
+    if(current.nodeType === 3 && current.parentElement){
+      current = current.parentElement;
+    }
+    while(current){
+      if(current === root){ return true; }
+      current = current.parentNode;
+    }
+    return false;
+  }
+
   function ensureTtsSelectionTracking(){
     if(typeof document === 'undefined'){ return; }
     const shouldListen = ttsSupport && ttsActive && ttsSettings.mode === 'selection';
@@ -3008,6 +3024,13 @@
       }
       return;
     }
+    if(!text && ttsSelectionText){
+      const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+      if(activeEl && isNodeInsideWidget(activeEl)){
+        syncTtsInstances();
+        return;
+      }
+    }
     ttsSelectionText = text;
     ensureTtsIdleStatus();
     syncTtsInstances();
@@ -3017,6 +3040,19 @@
     if(typeof window === 'undefined' || !window.getSelection){ return ''; }
     const selection = window.getSelection();
     if(!selection){ return ''; }
+    if(selection.rangeCount){
+      const anchor = selection.anchorNode;
+      const focus = selection.focusNode;
+      if(isNodeInsideWidget(anchor) || isNodeInsideWidget(focus)){
+        return '';
+      }
+      try {
+        const range = selection.getRangeAt(0);
+        if(range && isNodeInsideWidget(range.commonAncestorContainer)){
+          return '';
+        }
+      } catch(err){ /* ignore */ }
+    }
     const text = selection.toString();
     if(!text){ return ''; }
     return text.replace(/\s+/g, ' ').trim();
@@ -3269,17 +3305,19 @@
     }
   }
 
-  function ttsPlay(){
+  function ttsPlay(options={}){
     if(!ttsSupport || !ttsSynth || !ttsActive){ return; }
     if(ttsIsPlaying && !ttsIsPaused){ return; }
     if(ttsIsPaused && ttsSynth.paused){
       try { ttsSynth.resume(); } catch(err){ /* ignore */ }
       return;
     }
-    if(ttsSettings.mode === 'selection'){
+    const skipSelectionRefresh = options && options.skipSelectionRefresh === true;
+    if(ttsSettings.mode === 'selection' && !skipSelectionRefresh){
       updateTtsSelectionText();
     }
-    const text = ttsSettings.mode === 'selection' ? ttsSelectionText : getReadablePageText();
+    const forced = options && typeof options.forceText === 'string' ? options.forceText : '';
+    const text = forced ? forced : (ttsSettings.mode === 'selection' ? ttsSelectionText : getReadablePageText());
     if(!text){
       const message = ttsTexts.error_no_text || TTS_DEFAULT_TEXTS.error_no_text;
       updateTtsStatus(message, 'error');
@@ -3298,6 +3336,9 @@
     ttsIsPaused = false;
     ttsIsStopping = false;
     ttsSuppressStopStatus = false;
+    ttsCurrentSourceText = text;
+    ttsLastBoundary = { charIndex: 0 };
+    ttsPendingRestart = null;
     syncTtsInstances();
     utterance.onstart = () => {
       ttsUtterance = utterance;
@@ -3305,6 +3346,7 @@
       ttsIsPaused = false;
       ttsIsStopping = false;
       ttsSuppressStopStatus = false;
+      ttsLastBoundary = { charIndex: 0 };
       updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
       if(ttsTexts.announce_started){ ttsAnnounce(ttsTexts.announce_started); }
     };
@@ -3318,7 +3360,13 @@
       updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
       if(ttsTexts.announce_resumed){ ttsAnnounce(ttsTexts.announce_resumed); }
     };
+    utterance.onboundary = event => {
+      if(event && typeof event.charIndex === 'number' && event.charIndex >= 0){
+        ttsLastBoundary = { charIndex: event.charIndex };
+      }
+    };
     utterance.onend = () => {
+      const pending = ttsPendingRestart;
       const suppressed = ttsSuppressStopStatus;
       const stoppedManually = ttsIsStopping;
       ttsUtterance = null;
@@ -3326,6 +3374,15 @@
       ttsIsPaused = false;
       ttsIsStopping = false;
       ttsSuppressStopStatus = false;
+      ttsCurrentSourceText = '';
+      ttsLastBoundary = null;
+      ttsPendingRestart = null;
+      if(pending && pending.text){
+        setTimeout(() => {
+          ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
+        }, 50);
+        return;
+      }
       if(suppressed){
         ensureTtsIdleStatus();
         return;
@@ -3372,6 +3429,11 @@
 
   function ttsStop(options={}){
     if(!ttsSupport || !ttsSynth){ return; }
+    if(options.silent === true){
+      // keep pending restart when stopping silently
+    } else {
+      ttsPendingRestart = null;
+    }
     if(!ttsIsPlaying && !ttsIsPaused){
       if(options.silent !== true){
         ensureTtsIdleStatus();
@@ -3386,6 +3448,25 @@
   function getTtsVoiceByName(name){
     if(!name){ return null; }
     return ttsVoices.find(voice => voice && voice.name === name) || null;
+  }
+
+  function restartTtsPlaybackWithCurrentText(){
+    if(!ttsUtterance || !ttsIsPlaying || ttsIsPaused){ return; }
+    const source = (ttsCurrentSourceText && typeof ttsCurrentSourceText === 'string') ? ttsCurrentSourceText : (ttsUtterance.text || '');
+    if(!source){ return; }
+    let resumeText = source;
+    const boundaryIndex = ttsLastBoundary && typeof ttsLastBoundary.charIndex === 'number' ? ttsLastBoundary.charIndex : 0;
+    if(boundaryIndex > 0 && boundaryIndex < source.length){
+      resumeText = source.slice(boundaryIndex);
+    }
+    if(!resumeText){
+      resumeText = source;
+    }
+    ttsPendingRestart = { text: resumeText };
+    if(ttsIsStopping){
+      return;
+    }
+    ttsStop({ silent: true });
   }
 
   function populateTtsVoiceSelect(instance){
@@ -3844,7 +3925,10 @@
     rateSlider.addEventListener('change', () => {
       const value = clampRate(parseFloat(rateSlider.value));
       updateTtsSettings({ rate: value });
-      if(ttsUtterance){ ttsUtterance.rate = value; }
+      if(ttsUtterance){
+        ttsUtterance.rate = value;
+        restartTtsPlaybackWithCurrentText();
+      }
     });
     rateMinus.addEventListener('click', () => {
       const current = parseFloat(rateSlider.value) || 1;
