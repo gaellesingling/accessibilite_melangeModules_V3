@@ -15,6 +15,171 @@ define( 'A11Y_WIDGET_URL', plugin_dir_url( __FILE__ ) );
 define( 'A11Y_WIDGET_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
+ * Retrieve the available launcher logo variants.
+ *
+ * @return array<string, array{label:string, svg:string}>
+ */
+function a11y_widget_get_launcher_logo_variants() {
+    static $variants = null;
+
+    if ( null !== $variants ) {
+        return $variants;
+    }
+
+    $path_markup = '<path fill="#ffffff" d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm6.75 6.5h-4.5v11a1 1 0 1 1-2 0v-5h-1v5a1 1 0 1 1-2 0v-11h-4.5a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2Z" />';
+
+    $variants = array(
+        'bleu-vert' => array(
+            'label' => __( 'Bleu-vert', 'a11y-widget' ),
+            'svg'   => '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#0ea5e9" />' . $path_markup . '</svg>',
+        ),
+        'bleu'      => array(
+            'label' => __( 'Bleu', 'a11y-widget' ),
+            'svg'   => '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#2563eb" />' . $path_markup . '</svg>',
+        ),
+        'orange'    => array(
+            'label' => __( 'Orange', 'a11y-widget' ),
+            'svg'   => '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#f97316" />' . $path_markup . '</svg>',
+        ),
+        'rouge'     => array(
+            'label' => __( 'Rouge', 'a11y-widget' ),
+            'svg'   => '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#dc2626" />' . $path_markup . '</svg>',
+        ),
+        'vert'      => array(
+            'label' => __( 'Vert', 'a11y-widget' ),
+            'svg'   => '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#22c55e" />' . $path_markup . '</svg>',
+        ),
+    );
+
+    $variants = apply_filters( 'a11y_widget_launcher_logo_variants', $variants );
+
+    if ( ! is_array( $variants ) ) {
+        $variants = array();
+    }
+
+    $sanitized = array();
+
+    foreach ( $variants as $slug => $data ) {
+        if ( is_array( $data ) && isset( $data['slug'] ) ) {
+            $slug = $data['slug'];
+        }
+
+        $slug = sanitize_key( (string) $slug );
+
+        if ( '' === $slug ) {
+            continue;
+        }
+
+        $label = '';
+        $svg   = '';
+
+        if ( is_array( $data ) ) {
+            if ( isset( $data['label'] ) ) {
+                $label = (string) $data['label'];
+            }
+
+            if ( isset( $data['svg'] ) ) {
+                $svg = (string) $data['svg'];
+            }
+        } elseif ( is_string( $data ) ) {
+            $svg = $data;
+        }
+
+        if ( '' === $svg ) {
+            continue;
+        }
+
+        $sanitized[ $slug ] = array(
+            'label' => $label,
+            'svg'   => $svg,
+        );
+    }
+
+    $variants = $sanitized;
+
+    return $variants;
+}
+
+/**
+ * Retrieve the default launcher logo slug.
+ *
+ * @return string
+ */
+function a11y_widget_get_launcher_logo_default() {
+    return 'rouge';
+}
+
+/**
+ * Helper that returns the option name used to store the selected launcher logo.
+ *
+ * @return string
+ */
+function a11y_widget_get_launcher_logo_option_name() {
+    return 'a11y_widget_launcher_logo';
+}
+
+/**
+ * Sanitize the launcher logo slug.
+ *
+ * @param mixed $value Raw value.
+ *
+ * @return string
+ */
+function a11y_widget_sanitize_launcher_logo( $value ) {
+    if ( is_array( $value ) ) {
+        $value = reset( $value );
+    }
+
+    $value   = sanitize_key( (string) $value );
+    $choices = a11y_widget_get_launcher_logo_variants();
+
+    if ( isset( $choices[ $value ] ) ) {
+        return $value;
+    }
+
+    return a11y_widget_get_launcher_logo_default();
+}
+
+/**
+ * Retrieve the sanitized launcher logo slug stored in the options table.
+ *
+ * @return string
+ */
+function a11y_widget_get_launcher_logo() {
+    $option = get_option(
+        a11y_widget_get_launcher_logo_option_name(),
+        a11y_widget_get_launcher_logo_default()
+    );
+
+    return a11y_widget_sanitize_launcher_logo( $option );
+}
+
+/**
+ * Retrieve the SVG markup for the given launcher logo.
+ *
+ * @param string|null $slug Logo slug. Defaults to the stored option.
+ *
+ * @return string
+ */
+function a11y_widget_get_launcher_logo_markup( $slug = null ) {
+    $choices = a11y_widget_get_launcher_logo_variants();
+
+    if ( null === $slug ) {
+        $slug = a11y_widget_get_launcher_logo();
+    } else {
+        $slug = a11y_widget_sanitize_launcher_logo( $slug );
+    }
+
+    if ( isset( $choices[ $slug ] ) ) {
+        return $choices[ $slug ]['svg'];
+    }
+
+    $default = a11y_widget_get_launcher_logo_default();
+
+    return isset( $choices[ $default ] ) ? $choices[ $default ]['svg'] : '';
+}
+
+/**
  * Enqueue front assets
  */
 function a11y_widget_enqueue() {
