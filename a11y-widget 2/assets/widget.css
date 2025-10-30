@@ -99,7 +99,7 @@
 }
 .a11y-launcher:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-launcher:hover { transform: translateY(-2px); }
-.a11y-launcher svg { width: 28px; height: 28px; fill: currentColor; }
+.a11y-launcher svg { width: 28px; height: 28px; display: block; }
 
 /* Overlay + Panel */
 #a11y-overlay {
@@ -146,7 +146,14 @@
 .a11y-side-toggle[aria-pressed="true"] .a11y-side-toggle__icon { transform: scaleX(-1); }
 .a11y-title { font-weight: 700; font-size: 1.05rem; margin: 0; }
 .a11y-spacer { flex: 1 1 auto; }
-.a11y-icon { width: 28px; height: 28px; color: var(--a11y-primary); }
+.a11y-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.a11y-icon svg { width: 28px; height: 28px; display: block; }
 .a11y-close { border: none; background: none; padding: 8px; cursor: pointer; border-radius: 10px; }
 .a11y-close:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-tutorial-toggle {

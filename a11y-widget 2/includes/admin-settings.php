@@ -464,6 +464,16 @@ function a11y_widget_register_settings() {
 
     register_setting(
         'a11y_widget_settings',
+        a11y_widget_get_launcher_logo_option_name(),
+        array(
+            'type'              => 'string',
+            'sanitize_callback' => 'a11y_widget_sanitize_launcher_logo',
+            'default'           => a11y_widget_get_launcher_logo_default(),
+        )
+    );
+
+    register_setting(
+        'a11y_widget_settings',
         a11y_widget_get_reading_guide_heading_levels_option_name(),
         array(
             'type'              => 'array',
@@ -549,6 +559,9 @@ function a11y_widget_render_admin_page() {
     $available_headings     = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
     $syllable_option_key    = a11y_widget_get_reading_guide_syllable_selector_option_name();
     $syllable_selectors     = a11y_widget_get_reading_guide_syllable_selector();
+    $logo_option_key        = a11y_widget_get_launcher_logo_option_name();
+    $logo_variants          = a11y_widget_get_launcher_logo_variants();
+    $selected_logo          = a11y_widget_get_launcher_logo();
     ?>
     <div class="wrap a11y-widget-admin">
         <h1><?php esc_html_e( 'Accessibilité RGAA', 'a11y-widget' ); ?></h1>
@@ -558,6 +571,41 @@ function a11y_widget_render_admin_page() {
 
         <form method="post" action="options.php">
             <?php settings_fields( 'a11y_widget_settings' ); ?>
+
+            <fieldset class="a11y-widget-admin-launcher">
+                <?php $launcher_legend_id = 'a11y-widget-launcher-logo-legend'; ?>
+                <legend id="<?php echo esc_attr( $launcher_legend_id ); ?>"><?php esc_html_e( 'Logo du bouton lanceur', 'a11y-widget' ); ?></legend>
+                <p class="description">
+                    <?php esc_html_e( 'Choisissez le logo affiché sur le bouton flottant et dans l’en-tête du module.', 'a11y-widget' ); ?>
+                </p>
+                <?php if ( empty( $logo_variants ) ) : ?>
+                    <p class="description a11y-widget-admin-launcher__empty">
+                        <?php esc_html_e( 'Aucune variante de logo n’est disponible pour le moment.', 'a11y-widget' ); ?>
+                    </p>
+                <?php else : ?>
+                    <div class="a11y-widget-admin-launcher__choices" role="radiogroup" aria-labelledby="<?php echo esc_attr( $launcher_legend_id ); ?>">
+                        <?php foreach ( $logo_variants as $logo_slug => $logo_data ) :
+                            $input_id = 'a11y-widget-launcher-logo-' . $logo_slug;
+                            $label    = isset( $logo_data['label'] ) ? $logo_data['label'] : '';
+                            $svg      = isset( $logo_data['svg'] ) ? $logo_data['svg'] : '';
+                            ?>
+                            <label class="a11y-widget-admin-launcher__option" for="<?php echo esc_attr( $input_id ); ?>">
+                                <input
+                                    type="radio"
+                                    name="<?php echo esc_attr( $logo_option_key ); ?>"
+                                    id="<?php echo esc_attr( $input_id ); ?>"
+                                    value="<?php echo esc_attr( $logo_slug ); ?>"
+                                    <?php checked( $logo_slug === $selected_logo ); ?>
+                                />
+                                <span class="a11y-widget-admin-launcher__card">
+                                    <span class="a11y-widget-admin-launcher__preview" aria-hidden="true"><?php echo $svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+                                    <span class="a11y-widget-admin-launcher__name"><?php echo esc_html( $label ); ?></span>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </fieldset>
 
             <fieldset class="a11y-widget-admin-force-all">
                 <legend class="screen-reader-text"><?php esc_html_e( 'Affichage des fonctionnalités', 'a11y-widget' ); ?></legend>
