@@ -15,6 +15,47 @@ define( 'A11Y_WIDGET_URL', plugin_dir_url( __FILE__ ) );
 define( 'A11Y_WIDGET_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
+ * Retrieve inline SVG markup for a logo asset stored in the plugin.
+ *
+ * @param string $filename Logo filename relative to the plugin logo directory.
+ *
+ * @return string
+ */
+function a11y_widget_get_logo_svg_from_file( $filename ) {
+    $filename = (string) $filename;
+
+    if ( '' === $filename ) {
+        return '';
+    }
+
+    if ( function_exists( 'trailingslashit' ) ) {
+        $base_dir = trailingslashit( A11Y_WIDGET_PATH );
+    } else {
+        $base_dir = rtrim( A11Y_WIDGET_PATH, '/\\' ) . '/';
+    }
+
+    $path = $base_dir . 'logo/' . ltrim( $filename, '/\\' );
+
+    if ( ! file_exists( $path ) || ! is_readable( $path ) ) {
+        return '';
+    }
+
+    $svg = file_get_contents( $path );
+
+    if ( false === $svg ) {
+        return '';
+    }
+
+    $clean_svg = preg_replace( '/<\?xml[^>]*\?>\s*/', '', $svg );
+
+    if ( is_string( $clean_svg ) ) {
+        $svg = $clean_svg;
+    }
+
+    return trim( (string) $svg );
+}
+
+/**
  * Retrieve the available launcher logo variants.
  *
  * @return array<string, array{label:string, svg:string}>
@@ -50,6 +91,28 @@ function a11y_widget_get_launcher_logo_variants() {
             'svg'   => '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#22c55e" />' . $path_markup . '</svg>',
         ),
     );
+
+    $logo_files = array(
+        'bleu-vert' => 'logo_bleu-vert.svg',
+        'bleu'      => 'logo_bleu.svg',
+        'orange'    => 'logo_orange.svg',
+        'rouge'     => 'logo_rouge.svg',
+        'vert'      => 'logo_vert.svg',
+    );
+
+    foreach ( $logo_files as $slug => $filename ) {
+        $file_markup = a11y_widget_get_logo_svg_from_file( $filename );
+
+        if ( '' === $file_markup ) {
+            continue;
+        }
+
+        if ( ! isset( $variants[ $slug ] ) || ! is_array( $variants[ $slug ] ) ) {
+            $variants[ $slug ] = array();
+        }
+
+        $variants[ $slug ]['svg'] = $file_markup;
+    }
 
     $variants = apply_filters( 'a11y_widget_launcher_logo_variants', $variants );
 
