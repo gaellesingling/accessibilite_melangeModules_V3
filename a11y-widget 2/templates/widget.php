@@ -16,9 +16,12 @@ if ( '' === $default_logo ) {
 $launcher_logo_markup = function_exists( 'a11y_widget_get_launcher_logo_markup' )
     ? a11y_widget_get_launcher_logo_markup()
     : $default_logo;
+$launcher_logo_markup = (string) $launcher_logo_markup;
+$launcher_has_svg     = false !== stripos( $launcher_logo_markup, '<svg' );
+$launcher_classes     = 'a11y-launcher' . ( $launcher_has_svg ? ' has-svg-logo' : '' );
 ?>
 <div id="a11y-widget-root" class="a11y-root" data-a11y-filter-exempt>
-  <button class="a11y-launcher" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
+  <button class="<?php echo esc_attr( $launcher_classes ); ?>" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
     <?php echo $launcher_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
   </button>
 

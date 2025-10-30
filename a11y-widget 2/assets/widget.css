@@ -97,9 +97,11 @@
   background: var(--a11y-primary); color: var(--a11y-primary-contrast);
   box-shadow: var(--a11y-shadow); cursor: pointer; transition: transform .15s ease;
 }
+.a11y-launcher.has-svg-logo { padding: 0; background: transparent; }
 .a11y-launcher:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-launcher:hover { transform: translateY(-2px); }
 .a11y-launcher svg { width: 28px; height: 28px; display: block; }
+.a11y-launcher.has-svg-logo svg { width: 100%; height: 100%; }
 
 /* Overlay + Panel */
 #a11y-overlay {
