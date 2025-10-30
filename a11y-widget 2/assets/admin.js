@@ -243,6 +243,7 @@
         var sectionOrigin = null;
         var sectionNextSibling = null;
         var sectionDropOccurred = false;
+        var armedSectionForDrag = null;
 
         function cleanupSectionDrag() {
             if (draggedSection) {
@@ -258,14 +259,42 @@
         if (sectionGrid && sectionOrderInput) {
             var sections = toArray(sectionGrid.querySelectorAll('.a11y-widget-admin-section'));
 
+            sectionGrid.addEventListener('mousedown', function (event) {
+                var handle = event.target.closest('.a11y-widget-admin-section__handle');
+                if (handle) {
+                    armedSectionForDrag = handle.closest('.a11y-widget-admin-section');
+                } else {
+                    armedSectionForDrag = null;
+                }
+            });
+
+            sectionGrid.addEventListener('touchstart', function (event) {
+                var touchTarget = event.target.closest('.a11y-widget-admin-section__handle');
+                if (touchTarget) {
+                    armedSectionForDrag = touchTarget.closest('.a11y-widget-admin-section');
+                } else {
+                    armedSectionForDrag = null;
+                }
+            }, { passive: true });
+
+            document.addEventListener('mouseup', function () {
+                armedSectionForDrag = null;
+            });
+
+            document.addEventListener('touchend', function () {
+                armedSectionForDrag = null;
+            });
+
             sections.forEach(function (section) {
                 section.setAttribute('draggable', 'true');
 
                 section.addEventListener('dragstart', function (event) {
-                    if (!event.target.closest('.a11y-widget-admin-section__handle')) {
+                    if (section !== armedSectionForDrag) {
                         event.preventDefault();
                         return;
                     }
+
+                    armedSectionForDrag = null;
 
                     draggedSection = section;
                     sectionOrigin = section.parentElement;
