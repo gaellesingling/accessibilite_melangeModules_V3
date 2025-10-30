@@ -4162,7 +4162,10 @@
   const readingGuideTextNodes = new Map();
   const readingGuideCleanup = [];
   let readingGuideSelectorConfig = Object.assign({}, READING_GUIDE_DEFAULT_SELECTORS);
-  let readingGuideTexts = { summaryTitleFallback: 'Sommaire' };
+  let readingGuideTexts = {
+    summaryTitleFallback: 'Sommaire',
+    summaryCloseLabel: 'Fermer le sommaire'
+  };
 
   const CURSOR_SLUG = 'moteur-curseur';
   const CURSOR_SETTINGS_KEY = 'a11y-widget-cursor-settings:v1';
@@ -4332,6 +4335,9 @@
       panel.classList.toggle('is-right', resolved === 'right');
     }
     updateSideToggleUI(resolved);
+    if(readingGuideSummaryEl && !readingGuideSummaryHasCustomPosition){
+      restoreReadingGuideSummaryPosition();
+    }
   }
 
   function startDragging(clientX, clientY){
@@ -6769,6 +6775,10 @@ ${interactiveSelectors} {
     if(defaultTitle){
       readingGuideTexts.summaryTitleFallback = defaultTitle;
     }
+    const closeLabel = typeof rawSettings.summary_close_label === 'string'
+      ? rawSettings.summary_close_label.trim()
+      : '';
+    readingGuideTexts.summaryCloseLabel = closeLabel || 'Fermer le sommaire';
     const syllableSelectorValue = typeof rawSettings.syllable_selector_default === 'string'
       ? rawSettings.syllable_selector_default.trim()
       : '';
@@ -6996,7 +7006,10 @@ ${interactiveSelectors} {
     const width = rect.width || readingGuideSummaryEl.offsetWidth || 0;
     const height = rect.height || readingGuideSummaryEl.offsetHeight || 0;
     const availableLeft = Math.max(0, window.innerWidth - width);
-    const baseLeft = availableLeft > margin ? availableLeft - margin : availableLeft;
+    const resolvedSide = panelSide === 'left' ? 'left' : 'right';
+    const baseLeft = resolvedSide === 'right'
+      ? Math.min(margin, availableLeft)
+      : Math.min(Math.max(availableLeft - margin, 0), availableLeft);
     const baseTop = Math.min(Math.max(margin, 0), Math.max(0, window.innerHeight - height));
     return clampReadingGuideSummaryPosition(baseLeft, baseTop);
   }
@@ -7332,14 +7345,38 @@ ${interactiveSelectors} {
     container.classList.add('a11y-reading-guide-summary');
     container.innerHTML = '';
     const titleText = readingGuideTexts.summaryTitleFallback;
+    const header = document.createElement('div');
+    header.className = 'a11y-reading-guide-summary__header';
+    const closeLabel = readingGuideTexts.summaryCloseLabel || '';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'a11y-reading-guide-summary__close';
+    closeBtn.setAttribute('aria-label', closeLabel || readingGuideTexts.summaryTitleFallback || '');
+    if(closeLabel){ closeBtn.setAttribute('title', closeLabel); }
+    closeBtn.dataset.readingGuideNoDrag = 'true';
+    closeBtn.innerHTML = '<span aria-hidden="true">&times;</span>';
+    const closeHandler = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      setReadingGuideSetting('summaryEnabled', false);
+    };
+    closeBtn.addEventListener('click', closeHandler);
+    readingGuideSummaryDisposers.push(() => closeBtn.removeEventListener('click', closeHandler));
+    header.appendChild(closeBtn);
     if(titleText){
       const title = document.createElement('h2');
       title.className = 'a11y-reading-guide-summary__title';
       title.textContent = titleText;
       const titleAttr = getReadingGuideSelectorValue('tocTitleAttribute');
       if(titleAttr){ title.setAttribute(titleAttr, ''); }
-      container.appendChild(title);
-      container.setAttribute('aria-label', titleText);
+      header.appendChild(title);
+    }
+    container.appendChild(header);
+    const navLabel = titleText || closeLabel;
+    if(navLabel){
+      container.setAttribute('aria-label', navLabel);
+    } else {
+      container.removeAttribute('aria-label');
     }
     container.setAttribute('role', 'navigation');
     const tree = buildReadingGuideSummaryTree(headings);
