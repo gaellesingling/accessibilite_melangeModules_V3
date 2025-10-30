@@ -233,6 +233,7 @@ function a11y_widget_get_default_sections() {
                         'height_label'                   => __( 'Hauteur', 'a11y-widget' ),
                         'height_hint'                    => '',
                         'summary_label'                  => __( 'Sommaire automatique', 'a11y-widget' ),
+                        'summary_close_label'            => __( 'Fermer le sommaire', 'a11y-widget' ),
                         'summary_hint'                   => '',
                         'summary_toggle_label'           => __( 'Activer le sommaire', 'a11y-widget' ),
                         'summary_title_default'          => __( 'Sommaire', 'a11y-widget' ),
