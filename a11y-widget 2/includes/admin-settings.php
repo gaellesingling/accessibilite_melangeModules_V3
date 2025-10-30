@@ -66,6 +66,15 @@ function a11y_widget_get_feature_layout_option_name() {
 }
 
 /**
+ * Option name helper for the custom section order.
+ *
+ * @return string
+ */
+function a11y_widget_get_section_order_option_name() {
+    return 'a11y_widget_section_order';
+}
+
+/**
  * Default heading levels used by the reading guide summary.
  *
  * @return string[]
@@ -283,6 +292,17 @@ function a11y_widget_get_feature_layout() {
 }
 
 /**
+ * Retrieve the stored section order.
+ *
+ * @return string[]
+ */
+function a11y_widget_get_section_order() {
+    $order = get_option( a11y_widget_get_section_order_option_name(), array() );
+
+    return a11y_widget_sanitize_section_order( $order );
+}
+
+/**
  * Sanitize disabled features before saving the option.
  *
  * @param mixed $input Raw input.
@@ -360,6 +380,45 @@ function a11y_widget_sanitize_feature_layout( $input ) {
 }
 
 /**
+ * Sanitize the custom section order option.
+ *
+ * @param mixed $input Raw input.
+ *
+ * @return string[]
+ */
+function a11y_widget_sanitize_section_order( $input ) {
+    if ( null === $input ) {
+        return array();
+    }
+
+    if ( is_string( $input ) ) {
+        $input = preg_split( '/,/', $input );
+    }
+
+    if ( ! is_array( $input ) ) {
+        return array();
+    }
+
+    $order = array();
+
+    foreach ( $input as $slug ) {
+        if ( is_array( $slug ) ) {
+            continue;
+        }
+
+        $slug = sanitize_title( $slug );
+
+        if ( '' === $slug || isset( $order[ $slug ] ) ) {
+            continue;
+        }
+
+        $order[ $slug ] = true;
+    }
+
+    return array_keys( $order );
+}
+
+/**
  * Register plugin settings used by the admin screen.
  */
 function a11y_widget_register_settings() {
@@ -389,6 +448,16 @@ function a11y_widget_register_settings() {
         array(
             'type'              => 'array',
             'sanitize_callback' => 'a11y_widget_sanitize_feature_layout',
+            'default'           => array(),
+        )
+    );
+
+    register_setting(
+        'a11y_widget_settings',
+        a11y_widget_get_section_order_option_name(),
+        array(
+            'type'              => 'array',
+            'sanitize_callback' => 'a11y_widget_sanitize_section_order',
             'default'           => array(),
         )
     );
@@ -466,17 +535,20 @@ function a11y_widget_render_admin_page() {
         return;
     }
 
-    $sections             = a11y_widget_get_sections();
-    $disabled             = a11y_widget_get_disabled_features();
-    $disabled_lookup      = array_fill_keys( $disabled, true );
-    $force_all_features   = a11y_widget_force_all_features_enabled();
-    $force_all_option_key = a11y_widget_get_force_all_features_option_name();
-    $layout_option_key    = a11y_widget_get_feature_layout_option_name();
-    $heading_option_key   = a11y_widget_get_reading_guide_heading_levels_option_name();
-    $heading_levels       = a11y_widget_get_reading_guide_heading_levels();
-    $available_headings   = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
-    $syllable_option_key  = a11y_widget_get_reading_guide_syllable_selector_option_name();
-    $syllable_selectors   = a11y_widget_get_reading_guide_syllable_selector();
+    $sections               = a11y_widget_get_sections();
+    $disabled               = a11y_widget_get_disabled_features();
+    $disabled_lookup        = array_fill_keys( $disabled, true );
+    $force_all_features     = a11y_widget_force_all_features_enabled();
+    $force_all_option_key   = a11y_widget_get_force_all_features_option_name();
+    $layout_option_key      = a11y_widget_get_feature_layout_option_name();
+    $section_order_option   = a11y_widget_get_section_order_option_name();
+    $section_order_slugs    = array_filter( array_map( 'sanitize_title', wp_list_pluck( $sections, 'slug' ) ) );
+    $section_order_value    = implode( ',', $section_order_slugs );
+    $heading_option_key     = a11y_widget_get_reading_guide_heading_levels_option_name();
+    $heading_levels         = a11y_widget_get_reading_guide_heading_levels();
+    $available_headings     = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
+    $syllable_option_key    = a11y_widget_get_reading_guide_syllable_selector_option_name();
+    $syllable_selectors     = a11y_widget_get_reading_guide_syllable_selector();
     ?>
     <div class="wrap a11y-widget-admin">
         <h1><?php esc_html_e( 'Accessibilité RGAA', 'a11y-widget' ); ?></h1>
@@ -539,7 +611,7 @@ function a11y_widget_render_admin_page() {
             </fieldset>
 
             <p class="a11y-widget-admin__hint">
-                <?php esc_html_e( 'Glissez-déposez les fonctionnalités pour les réorganiser ou les déplacer vers une autre catégorie.', 'a11y-widget' ); ?>
+                <?php esc_html_e( 'Glissez-déposez les catégories et les fonctionnalités pour les réorganiser ou les déplacer.', 'a11y-widget' ); ?>
             </p>
 
             <?php if ( empty( $sections ) ) : ?>
@@ -547,6 +619,13 @@ function a11y_widget_render_admin_page() {
                     <?php esc_html_e( 'Aucune fonctionnalité n’est disponible pour le moment.', 'a11y-widget' ); ?>
                 </p>
             <?php else : ?>
+                <input
+                    type="hidden"
+                    class="a11y-widget-admin-section-order"
+                    data-section-order-input="true"
+                    name="<?php echo esc_attr( $section_order_option ); ?>"
+                    value="<?php echo esc_attr( $section_order_value ); ?>"
+                />
                 <div class="a11y-widget-admin-grid">
                     <?php
                     foreach ( $sections as $section ) :
@@ -575,8 +654,25 @@ function a11y_widget_render_admin_page() {
                             'a11y-widget-admin-section--' . $section_slug,
                         );
                         ?>
-                        <fieldset class="<?php echo esc_attr( implode( ' ', $section_classes ) ); ?>">
+                        <fieldset
+                            class="<?php echo esc_attr( implode( ' ', $section_classes ) ); ?>"
+                            data-section="<?php echo esc_attr( $section_slug ); ?>"
+                        >
                             <legend class="a11y-widget-admin-section__title">
+                                <?php
+                                $handle_label = sprintf(
+                                    __( 'Réorganiser la catégorie %s', 'a11y-widget' ),
+                                    '' !== $section_title ? wp_strip_all_tags( $section_title ) : $section_slug
+                                );
+                                ?>
+                                <button
+                                    type="button"
+                                    class="a11y-widget-admin-section__handle"
+                                    aria-label="<?php echo esc_attr( $handle_label ); ?>"
+                                >
+                                    <span aria-hidden="true" class="a11y-widget-admin-section__handle-icon">⋮⋮</span>
+                                    <span class="screen-reader-text"><?php echo esc_html( $handle_label ); ?></span>
+                                </button>
                                 <?php if ( '' !== $icon_markup ) : ?>
                                     <span class="a11y-widget-admin-section__icon" aria-hidden="true"><?php echo $icon_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
                                 <?php endif; ?>

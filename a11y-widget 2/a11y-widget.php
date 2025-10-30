@@ -1103,6 +1103,7 @@ function a11y_widget_get_sections() {
     }
 
     $sections = a11y_widget_apply_custom_feature_layout( $sections );
+    $sections = a11y_widget_apply_custom_section_order( $sections );
     $sections = a11y_widget_strip_placeholder_hints( $sections );
 
     /**
@@ -1251,6 +1252,84 @@ function a11y_widget_apply_custom_feature_layout( $sections ) {
     unset( $section );
 
     return $sections;
+}
+
+/**
+ * Apply the administrator-defined section order.
+ *
+ * @param array $sections Sections with their features.
+ *
+ * @return array
+ */
+function a11y_widget_apply_custom_section_order( $sections ) {
+    if ( empty( $sections ) || ! is_array( $sections ) ) {
+        return $sections;
+    }
+
+    if ( ! function_exists( 'a11y_widget_get_section_order' ) ) {
+        return $sections;
+    }
+
+    $order = a11y_widget_get_section_order();
+
+    if ( empty( $order ) || ! is_array( $order ) ) {
+        return $sections;
+    }
+
+    $sections_by_slug = array();
+
+    foreach ( $sections as $section ) {
+        if ( empty( $section['slug'] ) ) {
+            continue;
+        }
+
+        $slug = sanitize_title( $section['slug'] );
+
+        if ( '' === $slug || isset( $sections_by_slug[ $slug ] ) ) {
+            continue;
+        }
+
+        $section['slug']        = $slug;
+        $sections_by_slug[ $slug ] = $section;
+    }
+
+    if ( empty( $sections_by_slug ) ) {
+        return $sections;
+    }
+
+    $ordered = array();
+
+    foreach ( $order as $slug ) {
+        $slug = sanitize_title( $slug );
+
+        if ( '' === $slug || ! isset( $sections_by_slug[ $slug ] ) ) {
+            continue;
+        }
+
+        $ordered[] = $sections_by_slug[ $slug ];
+        unset( $sections_by_slug[ $slug ] );
+    }
+
+    if ( empty( $ordered ) ) {
+        return $sections;
+    }
+
+    foreach ( $sections as $section ) {
+        if ( empty( $section['slug'] ) ) {
+            continue;
+        }
+
+        $slug = sanitize_title( $section['slug'] );
+
+        if ( '' === $slug || ! isset( $sections_by_slug[ $slug ] ) ) {
+            continue;
+        }
+
+        $ordered[] = $sections_by_slug[ $slug ];
+        unset( $sections_by_slug[ $slug ] );
+    }
+
+    return array_values( $ordered );
 }
 
 // Load admin settings and feature visibility management.
