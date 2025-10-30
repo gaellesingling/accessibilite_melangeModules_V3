@@ -56,6 +56,56 @@
         return null;
     }
 
+    function updateSectionOrder(grid, input) {
+        if (!grid || !input) {
+            return;
+        }
+
+        var slugs = [];
+        toArray(grid.querySelectorAll('.a11y-widget-admin-section')).forEach(function (section) {
+            var slug = section.getAttribute('data-section');
+            if (slug) {
+                slugs.push(slug);
+            }
+        });
+
+        input.value = slugs.join(',');
+    }
+
+    function closestSection(element) {
+        while (element && element !== document) {
+            if (element.classList && element.classList.contains('a11y-widget-admin-section')) {
+                return element;
+            }
+
+            element = element.parentElement;
+        }
+
+        return null;
+    }
+
+    function getSectionDragAfterElement(grid, y) {
+        var siblings = toArray(grid.querySelectorAll('.a11y-widget-admin-section:not(.a11y-widget-admin-section--dragging)'));
+        var closest = {
+            offset: Number.NEGATIVE_INFINITY,
+            element: null
+        };
+
+        siblings.forEach(function (section) {
+            var box = section.getBoundingClientRect();
+            var offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                closest = {
+                    offset: offset,
+                    element: section
+                };
+            }
+        });
+
+        return closest.element;
+    }
+
     function getDragAfterElement(container, y) {
         var siblings = toArray(container.querySelectorAll('.a11y-widget-admin-feature:not(.a11y-widget-admin-feature--dragging)'));
         var closest = {
@@ -80,32 +130,27 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         var containers = toArray(document.querySelectorAll('.a11y-widget-admin-section__content'));
-
-        if (!containers.length) {
-            return;
-        }
+        var sectionGrid = document.querySelector('.a11y-widget-admin-grid');
+        var sectionOrderInput = document.querySelector('[data-section-order-input]');
 
         var draggedFeature = null;
-        var dragOrigin = null;
-        var dragNextSibling = null;
-        var dropOccurred = false;
+        var featureOrigin = null;
+        var featureNextSibling = null;
+        var featureDropOccurred = false;
 
-        function cleanupDrag() {
+        function cleanupFeatureDrag() {
             containers.forEach(function (container) {
                 container.classList.remove('a11y-widget-admin-section__content--drag-over');
             });
 
             if (draggedFeature) {
                 draggedFeature.classList.remove('a11y-widget-admin-feature--dragging');
-            }
-
-            if (draggedFeature) {
                 draggedFeature = null;
             }
 
-            dragOrigin = null;
-            dragNextSibling = null;
-            dropOccurred = false;
+            featureOrigin = null;
+            featureNextSibling = null;
+            featureDropOccurred = false;
         }
 
         function enableFeatureDrag(feature) {
@@ -113,9 +158,9 @@
 
             feature.addEventListener('dragstart', function (event) {
                 draggedFeature = feature;
-                dragOrigin = feature.parentElement;
-                dragNextSibling = feature.nextElementSibling;
-                dropOccurred = false;
+                featureOrigin = feature.parentElement;
+                featureNextSibling = feature.nextElementSibling;
+                featureDropOccurred = false;
 
                 feature.classList.add('a11y-widget-admin-feature--dragging');
 
@@ -133,16 +178,16 @@
             });
 
             feature.addEventListener('dragend', function () {
-                if (!dropOccurred && dragOrigin) {
-                    if (dragNextSibling && dragNextSibling.parentNode === dragOrigin) {
-                        dragOrigin.insertBefore(feature, dragNextSibling);
+                if (!featureDropOccurred && featureOrigin) {
+                    if (featureNextSibling && featureNextSibling.parentNode === featureOrigin) {
+                        featureOrigin.insertBefore(feature, featureNextSibling);
                     } else {
-                        dragOrigin.appendChild(feature);
+                        featureOrigin.appendChild(feature);
                     }
                 }
 
                 refreshAll(containers);
-                cleanupDrag();
+                cleanupFeatureDrag();
             });
         }
 
@@ -189,27 +234,151 @@
                 }
 
                 event.preventDefault();
-                dropOccurred = true;
+                featureDropOccurred = true;
                 container.classList.remove('a11y-widget-admin-section__content--drag-over');
             });
         });
 
-        document.addEventListener('drop', function (event) {
-            if (!draggedFeature) {
-                return;
+        var draggedSection = null;
+        var sectionOrigin = null;
+        var sectionNextSibling = null;
+        var sectionDropOccurred = false;
+        var armedSectionForDrag = null;
+
+        function cleanupSectionDrag() {
+            if (draggedSection) {
+                draggedSection.classList.remove('a11y-widget-admin-section--dragging');
+                draggedSection = null;
             }
 
-            if (closestContainer(event.target)) {
-                dropOccurred = true;
+            sectionOrigin = null;
+            sectionNextSibling = null;
+            sectionDropOccurred = false;
+        }
+
+        if (sectionGrid && sectionOrderInput) {
+            var sections = toArray(sectionGrid.querySelectorAll('.a11y-widget-admin-section'));
+
+            sectionGrid.addEventListener('mousedown', function (event) {
+                var handle = event.target.closest('.a11y-widget-admin-section__handle');
+                if (handle) {
+                    armedSectionForDrag = handle.closest('.a11y-widget-admin-section');
+                } else {
+                    armedSectionForDrag = null;
+                }
+            });
+
+            sectionGrid.addEventListener('touchstart', function (event) {
+                var touchTarget = event.target.closest('.a11y-widget-admin-section__handle');
+                if (touchTarget) {
+                    armedSectionForDrag = touchTarget.closest('.a11y-widget-admin-section');
+                } else {
+                    armedSectionForDrag = null;
+                }
+            }, { passive: true });
+
+            document.addEventListener('mouseup', function () {
+                armedSectionForDrag = null;
+            });
+
+            document.addEventListener('touchend', function () {
+                armedSectionForDrag = null;
+            });
+
+            sections.forEach(function (section) {
+                section.setAttribute('draggable', 'true');
+
+                section.addEventListener('dragstart', function (event) {
+                    if (section !== armedSectionForDrag) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                    armedSectionForDrag = null;
+
+                    draggedSection = section;
+                    sectionOrigin = section.parentElement;
+                    sectionNextSibling = section.nextElementSibling;
+                    sectionDropOccurred = false;
+                    section.classList.add('a11y-widget-admin-section--dragging');
+
+                    if (event.dataTransfer) {
+                        event.dataTransfer.effectAllowed = 'move';
+                        try {
+                            event.dataTransfer.setData('text/plain', section.getAttribute('data-section') || 'section');
+                        } catch (err) {
+                            // Ignore errors from browsers that disallow setting data.
+                        }
+                    }
+                });
+
+                section.addEventListener('dragend', function () {
+                    if (!sectionDropOccurred && sectionOrigin) {
+                        if (sectionNextSibling && sectionNextSibling.parentNode === sectionOrigin) {
+                            sectionOrigin.insertBefore(section, sectionNextSibling);
+                        } else {
+                            sectionOrigin.appendChild(section);
+                        }
+                    }
+
+                    updateSectionOrder(sectionGrid, sectionOrderInput);
+                    cleanupSectionDrag();
+                });
+            });
+
+            sectionGrid.addEventListener('dragover', function (event) {
+                if (!draggedSection) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                var afterSection = getSectionDragAfterElement(sectionGrid, event.clientY);
+
+                if (!afterSection) {
+                    sectionGrid.appendChild(draggedSection);
+                } else if (afterSection !== draggedSection) {
+                    sectionGrid.insertBefore(draggedSection, afterSection);
+                }
+
+                updateSectionOrder(sectionGrid, sectionOrderInput);
+            });
+
+            sectionGrid.addEventListener('drop', function (event) {
+                if (!draggedSection) {
+                    return;
+                }
+
+                event.preventDefault();
+                sectionDropOccurred = true;
+                updateSectionOrder(sectionGrid, sectionOrderInput);
+            });
+        }
+
+        document.addEventListener('drop', function (event) {
+            if (draggedFeature && closestContainer(event.target)) {
+                featureDropOccurred = true;
+            }
+
+            if (draggedSection) {
+                if (closestSection(event.target) || (sectionGrid && sectionGrid.contains(event.target))) {
+                    sectionDropOccurred = true;
+                }
             }
         }, true);
 
         refreshAll(containers);
+        if (sectionGrid && sectionOrderInput) {
+            updateSectionOrder(sectionGrid, sectionOrderInput);
+        }
 
         var form = document.querySelector('.a11y-widget-admin form');
         if (form) {
             form.addEventListener('submit', function () {
                 refreshAll(containers);
+                if (sectionGrid && sectionOrderInput) {
+                    updateSectionOrder(sectionGrid, sectionOrderInput);
+                }
             });
         }
     });
