@@ -4,7 +4,15 @@
  * This is printed in the footer or via shortcode.
  */
 
-$default_logo = '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#dc2626" /><path fill="#ffffff" d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm6.75 6.5h-4.5v11a1 1 0 1 1-2 0v-5h-1v5a1 1 0 1 1-2 0v-11h-4.5a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2Z" /></svg>';
+$default_logo = '';
+
+if ( function_exists( 'a11y_widget_get_logo_svg_from_file' ) ) {
+    $default_logo = a11y_widget_get_logo_svg_from_file( 'logo_rouge.svg' );
+}
+
+if ( '' === $default_logo ) {
+    $default_logo = '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#dc2626" /><path fill="#ffffff" d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm6.75 6.5h-4.5v11a1 1 0 1 1-2 0v-5h-1v5a1 1 0 1 1-2 0v-11h-4.5a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2Z" /></svg>';
+}
 $launcher_logo_markup = function_exists( 'a11y_widget_get_launcher_logo_markup' )
     ? a11y_widget_get_launcher_logo_markup()
     : $default_logo;
