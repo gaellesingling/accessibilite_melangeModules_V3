@@ -9796,14 +9796,6 @@ ${interactiveSelectors} {
       });
       return;
     }
-    const defaultSectionId = tabs.length ? (tabs[0].dataset.sectionId || '') : '';
-    panelPartsBySection.forEach(({ panel }) => {
-      if(!panel) return;
-      if(panel.hidden !== true && panel.dataset.sectionId !== defaultSectionId){
-        panel.hidden = true;
-        panel.setAttribute('aria-hidden','true');
-      }
-    });
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const sectionId = tab.dataset.sectionId || '';
@@ -9815,9 +9807,11 @@ ${interactiveSelectors} {
       });
       tab.addEventListener('keydown', event => handleTabKeydown(event, tab));
     });
-    const initiallySelected = tabs.find(tab => tab.getAttribute('aria-selected') === 'true') || tabs[0];
+    const initiallySelected = tabs.find(tab => tab.getAttribute('aria-selected') === 'true');
     if(initiallySelected){
       setActiveTab(initiallySelected);
+    } else {
+      collapseSection(null);
     }
   }
 
