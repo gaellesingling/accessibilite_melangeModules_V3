@@ -230,7 +230,7 @@ function a11y_widget_get_default_sections() {
                         'color_hint'                     => '',
                         'opacity_label'                  => __( 'Opacité', 'a11y-widget' ),
                         'opacity_hint'                   => '',
-                        'height_label'                   => __( 'Hauteur', 'a11y-widget' ),
+                        'height_label'                   => __( 'Taille', 'a11y-widget' ),
                         'height_hint'                    => '',
                         'summary_label'                  => __( 'Sommaire automatique', 'a11y-widget' ),
                         'summary_hint'                   => '',
