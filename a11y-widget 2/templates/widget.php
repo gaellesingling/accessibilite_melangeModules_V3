@@ -103,11 +103,10 @@
       <?php $sections = a11y_widget_get_sections(); ?>
       <?php if ( ! empty( $sections ) ) : ?>
         <?php
-        $tablist_id   = 'a11y-section-tabs';
-        $tabpanel_id  = 'a11y-section-panel';
-        $template_id  = 'a11y-feature-template';
-        $payload      = array();
-        $first_tab_id = '';
+        $tablist_id  = 'a11y-section-tabs';
+        $tabpanel_id = 'a11y-section-panel';
+        $template_id = 'a11y-feature-template';
+        $payload     = array();
         ?>
         <nav
           id="<?php echo esc_attr( $tablist_id ); ?>"
@@ -216,13 +215,10 @@
                 'features' => $features_data,
             );
 
-            $tab_id     = 'a11y-tab-' . $section_id;
-            $panel_id   = 'a11y-panel-' . $section_id;
-            $is_active  = 0 === (int) $index;
-            if ( $is_active && '' === $first_tab_id ) {
-                $first_tab_id = $tab_id;
-            }
-            $tab_class = 'a11y-tab' . ( $is_active ? ' is-active' : '' );
+            $tab_id   = 'a11y-tab-' . $section_id;
+            $panel_id = 'a11y-panel-' . $section_id;
+            $is_first = 0 === (int) $index;
+            $tab_class = 'a11y-tab';
             ?>
             <div class="a11y-tab-item" role="presentation" data-role="tab-item" data-section-id="<?php echo esc_attr( $section_id ); ?>">
               <button
@@ -230,9 +226,9 @@
                 class="<?php echo esc_attr( $tab_class ); ?>"
                 role="tab"
                 id="<?php echo esc_attr( $tab_id ); ?>"
-                aria-selected="<?php echo $is_active ? 'true' : 'false'; ?>"
+                aria-selected="false"
                 aria-controls="<?php echo esc_attr( $panel_id ); ?>"
-                tabindex="<?php echo $is_active ? '0' : '-1'; ?>"
+                tabindex="<?php echo $is_first ? '0' : '-1'; ?>"
                 data-role="section-tab"
                 data-section-index="<?php echo esc_attr( $index ); ?>"
                 data-section-id="<?php echo esc_attr( $section_id ); ?>"
@@ -254,8 +250,8 @@
                 aria-live="polite"
                 data-role="section-panel"
                 data-section-id="<?php echo esc_attr( $section_id ); ?>"
-                <?php if ( $is_active && '' !== $first_tab_id ) : ?>aria-labelledby="<?php echo esc_attr( $first_tab_id ); ?>"<?php endif; ?>
-                <?php if ( $is_active ) : ?>aria-hidden="false"<?php else : ?>hidden aria-hidden="true"<?php endif; ?>
+                aria-labelledby="<?php echo esc_attr( $tab_id ); ?>"
+                hidden aria-hidden="true"
               >
                 <div class="a11y-grid" data-role="feature-grid"></div>
                 <p class="a11y-empty" data-role="feature-empty" hidden><?php echo esc_html__( 'Aucune fonctionnalité disponible pour le moment.', 'a11y-widget' ); ?></p>
