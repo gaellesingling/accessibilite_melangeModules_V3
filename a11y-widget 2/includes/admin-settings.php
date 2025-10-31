@@ -586,8 +586,17 @@ function a11y_widget_render_admin_page() {
                     <div class="a11y-widget-admin-launcher__choices" role="radiogroup" aria-labelledby="<?php echo esc_attr( $launcher_legend_id ); ?>">
                         <?php foreach ( $logo_variants as $logo_slug => $logo_data ) :
                             $input_id = 'a11y-widget-launcher-logo-' . $logo_slug;
-                            $label    = isset( $logo_data['label'] ) ? $logo_data['label'] : '';
-                            $svg      = isset( $logo_data['svg'] ) ? $logo_data['svg'] : '';
+                            $label           = isset( $logo_data['label'] ) ? $logo_data['label'] : '';
+                            $svg             = isset( $logo_data['svg'] ) ? (string) $logo_data['svg'] : '';
+                            if ( function_exists( 'a11y_widget_get_launcher_logo_image_markup' ) ) {
+                                $preview_markup = a11y_widget_get_launcher_logo_image_markup( $logo_slug, 'admin' );
+                            } else {
+                                $preview_markup = $svg;
+
+                                if ( '' !== $preview_markup && function_exists( 'a11y_widget_prepare_logo_svg_markup' ) ) {
+                                    $preview_markup = a11y_widget_prepare_logo_svg_markup( $preview_markup, $logo_slug, 'admin' );
+                                }
+                            }
                             ?>
                             <label class="a11y-widget-admin-launcher__option" for="<?php echo esc_attr( $input_id ); ?>">
                                 <input
@@ -598,7 +607,7 @@ function a11y_widget_render_admin_page() {
                                     <?php checked( $logo_slug === $selected_logo ); ?>
                                 />
                                 <span class="a11y-widget-admin-launcher__card">
-                                    <span class="a11y-widget-admin-launcher__preview" aria-hidden="true"><?php echo $svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+                                    <span class="a11y-widget-admin-launcher__preview" aria-hidden="true"><?php echo $preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
                                     <span class="a11y-widget-admin-launcher__name"><?php echo esc_html( $label ); ?></span>
                                 </span>
                             </label>
