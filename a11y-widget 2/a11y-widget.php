@@ -654,6 +654,60 @@ function a11y_widget_get_launcher_logo() {
 }
 
 /**
+ * Default background mode applied when opening the accessibility panel.
+ *
+ * @return string
+ */
+function a11y_widget_get_background_mode_default() {
+    return 'modal';
+}
+
+/**
+ * Helper returning the option name storing the background mode value.
+ *
+ * @return string
+ */
+function a11y_widget_get_background_mode_option_name() {
+    return 'a11y_widget_background_mode';
+}
+
+/**
+ * Sanitize the chosen background mode.
+ *
+ * @param mixed $value Raw option value.
+ *
+ * @return string
+ */
+function a11y_widget_sanitize_background_mode( $value ) {
+    if ( is_array( $value ) ) {
+        $value = reset( $value );
+    }
+
+    $value   = sanitize_key( (string) $value );
+    $choices = array( 'modal', 'interactive' );
+
+    if ( in_array( $value, $choices, true ) ) {
+        return $value;
+    }
+
+    return a11y_widget_get_background_mode_default();
+}
+
+/**
+ * Retrieve the sanitized background mode stored in the database.
+ *
+ * @return string
+ */
+function a11y_widget_get_background_mode() {
+    $option = get_option(
+        a11y_widget_get_background_mode_option_name(),
+        a11y_widget_get_background_mode_default()
+    );
+
+    return a11y_widget_sanitize_background_mode( $option );
+}
+
+/**
  * Retrieve the SVG markup for the given launcher logo.
  *
  * @param string|null $slug Logo slug. Defaults to the stored option.

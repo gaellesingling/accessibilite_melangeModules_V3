@@ -120,6 +120,7 @@
   pointer-events: none;
 }
 #a11y-overlay[aria-hidden="false"] { display: block; }
+#a11y-overlay[data-background-mode="interactive"] { display: none !important; }
 
 .a11y-panel {
   position: fixed;
