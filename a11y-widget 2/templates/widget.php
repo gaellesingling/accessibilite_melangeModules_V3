@@ -37,24 +37,26 @@ if ( function_exists( 'a11y_widget_get_launcher_logo_image_markup' ) ) {
 
 $launcher_has_logo = (bool) preg_match( '/<(svg|img)\b/i', $launcher_logo_markup );
 $launcher_classes  = 'a11y-launcher' . ( $launcher_has_logo ? ' has-logo' : '' );
-$logo_scale_value  = 1;
+$logo_scale_value  = 1.0;
 $launcher_size_px  = 56;
 $panel_logo_px     = 28;
 
 if ( function_exists( 'a11y_widget_get_launcher_logo_scale' ) ) {
-    $logo_scale_value = (int) a11y_widget_get_launcher_logo_scale();
+    $logo_scale_value = (float) a11y_widget_get_launcher_logo_scale();
 
     if ( $logo_scale_value <= 0 ) {
-        $logo_scale_value = 1;
+        $logo_scale_value = 1.0;
     }
 }
 
-$launcher_size_px = max( 1, $launcher_size_px * $logo_scale_value );
-$panel_logo_px    = max( 1, $panel_logo_px * $logo_scale_value );
+$launcher_size_px = max( 1, (int) round( $launcher_size_px * $logo_scale_value ) );
+$panel_logo_px    = max( 1, (int) round( $panel_logo_px * $logo_scale_value ) );
+
+$logo_scale_css_value = rtrim( rtrim( number_format( $logo_scale_value, 2, '.', '' ), '0' ), '.' );
 
 $logo_scale_style = sprintf(
-    '--a11y-widget-logo-scale: %1$d; --a11y-launcher-size: %2$dpx; --a11y-panel-logo-size: %3$dpx;',
-    $logo_scale_value,
+    '--a11y-widget-logo-scale: %1$s; --a11y-launcher-size: %2$dpx; --a11y-panel-logo-size: %3$dpx;',
+    $logo_scale_css_value,
     $launcher_size_px,
     $panel_logo_px
 );
