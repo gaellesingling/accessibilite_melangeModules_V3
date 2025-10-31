@@ -83,7 +83,20 @@
   border: 1px solid transparent;
 }
 
-.a11y-widget-admin-launcher__preview svg {
+.a11y-widget-admin-launcher__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.a11y-widget-admin-launcher__field label {
+  font-weight: 600;
+  margin: 0;
+}
+
+.a11y-widget-admin-launcher__preview svg,
+.a11y-widget-admin-launcher__preview img {
   width: 44px;
   height: 44px;
   display: block;
