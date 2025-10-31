@@ -56,6 +56,237 @@ function a11y_widget_get_logo_svg_from_file( $filename ) {
 }
 
 /**
+ * Scope the IDs defined inside an SVG fragment to prevent collisions.
+ *
+ * When several inline SVGs reuse the same <defs> identifiers (gradients,
+ * masks, etc.), only the first definition remains effective in the DOM.
+ * This helper rewrites those identifiers so each fragment stays isolated.
+ *
+ * @param string $svg   Raw SVG markup.
+ * @param string $scope Identifier prefix to apply to every ID.
+ *
+ * @return string
+ */
+function a11y_widget_scope_logo_svg_ids( $svg, $scope ) {
+    $svg   = (string) $svg;
+    $scope = (string) $scope;
+
+    if ( '' === $svg ) {
+        return '';
+    }
+
+    if ( ! class_exists( 'DOMDocument' ) || ! class_exists( 'DOMXPath' ) ) {
+        return $svg;
+    }
+
+    if ( function_exists( 'sanitize_key' ) ) {
+        $scope = sanitize_key( $scope );
+    } else {
+        $scope = strtolower( preg_replace( '/[^a-zA-Z0-9_-]+/', '-', $scope ) );
+    }
+
+    if ( '' === $scope ) {
+        $scope = 'a11y-logo';
+    }
+
+    $dom = new DOMDocument();
+    $dom->preserveWhiteSpace = true;
+    $dom->formatOutput       = false;
+
+    $previous_state = libxml_use_internal_errors( true );
+    $loaded         = $dom->loadXML( $svg );
+    libxml_clear_errors();
+    libxml_use_internal_errors( $previous_state );
+
+    if ( ! $loaded || ! $dom->documentElement ) {
+        return $svg;
+    }
+
+    $xpath = new DOMXPath( $dom );
+    $nodes = $xpath->query( '//*[@id]' );
+
+    if ( ! $nodes || 0 === $nodes->length ) {
+        return $svg;
+    }
+
+    $map = array();
+
+    foreach ( $nodes as $index => $node ) {
+        if ( ! $node instanceof DOMElement ) {
+            continue;
+        }
+
+        $original_id = $node->getAttribute( 'id' );
+
+        if ( '' === $original_id ) {
+            continue;
+        }
+
+        if ( function_exists( 'sanitize_key' ) ) {
+            $normalized = sanitize_key( $original_id );
+        } else {
+            $normalized = strtolower( preg_replace( '/[^a-zA-Z0-9_-]+/', '-', $original_id ) );
+        }
+
+        if ( '' === $normalized ) {
+            $normalized = 'fragment-' . ( $index + 1 );
+        }
+
+        $new_id = $scope . '-' . $normalized;
+
+        $node->setAttribute( 'id', $new_id );
+        $map[ $original_id ] = $new_id;
+    }
+
+    if ( empty( $map ) ) {
+        return $svg;
+    }
+
+    $url_attributes = array(
+        'fill',
+        'stroke',
+        'clip-path',
+        'mask',
+        'filter',
+        'style',
+        'marker-start',
+        'marker-mid',
+        'marker-end',
+    );
+
+    foreach ( $dom->getElementsByTagName( '*' ) as $element ) {
+        if ( ! $element->hasAttributes() ) {
+            continue;
+        }
+
+        $attributes = array();
+
+        foreach ( $element->attributes as $attr ) {
+            $attributes[] = $attr;
+        }
+
+        foreach ( $attributes as $attr ) {
+            $name  = $attr->nodeName;
+            $value = $attr->nodeValue;
+
+            if ( '' === $value ) {
+                continue;
+            }
+
+            $updated = $value;
+
+            if ( 'aria-labelledby' === $name || 'aria-describedby' === $name ) {
+                $parts = preg_split( '/[[:space:]]+/', trim( $value ) );
+                if ( ! empty( $parts ) ) {
+                    foreach ( $parts as $idx => $part ) {
+                        if ( isset( $map[ $part ] ) ) {
+                            $parts[ $idx ] = $map[ $part ];
+                        }
+                    }
+                    $updated = implode( ' ', array_filter( $parts ) );
+                }
+            } elseif ( 'href' === $name || 'xlink:href' === $name ) {
+                foreach ( $map as $from => $to ) {
+                    if ( 0 === strpos( $updated, '#' . $from ) ) {
+                        $updated = '#' . $to . substr( $updated, strlen( '#' . $from ) );
+                        break;
+                    }
+                }
+            } else {
+                $needs_url_replacement = in_array( $name, $url_attributes, true ) || false !== strpos( $updated, 'url(#' );
+
+                if ( $needs_url_replacement ) {
+                    foreach ( $map as $from => $to ) {
+                        if ( false === strpos( $updated, $from ) ) {
+                            continue;
+                        }
+
+                        $double_quote = '"';
+                        $single_quote = "'";
+
+                        $updated = str_replace(
+                            array(
+                                'url(#' . $from . ')',
+                                'url(' . $double_quote . '#' . $from . $double_quote . ')',
+                                'url(' . $single_quote . '#' . $from . $single_quote . ')',
+                            ),
+                            array(
+                                'url(#' . $to . ')',
+                                'url(' . $double_quote . '#' . $to . $double_quote . ')',
+                                'url(' . $single_quote . '#' . $to . $single_quote . ')',
+                            ),
+                            $updated
+                        );
+                    }
+                }
+            }
+
+            if ( $updated !== $value ) {
+                $attr->nodeValue = $updated;
+            }
+        }
+    }
+
+    return $dom->saveXML( $dom->documentElement );
+}
+
+/**
+ * Prepare SVG markup so that identifiers remain unique within the DOM.
+ *
+ * @param string      $svg     Raw SVG markup.
+ * @param string      $slug    Logo slug used as part of the scope.
+ * @param string|null $context Optional context identifier appended to the scope.
+ *
+ * @return string
+ */
+function a11y_widget_prepare_logo_svg_markup( $svg, $slug, $context = null ) {
+    $svg  = (string) $svg;
+    $slug = (string) $slug;
+
+    if ( '' === $svg ) {
+        return '';
+    }
+
+    if ( function_exists( 'sanitize_key' ) ) {
+        $slug = sanitize_key( $slug );
+    } else {
+        $slug = strtolower( preg_replace( '/[^a-zA-Z0-9_-]+/', '-', $slug ) );
+    }
+
+    $parts = array( 'a11y', 'logo' );
+
+    if ( '' !== $slug ) {
+        $parts[] = $slug;
+    }
+
+    if ( null !== $context && '' !== $context ) {
+        if ( function_exists( 'sanitize_key' ) ) {
+            $context = sanitize_key( $context );
+        } else {
+            $context = strtolower( preg_replace( '/[^a-zA-Z0-9_-]+/', '-', $context ) );
+        }
+
+        if ( '' !== $context ) {
+            $parts[] = $context;
+        }
+    }
+
+    $base_scope = implode( '-', array_filter( $parts ) );
+
+    if ( '' === $base_scope ) {
+        $base_scope = 'a11y-logo';
+    }
+
+    if ( function_exists( 'wp_unique_id' ) ) {
+        $scope = wp_unique_id( $base_scope . '-' );
+    } else {
+        $scope = $base_scope . '-' . uniqid( '', false );
+    }
+
+    return a11y_widget_scope_logo_svg_ids( $svg, $scope );
+}
+
+/**
  * Retrieve the available launcher logo variants.
  *
  * @return array<string, array{label:string, svg:string}>
@@ -234,12 +465,14 @@ function a11y_widget_get_launcher_logo_markup( $slug = null ) {
     }
 
     if ( isset( $choices[ $slug ] ) ) {
-        return $choices[ $slug ]['svg'];
+        return a11y_widget_prepare_logo_svg_markup( $choices[ $slug ]['svg'], $slug, 'launcher' );
     }
 
     $default = a11y_widget_get_launcher_logo_default();
 
-    return isset( $choices[ $default ] ) ? $choices[ $default ]['svg'] : '';
+    return isset( $choices[ $default ] )
+        ? a11y_widget_prepare_logo_svg_markup( $choices[ $default ]['svg'], $default, 'launcher' )
+        : '';
 }
 
 /**
