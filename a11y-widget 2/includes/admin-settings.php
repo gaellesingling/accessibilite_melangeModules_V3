@@ -75,6 +75,65 @@ function a11y_widget_get_section_order_option_name() {
 }
 
 /**
+ * Option name helper for the launcher logo scale.
+ *
+ * @return string
+ */
+function a11y_widget_get_launcher_logo_scale_option_name() {
+    return 'a11y_widget_launcher_logo_scale';
+}
+
+/**
+ * Default scale applied to the launcher logo preview.
+ *
+ * @return int
+ */
+function a11y_widget_get_launcher_logo_scale_default() {
+    return 1;
+}
+
+/**
+ * Sanitize the multiplier applied to the launcher logo preview.
+ *
+ * @param mixed $value Raw input value.
+ *
+ * @return int
+ */
+function a11y_widget_sanitize_launcher_logo_scale( $value ) {
+    if ( is_array( $value ) ) {
+        $value = reset( $value );
+    }
+
+    if ( is_numeric( $value ) ) {
+        $value = (int) $value;
+    } else {
+        $value = null;
+    }
+
+    $allowed = array( 1, 2, 3, 5 );
+
+    if ( in_array( $value, $allowed, true ) ) {
+        return $value;
+    }
+
+    return a11y_widget_get_launcher_logo_scale_default();
+}
+
+/**
+ * Retrieve the sanitized launcher logo scale value.
+ *
+ * @return int
+ */
+function a11y_widget_get_launcher_logo_scale() {
+    $option = get_option(
+        a11y_widget_get_launcher_logo_scale_option_name(),
+        a11y_widget_get_launcher_logo_scale_default()
+    );
+
+    return a11y_widget_sanitize_launcher_logo_scale( $option );
+}
+
+/**
  * Default heading levels used by the reading guide summary.
  *
  * @return string[]
@@ -474,6 +533,16 @@ function a11y_widget_register_settings() {
 
     register_setting(
         'a11y_widget_settings',
+        a11y_widget_get_launcher_logo_scale_option_name(),
+        array(
+            'type'              => 'integer',
+            'sanitize_callback' => 'a11y_widget_sanitize_launcher_logo_scale',
+            'default'           => a11y_widget_get_launcher_logo_scale_default(),
+        )
+    );
+
+    register_setting(
+        'a11y_widget_settings',
         a11y_widget_get_reading_guide_heading_levels_option_name(),
         array(
             'type'              => 'array',
@@ -562,6 +631,9 @@ function a11y_widget_render_admin_page() {
     $logo_option_key        = a11y_widget_get_launcher_logo_option_name();
     $logo_variants          = a11y_widget_get_launcher_logo_variants();
     $selected_logo          = a11y_widget_get_launcher_logo();
+    $logo_scale_option_key  = a11y_widget_get_launcher_logo_scale_option_name();
+    $logo_scale_value       = a11y_widget_get_launcher_logo_scale();
+    $logo_scale_choices     = array( 1, 2, 3, 5 );
     ?>
     <div class="wrap a11y-widget-admin">
         <h1><?php esc_html_e( 'Accessibilité RGAA', 'a11y-widget' ); ?></h1>
@@ -578,6 +650,19 @@ function a11y_widget_render_admin_page() {
                 <p class="description">
                     <?php esc_html_e( 'Choisissez le logo affiché sur le bouton flottant et dans l’en-tête du module.', 'a11y-widget' ); ?>
                 </p>
+                <div class="a11y-widget-admin-launcher__field">
+                    <label for="a11y-widget-launcher-logo-scale"><?php esc_html_e( 'Taille du logo', 'a11y-widget' ); ?></label>
+                    <select
+                        id="a11y-widget-launcher-logo-scale"
+                        name="<?php echo esc_attr( $logo_scale_option_key ); ?>"
+                    >
+                        <?php foreach ( $logo_scale_choices as $scale_choice ) : ?>
+                            <option value="<?php echo esc_attr( $scale_choice ); ?>" <?php selected( $logo_scale_value, $scale_choice ); ?>>
+                                <?php echo esc_html( sprintf( __( '×%d', 'a11y-widget' ), $scale_choice ) ); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <?php if ( empty( $logo_variants ) ) : ?>
                     <p class="description a11y-widget-admin-launcher__empty">
                         <?php esc_html_e( 'Aucune variante de logo n’est disponible pour le moment.', 'a11y-widget' ); ?>

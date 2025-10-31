@@ -68,8 +68,12 @@
   --a11y-z-overlay: 2147483645; /* backdrop */
   --a11y-z: 2147483646; /* launcher */
   --a11y-z-panel: 2147483647; /* top */
-  --a11y-launcher-x: calc(100vw - 76px);
-  --a11y-launcher-y: calc(100vh - 76px);
+  --a11y-widget-logo-scale: 1;
+  --a11y-launcher-margin: 20px;
+  --a11y-launcher-size: calc(56px * var(--a11y-widget-logo-scale));
+  --a11y-panel-logo-size: calc(28px * var(--a11y-widget-logo-scale));
+  --a11y-launcher-x: calc(100vw - (var(--a11y-launcher-size) + var(--a11y-launcher-margin)));
+  --a11y-launcher-y: calc(100vh - (var(--a11y-launcher-size) + var(--a11y-launcher-margin)));
   --a11y-visual-filter: none;
   --a11y-reading-guide-color: #ffe28a;
   --a11y-reading-guide-opacity: 0.65;
@@ -93,7 +97,7 @@
 .a11y-launcher {
   position: fixed; left: var(--a11y-launcher-x); top: var(--a11y-launcher-y); z-index: var(--a11y-z);
   display: inline-flex; align-items: center; justify-content: center;
-  width: 56px; height: 56px; border-radius: 999px; border: none;
+  width: var(--a11y-launcher-size); height: var(--a11y-launcher-size); border-radius: 999px; border: none;
   background: var(--a11y-primary); color: var(--a11y-primary-contrast);
   box-shadow: var(--a11y-shadow); cursor: pointer; transition: transform .15s ease;
 }
@@ -101,7 +105,7 @@
 .a11y-launcher:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-launcher:hover { transform: translateY(-2px); }
 .a11y-launcher svg,
-.a11y-launcher img { width: 28px; height: 28px; display: block; }
+.a11y-launcher img { width: var(--a11y-panel-logo-size); height: var(--a11y-panel-logo-size); display: block; }
 .a11y-launcher.has-logo svg,
 .a11y-launcher.has-logo img { width: 100%; height: 100%; }
 
@@ -154,11 +158,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--a11y-panel-logo-size);
+  height: var(--a11y-panel-logo-size);
 }
 .a11y-icon svg,
-.a11y-icon img { width: 28px; height: 28px; display: block; }
+.a11y-icon img { width: 100%; height: 100%; display: block; }
 .a11y-close { border: none; background: none; padding: 8px; cursor: pointer; border-radius: 10px; }
 .a11y-close:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-tutorial-toggle {
