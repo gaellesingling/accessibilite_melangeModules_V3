@@ -634,7 +634,6 @@ function a11y_widget_render_admin_page() {
     $logo_scale_option_key  = a11y_widget_get_launcher_logo_scale_option_name();
     $logo_scale_value       = a11y_widget_get_launcher_logo_scale();
     $logo_scale_choices     = array( 1, 2, 3, 5 );
-    $logo_preview_style     = '--a11y-widget-logo-scale: ' . $logo_scale_value . ';';
     ?>
     <div class="wrap a11y-widget-admin">
         <h1><?php esc_html_e( 'Accessibilité RGAA', 'a11y-widget' ); ?></h1>

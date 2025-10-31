@@ -95,14 +95,10 @@
   margin: 0;
 }
 
-.a11y-widget-admin-launcher__preview {
-  --a11y-widget-logo-scale: 1;
-}
-
 .a11y-widget-admin-launcher__preview svg,
 .a11y-widget-admin-launcher__preview img {
-  width: calc(44px * var(--a11y-widget-logo-scale));
-  height: calc(44px * var(--a11y-widget-logo-scale));
+  width: 44px;
+  height: 44px;
   display: block;
 }
 
