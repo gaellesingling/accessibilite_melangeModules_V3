@@ -56,6 +56,132 @@ function a11y_widget_get_logo_svg_from_file( $filename ) {
 }
 
 /**
+ * Apply a subset of CSS declarations defined in <style> blocks directly on the matching SVG nodes.
+ *
+ * Some environments strip or ignore embedded <style> tags in inline SVGs. By duplicating the
+ * declarations as presentation attributes we make sure the logo keeps its colors even when the
+ * stylesheet is discarded.
+ *
+ * @param DOMDocument $dom Parsed SVG document.
+ * @param string      $css Raw CSS extracted from a <style> element.
+ *
+ * @return void
+ */
+function a11y_widget_apply_inline_svg_styles( DOMDocument $dom, $css ) {
+    $css = (string) $css;
+
+    if ( '' === trim( $css ) ) {
+        return;
+    }
+
+    if ( ! preg_match_all( '/\.([A-Za-z0-9_-]+)\s*\{([^}]*)\}/', $css, $matches, PREG_SET_ORDER ) ) {
+        return;
+    }
+
+    $attribute_map = array(
+        'fill'              => 'fill',
+        'stroke'            => 'stroke',
+        'stroke-width'      => 'stroke-width',
+        'stroke-linecap'    => 'stroke-linecap',
+        'stroke-linejoin'   => 'stroke-linejoin',
+        'stroke-miterlimit' => 'stroke-miterlimit',
+        'stroke-dasharray'  => 'stroke-dasharray',
+        'stroke-dashoffset' => 'stroke-dashoffset',
+        'fill-opacity'      => 'fill-opacity',
+        'stroke-opacity'    => 'stroke-opacity',
+        'opacity'           => 'opacity',
+        'stop-color'        => 'stop-color',
+        'stop-opacity'      => 'stop-opacity',
+    );
+
+    $rules = array();
+
+    foreach ( $matches as $rule ) {
+        if ( count( $rule ) < 3 ) {
+            continue;
+        }
+
+        $class_name = trim( $rule[1] );
+        $block      = trim( $rule[2] );
+
+        if ( '' === $class_name || '' === $block ) {
+            continue;
+        }
+
+        $declarations = array();
+        $properties   = preg_split( '/;/', $block );
+
+        foreach ( $properties as $property ) {
+            $property = trim( $property );
+
+            if ( '' === $property ) {
+                continue;
+            }
+
+            $parts = explode( ':', $property, 2 );
+
+            if ( 2 !== count( $parts ) ) {
+                continue;
+            }
+
+            $name  = strtolower( trim( $parts[0] ) );
+            $value = trim( $parts[1] );
+
+            if ( '' === $value || ! isset( $attribute_map[ $name ] ) ) {
+                continue;
+            }
+
+            $attribute = $attribute_map[ $name ];
+            $declarations[ $attribute ] = $value;
+        }
+
+        if ( empty( $declarations ) ) {
+            continue;
+        }
+
+        $rules[ $class_name ] = $declarations;
+    }
+
+    if ( empty( $rules ) ) {
+        return;
+    }
+
+    foreach ( $dom->getElementsByTagName( '*' ) as $node ) {
+        if ( ! $node instanceof DOMElement ) {
+            continue;
+        }
+
+        if ( ! $node->hasAttribute( 'class' ) ) {
+            continue;
+        }
+
+        $class_value = trim( $node->getAttribute( 'class' ) );
+
+        if ( '' === $class_value ) {
+            continue;
+        }
+
+        $class_names = preg_split( '/\s+/', $class_value );
+
+        foreach ( (array) $class_names as $candidate ) {
+            $candidate = trim( (string) $candidate );
+
+            if ( '' === $candidate || ! isset( $rules[ $candidate ] ) ) {
+                continue;
+            }
+
+            foreach ( $rules[ $candidate ] as $attribute => $value ) {
+                if ( $node->hasAttribute( $attribute ) && '' !== trim( $node->getAttribute( $attribute ) ) ) {
+                    continue;
+                }
+
+                $node->setAttribute( $attribute, $value );
+            }
+        }
+    }
+}
+
+/**
  * Scope the IDs defined inside an SVG fragment to prevent collisions.
  *
  * When several inline SVGs reuse the same <defs> identifiers (gradients,
@@ -227,21 +353,23 @@ function a11y_widget_scope_logo_svg_ids( $svg, $scope ) {
         }
     }
 
-    if ( ! empty( $map ) ) {
-        $style_nodes = $dom->getElementsByTagName( 'style' );
+    $style_nodes = $dom->getElementsByTagName( 'style' );
 
-        if ( $style_nodes && $style_nodes->length > 0 ) {
-            foreach ( $style_nodes as $style_node ) {
-                if ( ! $style_node->firstChild ) {
-                    continue;
-                }
+    if ( $style_nodes && $style_nodes->length > 0 ) {
+        foreach ( $style_nodes as $style_node ) {
+            if ( ! $style_node->firstChild ) {
+                continue;
+            }
 
-                $css_content = $style_node->textContent;
+            $css_content = $style_node->textContent;
 
-                if ( '' === $css_content ) {
-                    continue;
-                }
+            if ( '' === $css_content ) {
+                continue;
+            }
 
+            $final_css = $css_content;
+
+            if ( ! empty( $map ) ) {
                 $updated_css = $css_content;
 
                 foreach ( $map as $from => $to ) {
@@ -260,16 +388,17 @@ function a11y_widget_scope_logo_svg_ids( $svg, $scope ) {
                     );
                 }
 
-                if ( $updated_css === $css_content ) {
-                    continue;
-                }
+                if ( $updated_css !== $css_content ) {
+                    while ( $style_node->firstChild ) {
+                        $style_node->removeChild( $style_node->firstChild );
+                    }
 
-                while ( $style_node->firstChild ) {
-                    $style_node->removeChild( $style_node->firstChild );
+                    $style_node->appendChild( $dom->createTextNode( $updated_css ) );
+                    $final_css = $updated_css;
                 }
-
-                $style_node->appendChild( $dom->createTextNode( $updated_css ) );
             }
+
+            a11y_widget_apply_inline_svg_styles( $dom, $final_css );
         }
     }
 
