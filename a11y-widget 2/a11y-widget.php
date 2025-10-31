@@ -227,6 +227,52 @@ function a11y_widget_scope_logo_svg_ids( $svg, $scope ) {
         }
     }
 
+    if ( ! empty( $map ) ) {
+        $style_nodes = $dom->getElementsByTagName( 'style' );
+
+        if ( $style_nodes && $style_nodes->length > 0 ) {
+            foreach ( $style_nodes as $style_node ) {
+                if ( ! $style_node->firstChild ) {
+                    continue;
+                }
+
+                $css_content = $style_node->textContent;
+
+                if ( '' === $css_content ) {
+                    continue;
+                }
+
+                $updated_css = $css_content;
+
+                foreach ( $map as $from => $to ) {
+                    $updated_css = str_replace(
+                        array(
+                            'url(#' . $from . ')',
+                            'url("#' . $from . '")',
+                            "url('#" . $from . "')",
+                        ),
+                        array(
+                            'url(#' . $to . ')',
+                            'url("#' . $to . '")',
+                            "url('#" . $to . "')",
+                        ),
+                        $updated_css
+                    );
+                }
+
+                if ( $updated_css === $css_content ) {
+                    continue;
+                }
+
+                while ( $style_node->firstChild ) {
+                    $style_node->removeChild( $style_node->firstChild );
+                }
+
+                $style_node->appendChild( $dom->createTextNode( $updated_css ) );
+            }
+        }
+    }
+
     return $dom->saveXML( $dom->documentElement );
 }
 
