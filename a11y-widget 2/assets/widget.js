@@ -30,6 +30,8 @@
   const btn = document.getElementById('a11y-launcher');
   const overlay = document.getElementById('a11y-overlay');
   const panel = root ? root.querySelector('.a11y-panel') : null;
+  const backgroundMode = root && root.dataset ? (root.dataset.backgroundMode || 'modal') : 'modal';
+  const isModalBackground = backgroundMode === 'modal';
   const closeBtn = document.getElementById('a11y-close');
   const closeBtn2 = document.getElementById('a11y-close2');
   const resetBtn = document.getElementById('a11y-reset');
@@ -9820,11 +9822,11 @@ ${interactiveSelectors} {
   function openPanel(){
     if(!panel){ return; }
     lastFocused = document.activeElement;
-    if(overlay){ overlay.setAttribute('aria-hidden','false'); }
+    if(isModalBackground && overlay){ overlay.setAttribute('aria-hidden','false'); }
     panel.hidden = false;
     panel.setAttribute('aria-hidden', 'false');
     if(root){ root.classList.add('is-open'); }
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = isModalBackground ? 'hidden' : '';
     if(btn){ btn.setAttribute('aria-expanded','true'); }
     // focus premier focusable
     const focusables = panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -9833,7 +9835,7 @@ ${interactiveSelectors} {
   }
   function closePanel(){
     disableSearchMode();
-    if(overlay){ overlay.setAttribute('aria-hidden','true'); }
+    if(isModalBackground && overlay){ overlay.setAttribute('aria-hidden','true'); }
     if(panel){
       panel.setAttribute('aria-hidden', 'true');
       panel.hidden = true;
@@ -9846,6 +9848,7 @@ ${interactiveSelectors} {
   }
   function trap(e){
     if(e.key === 'Escape'){ e.preventDefault(); closePanel(); return; }
+    if(!isModalBackground){ return; }
     if(e.key !== 'Tab') return;
     if(!panel){ return; }
     const focusables = Array.from(panel.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')).filter(el=>!el.hasAttribute('disabled') && el.offsetParent !== null);
@@ -10078,21 +10081,23 @@ document.addEventListener('click', function(e){
   const rootEl = document.getElementById('a11y-widget-root');
   const overlayEl = document.getElementById('a11y-overlay');
   if(!overlayEl || !rootEl) return;
+  const backgroundMode = rootEl.dataset ? (rootEl.dataset.backgroundMode || 'modal') : 'modal';
+  const isModalBackground = backgroundMode === 'modal';
   const launcherBtn = document.getElementById('a11y-launcher');
   function getPanel(){ return rootEl.querySelector('.a11y-panel'); }
   function open(){
-    overlayEl.setAttribute('aria-hidden','false');
+    if(isModalBackground){ overlayEl.setAttribute('aria-hidden','false'); }
     const panelEl = getPanel();
     if(panelEl){
       panelEl.hidden = false;
       panelEl.setAttribute('aria-hidden', 'false');
     }
     rootEl.classList.add('is-open');
-    document.body.style.overflow='hidden';
+    document.body.style.overflow = isModalBackground ? 'hidden' : '';
     if(launcherBtn){ launcherBtn.setAttribute('aria-expanded','true'); }
   }
   function close(){
-    overlayEl.setAttribute('aria-hidden','true');
+    if(isModalBackground){ overlayEl.setAttribute('aria-hidden','true'); }
     document.body.style.overflow='';
     if(launcherBtn){ launcherBtn.setAttribute('aria-expanded','false'); }
     const panelEl = getPanel();

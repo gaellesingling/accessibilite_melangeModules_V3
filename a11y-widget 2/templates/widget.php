@@ -60,13 +60,46 @@ $logo_scale_style = sprintf(
     $launcher_size_px,
     $panel_logo_px
 );
+
+$background_mode = 'modal';
+
+if ( function_exists( 'a11y_widget_get_background_mode' ) ) {
+    $background_mode = a11y_widget_get_background_mode();
+}
+
+if ( ! in_array( $background_mode, array( 'modal', 'interactive' ), true ) ) {
+    $background_mode = 'modal';
+}
+
+$root_class_names = array( 'a11y-root', 'a11y-root--mode-' . $background_mode );
+
+if ( function_exists( 'sanitize_html_class' ) ) {
+    $root_class_names = array_map( 'sanitize_html_class', $root_class_names );
+}
+
+$root_classes = implode( ' ', array_filter( array_unique( $root_class_names ) ) );
 ?>
-<div id="a11y-widget-root" class="a11y-root" data-a11y-filter-exempt style="<?php echo esc_attr( $logo_scale_style ); ?>">
+<div
+  id="a11y-widget-root"
+  class="<?php echo esc_attr( $root_classes ); ?>"
+  data-a11y-filter-exempt
+  data-background-mode="<?php echo esc_attr( $background_mode ); ?>"
+  style="<?php echo esc_attr( $logo_scale_style ); ?>"
+>
   <button class="<?php echo esc_attr( $launcher_classes ); ?>" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
     <?php echo $launcher_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
   </button>
 
-  <section class="a11y-panel is-right" id="a11y-panel" role="dialog" aria-modal="true" aria-labelledby="a11y-title" aria-hidden="true" hidden data-a11y-preserve-colors>
+  <section
+    class="a11y-panel is-right"
+    id="a11y-panel"
+    role="dialog"
+    aria-modal="<?php echo esc_attr( 'modal' === $background_mode ? 'true' : 'false' ); ?>"
+    aria-labelledby="a11y-title"
+    aria-hidden="true"
+    hidden
+    data-a11y-preserve-colors
+  >
     <?php
     $panel_label_left  = esc_attr__( 'Placer le panneau à gauche', 'a11y-widget' );
     $panel_label_right = esc_attr__( 'Placer le panneau à droite', 'a11y-widget' );
@@ -348,4 +381,11 @@ $logo_scale_style = sprintf(
   </section>
 </div>
 
-<div class="a11y-overlay" id="a11y-overlay" role="presentation" aria-hidden="true" data-a11y-filter-exempt></div>
+<div
+  class="a11y-overlay"
+  id="a11y-overlay"
+  role="presentation"
+  aria-hidden="true"
+  data-a11y-filter-exempt
+  data-background-mode="<?php echo esc_attr( $background_mode ); ?>"
+></div>

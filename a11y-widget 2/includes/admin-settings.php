@@ -555,6 +555,16 @@ function a11y_widget_register_settings() {
 
     register_setting(
         'a11y_widget_settings',
+        a11y_widget_get_background_mode_option_name(),
+        array(
+            'type'              => 'string',
+            'sanitize_callback' => 'a11y_widget_sanitize_background_mode',
+            'default'           => a11y_widget_get_background_mode_default(),
+        )
+    );
+
+    register_setting(
+        'a11y_widget_settings',
         a11y_widget_get_reading_guide_heading_levels_option_name(),
         array(
             'type'              => 'array',
@@ -646,6 +656,18 @@ function a11y_widget_render_admin_page() {
     $logo_scale_option_key  = a11y_widget_get_launcher_logo_scale_option_name();
     $logo_scale_value       = a11y_widget_get_launcher_logo_scale();
     $logo_scale_choices     = array( 1, 1.5, 2, 3, 5 );
+    $background_mode_option = a11y_widget_get_background_mode_option_name();
+    $background_mode_value  = a11y_widget_get_background_mode();
+    $background_mode_choices = array(
+        'modal'       => array(
+            'label'       => __( 'Mode modal (site en arrière-plan figé)', 'a11y-widget' ),
+            'description' => __( 'Masque l’arrière-plan, verrouille le défilement et piège le focus dans le module.', 'a11y-widget' ),
+        ),
+        'interactive' => array(
+            'label'       => __( 'Mode interactif (site accessible)', 'a11y-widget' ),
+            'description' => __( 'Laisse la page active : pas de masque ni de verrouillage du focus.', 'a11y-widget' ),
+        ),
+    );
     ?>
     <div class="wrap a11y-widget-admin">
         <h1><?php esc_html_e( 'Accessibilité RGAA', 'a11y-widget' ); ?></h1>
@@ -655,6 +677,35 @@ function a11y_widget_render_admin_page() {
 
         <form method="post" action="options.php">
             <?php settings_fields( 'a11y_widget_settings' ); ?>
+
+            <fieldset class="a11y-widget-admin-background">
+                <legend><?php esc_html_e( 'Comportement du site en arrière-plan', 'a11y-widget' ); ?></legend>
+                <p class="description">
+                    <?php esc_html_e( 'Choisissez si l’ouverture du module doit figer le site ou le laisser accessible.', 'a11y-widget' ); ?>
+                </p>
+                <?php foreach ( $background_mode_choices as $mode_slug => $mode_data ) :
+                    $mode_slug = sanitize_key( $mode_slug );
+                    $input_id  = 'a11y-widget-background-mode-' . $mode_slug;
+                    $label     = isset( $mode_data['label'] ) ? (string) $mode_data['label'] : '';
+                    $help      = isset( $mode_data['description'] ) ? (string) $mode_data['description'] : '';
+                    ?>
+                    <div class="a11y-widget-admin-background__option">
+                        <label for="<?php echo esc_attr( $input_id ); ?>">
+                            <input
+                                type="radio"
+                                name="<?php echo esc_attr( $background_mode_option ); ?>"
+                                id="<?php echo esc_attr( $input_id ); ?>"
+                                value="<?php echo esc_attr( $mode_slug ); ?>"
+                                <?php checked( $background_mode_value, $mode_slug ); ?>
+                            />
+                            <span class="a11y-widget-admin-background__label"><?php echo esc_html( $label ); ?></span>
+                        </label>
+                        <?php if ( '' !== trim( $help ) ) : ?>
+                            <p class="description"><?php echo esc_html( $help ); ?></p>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </fieldset>
 
             <fieldset class="a11y-widget-admin-launcher">
                 <?php $launcher_legend_id = 'a11y-widget-launcher-logo-legend'; ?>
