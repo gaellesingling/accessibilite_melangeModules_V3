@@ -182,6 +182,36 @@ function a11y_widget_apply_inline_svg_styles( DOMDocument $dom, $css ) {
 }
 
 /**
+ * Convert raw SVG markup to a data URI that can be used in an <img> tag.
+ *
+ * @param string $svg Raw SVG markup.
+ *
+ * @return string Data URI or empty string on failure.
+ */
+function a11y_widget_svg_markup_to_data_uri( $svg ) {
+    $svg = trim( (string) $svg );
+
+    if ( '' === $svg ) {
+        return '';
+    }
+
+    if ( function_exists( 'mb_convert_encoding' ) ) {
+        $encoded = @mb_convert_encoding( $svg, 'UTF-8', 'UTF-8' );
+        if ( false !== $encoded && '' !== $encoded ) {
+            $svg = $encoded;
+        }
+    }
+
+    $base64 = base64_encode( $svg );
+
+    if ( false === $base64 || '' === $base64 ) {
+        return '';
+    }
+
+    return 'data:image/svg+xml;base64,' . $base64;
+}
+
+/**
  * Scope the IDs defined inside an SVG fragment to prevent collisions.
  *
  * When several inline SVGs reuse the same <defs> identifiers (gradients,
@@ -648,6 +678,69 @@ function a11y_widget_get_launcher_logo_markup( $slug = null ) {
     return isset( $choices[ $default ] )
         ? a11y_widget_prepare_logo_svg_markup( $choices[ $default ]['svg'], $default, 'launcher' )
         : '';
+}
+
+/**
+ * Retrieve an <img> tag containing the launcher logo as a data URI.
+ *
+ * @param string|null $slug    Logo slug. Defaults to the stored option.
+ * @param string      $context Context identifier appended to the SVG scope.
+ *
+ * @return string
+ */
+function a11y_widget_get_launcher_logo_image_markup( $slug = null, $context = 'launcher' ) {
+    $choices = a11y_widget_get_launcher_logo_variants();
+
+    if ( null === $slug ) {
+        $slug = a11y_widget_get_launcher_logo();
+    } else {
+        $slug = a11y_widget_sanitize_launcher_logo( $slug );
+    }
+
+    $svg_markup = '';
+
+    if ( isset( $choices[ $slug ] ) ) {
+        $svg_markup = a11y_widget_prepare_logo_svg_markup( $choices[ $slug ]['svg'], $slug, $context . '-image' );
+    } else {
+        $default = a11y_widget_get_launcher_logo_default();
+
+        if ( isset( $choices[ $default ] ) ) {
+            $svg_markup = a11y_widget_prepare_logo_svg_markup( $choices[ $default ]['svg'], $default, $context . '-image' );
+        }
+    }
+
+    if ( '' === $svg_markup ) {
+        return '';
+    }
+
+    $data_uri = a11y_widget_svg_markup_to_data_uri( $svg_markup );
+
+    if ( '' === $data_uri ) {
+        return '';
+    }
+
+    $attributes = array(
+        'src'         => $data_uri,
+        'alt'         => '',
+        'role'        => 'presentation',
+        'aria-hidden' => 'true',
+        'decoding'    => 'async',
+        'draggable'   => 'false',
+    );
+
+    $parts = array();
+
+    foreach ( $attributes as $name => $value ) {
+        $value = (string) $value;
+
+        if ( function_exists( 'esc_attr' ) ) {
+            $value = esc_attr( $value );
+        }
+
+        $parts[] = sprintf( "%s=\"%s\"", $name, $value );
+    }
+
+    return '<img ' . implode( ' ', $parts ) . ' />';
 }
 
 /**
