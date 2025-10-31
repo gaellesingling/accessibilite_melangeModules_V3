@@ -132,6 +132,51 @@
         var containers = toArray(document.querySelectorAll('.a11y-widget-admin-section__content'));
         var sectionGrid = document.querySelector('.a11y-widget-admin-grid');
         var sectionOrderInput = document.querySelector('[data-section-order-input]');
+        var launcherGroups = toArray(document.querySelectorAll('[data-launcher-checkbox-group]'));
+
+        launcherGroups.forEach(function (group) {
+            group.addEventListener('change', function (event) {
+                var target = event.target;
+
+                if (!target || !target.matches('[data-launcher-checkbox]')) {
+                    return;
+                }
+
+                var labels = toArray(group.querySelectorAll('.a11y-widget-admin-launcher__label'));
+
+                labels.forEach(function (label) {
+                    label.classList.remove('a11y-widget-admin-launcher__label--checked');
+                });
+
+                toArray(group.querySelectorAll('[data-launcher-checkbox]')).forEach(function (input) {
+                    var label = input.closest('.a11y-widget-admin-launcher__label');
+
+                    if (input !== target) {
+                        input.checked = false;
+
+                        if (label) {
+                            label.classList.remove('a11y-widget-admin-launcher__label--checked');
+                        }
+
+                        return;
+                    }
+
+                    if (target.checked && label) {
+                        label.classList.add('a11y-widget-admin-launcher__label--checked');
+                    }
+                });
+            });
+
+            toArray(group.querySelectorAll('[data-launcher-checkbox]')).forEach(function (input) {
+                if (input.checked) {
+                    var label = input.closest('.a11y-widget-admin-launcher__label');
+
+                    if (label) {
+                        label.classList.add('a11y-widget-admin-launcher__label--checked');
+                    }
+                }
+            });
+        });
 
         var draggedFeature = null;
         var featureOrigin = null;

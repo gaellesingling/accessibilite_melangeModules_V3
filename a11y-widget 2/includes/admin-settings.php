@@ -583,11 +583,17 @@ function a11y_widget_render_admin_page() {
                         <?php esc_html_e( 'Aucune variante de logo n’est disponible pour le moment.', 'a11y-widget' ); ?>
                     </p>
                 <?php else : ?>
-                    <div class="a11y-widget-admin-launcher__choices" role="radiogroup" aria-labelledby="<?php echo esc_attr( $launcher_legend_id ); ?>">
+                    <div
+                        class="a11y-widget-admin-launcher__choices"
+                        role="group"
+                        aria-labelledby="<?php echo esc_attr( $launcher_legend_id ); ?>"
+                        data-launcher-checkbox-group
+                    >
                         <?php foreach ( $logo_variants as $logo_slug => $logo_data ) :
                             $input_id = 'a11y-widget-launcher-logo-' . $logo_slug;
-                            $label           = isset( $logo_data['label'] ) ? $logo_data['label'] : '';
-                            $svg             = isset( $logo_data['svg'] ) ? (string) $logo_data['svg'] : '';
+                            $label    = isset( $logo_data['label'] ) ? $logo_data['label'] : '';
+                            $svg      = isset( $logo_data['svg'] ) ? (string) $logo_data['svg'] : '';
+
                             if ( function_exists( 'a11y_widget_get_launcher_logo_image_markup' ) ) {
                                 $preview_markup = a11y_widget_get_launcher_logo_image_markup( $logo_slug, 'admin' );
                             } else {
@@ -598,19 +604,22 @@ function a11y_widget_render_admin_page() {
                                 }
                             }
                             ?>
-                            <label class="a11y-widget-admin-launcher__option" for="<?php echo esc_attr( $input_id ); ?>">
-                                <input
-                                    type="radio"
-                                    name="<?php echo esc_attr( $logo_option_key ); ?>"
-                                    id="<?php echo esc_attr( $input_id ); ?>"
-                                    value="<?php echo esc_attr( $logo_slug ); ?>"
-                                    <?php checked( $logo_slug === $selected_logo ); ?>
-                                />
-                                <span class="a11y-widget-admin-launcher__card">
-                                    <span class="a11y-widget-admin-launcher__preview" aria-hidden="true"><?php echo $preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-                                    <span class="a11y-widget-admin-launcher__name"><?php echo esc_html( $label ); ?></span>
-                                </span>
-                            </label>
+                            <div class="a11y-widget-admin-launcher__option">
+                                <label class="a11y-widget-admin-launcher__label" for="<?php echo esc_attr( $input_id ); ?>">
+                                    <input
+                                        type="checkbox"
+                                        name="<?php echo esc_attr( $logo_option_key ); ?>"
+                                        id="<?php echo esc_attr( $input_id ); ?>"
+                                        value="<?php echo esc_attr( $logo_slug ); ?>"
+                                        <?php checked( $logo_slug === $selected_logo ); ?>
+                                        data-launcher-checkbox
+                                    />
+                                    <span class="a11y-widget-admin-launcher__details">
+                                        <span class="a11y-widget-admin-launcher__preview" aria-hidden="true"><?php echo $preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+                                        <span class="a11y-widget-admin-launcher__name"><?php echo esc_html( $label ); ?></span>
+                                    </span>
+                                </label>
+                            </div>
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
