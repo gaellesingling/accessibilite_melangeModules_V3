@@ -4,13 +4,37 @@
  * This is printed in the footer or via shortcode.
  */
 
-$default_logo = '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#dc2626" /><path fill="#ffffff" d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm6.75 6.5h-4.5v11a1 1 0 1 1-2 0v-5h-1v5a1 1 0 1 1-2 0v-11h-4.5a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2Z" /></svg>';
-$launcher_logo_markup = function_exists( 'a11y_widget_get_launcher_logo_markup' )
-    ? a11y_widget_get_launcher_logo_markup()
-    : $default_logo;
+$default_logo = '';
+
+if ( function_exists( 'a11y_widget_get_logo_svg_from_file' ) ) {
+    $default_logo = a11y_widget_get_logo_svg_from_file( 'logo_rouge.svg' );
+}
+
+if ( '' === $default_logo ) {
+    $default_logo = '<svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="12" fill="#dc2626" /><path fill="#ffffff" d="M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm6.75 6.5h-4.5v11a1 1 0 1 1-2 0v-5h-1v5a1 1 0 1 1-2 0v-11h-4.5a1 1 0 1 1 0-2h14a1 1 0 1 1 0 2Z" /></svg>';
+}
+
+if ( function_exists( 'a11y_widget_get_launcher_logo_markup' ) ) {
+    $launcher_logo_markup = (string) a11y_widget_get_launcher_logo_markup();
+    $panel_logo_markup    = (string) a11y_widget_get_launcher_logo_markup();
+
+    if ( '' === trim( $launcher_logo_markup ) ) {
+        $launcher_logo_markup = $default_logo;
+    }
+
+    if ( '' === trim( $panel_logo_markup ) ) {
+        $panel_logo_markup = $default_logo;
+    }
+} else {
+    $launcher_logo_markup = $default_logo;
+    $panel_logo_markup    = $default_logo;
+}
+
+$launcher_has_svg = false !== stripos( $launcher_logo_markup, '<svg' );
+$launcher_classes = 'a11y-launcher' . ( $launcher_has_svg ? ' has-svg-logo' : '' );
 ?>
 <div id="a11y-widget-root" class="a11y-root" data-a11y-filter-exempt>
-  <button class="a11y-launcher" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
+  <button class="<?php echo esc_attr( $launcher_classes ); ?>" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
     <?php echo $launcher_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
   </button>
 
@@ -36,7 +60,7 @@ $launcher_logo_markup = function_exists( 'a11y_widget_get_launcher_logo_markup' 
           <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
         </svg>
       </button>
-      <span class="a11y-icon" aria-hidden="true"><?php echo $launcher_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+      <span class="a11y-icon" aria-hidden="true"><?php echo $panel_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
       <h2 id="a11y-title" class="a11y-title"><?php echo esc_html__('Accessibilité du site', 'a11y-widget'); ?></h2>
       <button
         type="button"
