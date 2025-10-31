@@ -38,6 +38,8 @@ if ( function_exists( 'a11y_widget_get_launcher_logo_image_markup' ) ) {
 $launcher_has_logo = (bool) preg_match( '/<(svg|img)\b/i', $launcher_logo_markup );
 $launcher_classes  = 'a11y-launcher' . ( $launcher_has_logo ? ' has-logo' : '' );
 $logo_scale_value  = 1;
+$launcher_size_px  = 56;
+$panel_logo_px     = 28;
 
 if ( function_exists( 'a11y_widget_get_launcher_logo_scale' ) ) {
     $logo_scale_value = (int) a11y_widget_get_launcher_logo_scale();
@@ -47,7 +49,15 @@ if ( function_exists( 'a11y_widget_get_launcher_logo_scale' ) ) {
     }
 }
 
-$logo_scale_style = sprintf( '--a11y-widget-logo-scale: %d;', $logo_scale_value );
+$launcher_size_px = max( 1, $launcher_size_px * $logo_scale_value );
+$panel_logo_px    = max( 1, $panel_logo_px * $logo_scale_value );
+
+$logo_scale_style = sprintf(
+    '--a11y-widget-logo-scale: %1$d; --a11y-launcher-size: %2$dpx; --a11y-panel-logo-size: %3$dpx;',
+    $logo_scale_value,
+    $launcher_size_px,
+    $panel_logo_px
+);
 ?>
 <div id="a11y-widget-root" class="a11y-root" data-a11y-filter-exempt style="<?php echo esc_attr( $logo_scale_style ); ?>">
   <button class="<?php echo esc_attr( $launcher_classes ); ?>" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
