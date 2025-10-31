@@ -37,8 +37,19 @@ if ( function_exists( 'a11y_widget_get_launcher_logo_image_markup' ) ) {
 
 $launcher_has_logo = (bool) preg_match( '/<(svg|img)\b/i', $launcher_logo_markup );
 $launcher_classes  = 'a11y-launcher' . ( $launcher_has_logo ? ' has-logo' : '' );
+$logo_scale_value  = 1;
+
+if ( function_exists( 'a11y_widget_get_launcher_logo_scale' ) ) {
+    $logo_scale_value = (int) a11y_widget_get_launcher_logo_scale();
+
+    if ( $logo_scale_value <= 0 ) {
+        $logo_scale_value = 1;
+    }
+}
+
+$logo_scale_style = sprintf( '--a11y-widget-logo-scale: %d;', $logo_scale_value );
 ?>
-<div id="a11y-widget-root" class="a11y-root" data-a11y-filter-exempt>
+<div id="a11y-widget-root" class="a11y-root" data-a11y-filter-exempt style="<?php echo esc_attr( $logo_scale_style ); ?>">
   <button class="<?php echo esc_attr( $launcher_classes ); ?>" id="a11y-launcher" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11y-panel" aria-label="<?php echo esc_attr__('Ouvrir le module d’accessibilité', 'a11y-widget'); ?>" data-a11y-preserve-colors data-a11y-filter-exempt>
     <?php echo $launcher_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
   </button>
