@@ -715,7 +715,7 @@ function a11y_widget_render_admin_page() {
                                         data-launcher-checkbox
                                     />
                                     <span class="a11y-widget-admin-launcher__details">
-                                        <span class="a11y-widget-admin-launcher__preview" aria-hidden="true"><?php echo $preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+                                        <span class="a11y-widget-admin-launcher__preview" aria-hidden="true" style="<?php echo esc_attr( $logo_preview_style ); ?>"><?php echo $preview_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
                                         <span class="a11y-widget-admin-launcher__name"><?php echo esc_html( $label ); ?></span>
                                     </span>
                                 </label>
