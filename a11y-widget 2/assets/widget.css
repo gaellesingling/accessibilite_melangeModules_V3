@@ -861,8 +861,15 @@ html[data-a11y-luminosite-reglages="on"]::before {
   pointer-events: none;
   background: rgba(24, 27, 33, 0.72);
   opacity: 0;
+  mix-blend-mode: normal;
   transition: opacity 0.3s ease, background 0.3s ease;
   z-index: calc(var(--a11y-z-overlay) - 1);
+}
+
+html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="blue_light"]::before {
+  background: rgba(255, 210, 150, 0.3);
+  opacity: 1;
+  mix-blend-mode: color;
 }
 
 @supports selector(:has(*)) {
@@ -1418,8 +1425,9 @@ html[data-a11y-luminosite-reglages="on"] #a11y-overlay {
 }
 
 #a11y-overlay.acc-mode-blue-light {
-  background-color: rgba(255, 224, 186, 0.55);
-  filter: sepia(35%) saturate(160%) hue-rotate(-15deg) brightness(105%) contrast(95%) !important;
+  background-color: rgba(255, 210, 150, 0.35);
+  filter: none !important;
+  mix-blend-mode: color;
 }
 
 #a11y-overlay.acc-mode-high-contrast {

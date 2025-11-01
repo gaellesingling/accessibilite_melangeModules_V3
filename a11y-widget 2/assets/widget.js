@@ -1156,7 +1156,7 @@
   const BRIGHTNESS_MODE_FILTERS = {
     normal: '',
     night: 'invert(1) hue-rotate(180deg)',
-    blue_light: 'sepia(35%) saturate(160%) hue-rotate(-15deg) brightness(105%) contrast(95%)',
+    blue_light: '',
     high_contrast: 'contrast(215%) brightness(90%) saturate(120%)',
     low_contrast: 'contrast(65%) brightness(108%) saturate(85%)',
     grayscale: 'grayscale(100%)',
@@ -1297,7 +1297,10 @@
 
   function updateVisualFilterStyles(){
     const combined = composeVisualFilterValue();
-    if(!visualFilterStyleElement && !combined){
+    const normalizedMode = normalizeBrightnessMode(brightnessSettings.mode);
+    const shouldDarkenDocument = brightnessActive && normalizedMode === 'night';
+    const shouldWarmTintDocument = brightnessActive && normalizedMode === 'blue_light';
+    if(!visualFilterStyleElement && !combined && !shouldDarkenDocument && !shouldWarmTintDocument){
       return;
     }
     const styleEl = ensureVisualFilterStyleElement();
@@ -1310,8 +1313,6 @@
     if(bodyEl){
       bodyEl.style.setProperty('--a11y-visual-filter', filterValue);
     }
-    const normalizedMode = normalizeBrightnessMode(brightnessSettings.mode);
-    const shouldDarkenDocument = brightnessActive && normalizedMode === 'night';
     updateNightModeMediaExemptions(shouldDarkenDocument);
     let nightDocumentBackground = '#181b22';
     let nightDocumentText = '#e5e7eb';
@@ -1376,6 +1377,13 @@
         `${nightRootSelector} body > :not([data-a11y-filter-exempt]) ${mediaElementsSelector} { filter: none !important; }`,
         `${nightRootSelector} [data-a11y-filter-exempt] ${mediaElementsSelector} { filter: none !important; }`,
         `@supports selector(:has(*)) { ${nightRootSelector} body > :not([data-a11y-filter-exempt]):has(${mediaElementsSelector}) { filter: none !important; } }`
+      );
+    }
+    if(shouldWarmTintDocument){
+      const blueLightRootSelector = `${activeRootSelector}[data-a11y-luminosite-mode="blue_light"]`;
+      const blueLightTint = 'rgba(255, 210, 150, 0.3)';
+      rules.push(
+        `${blueLightRootSelector}::before { opacity: 1; background: ${blueLightTint}; mix-blend-mode: color; }`
       );
     }
     styleEl.textContent = rules.join('\n');
