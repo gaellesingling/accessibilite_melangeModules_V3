@@ -1157,8 +1157,8 @@
     normal: '',
     night: 'invert(1) hue-rotate(180deg)',
     blue_light: 'sepia(35%) saturate(160%) hue-rotate(-15deg) brightness(105%) contrast(95%)',
-    high_contrast: 'contrast(200%)',
-    low_contrast: 'contrast(70%)',
+    high_contrast: 'contrast(215%) brightness(90%) saturate(120%)',
+    low_contrast: 'contrast(65%) brightness(108%) saturate(85%)',
     grayscale: 'grayscale(100%)',
   };
   const BRIGHTNESS_MODE_CONFIG = [

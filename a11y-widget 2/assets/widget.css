@@ -1423,13 +1423,13 @@ html[data-a11y-luminosite-reglages="on"] #a11y-overlay {
 }
 
 #a11y-overlay.acc-mode-high-contrast {
-  background-color: rgba(0, 0, 0, 0.75);
-  filter: contrast(200%) !important;
+  background-color: rgba(0, 0, 0, 0.78);
+  filter: contrast(215%) brightness(90%) saturate(120%);
 }
 
 #a11y-overlay.acc-mode-low-contrast {
-  background-color: rgba(255, 255, 255, 0.6);
-  filter: contrast(70%) !important;
+  background-color: rgba(255, 255, 255, 0.68);
+  filter: contrast(65%) brightness(108%) saturate(85%);
 }
 
 #a11y-overlay.acc-mode-grayscale {
