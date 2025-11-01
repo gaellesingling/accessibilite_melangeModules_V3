@@ -3398,6 +3398,37 @@
     }
   }
 
+  function finalizeTtsPlayback(){
+    const pending = ttsPendingRestart;
+    const suppressed = ttsSuppressStopStatus === true;
+    const stoppedManually = ttsIsStopping === true;
+
+    ttsUtterance = null;
+    ttsIsPlaying = false;
+    ttsIsPaused = false;
+    ttsIsStopping = false;
+    ttsSuppressStopStatus = false;
+    ttsCurrentSourceText = '';
+    ttsLastBoundary = null;
+    ttsPendingRestart = null;
+    ttsPausedForRateChange = false;
+    syncTtsInstances();
+
+    if(pending && pending.text){
+      setTimeout(() => {
+        ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
+      }, 50);
+      return { handled: true, stoppedManually };
+    }
+
+    if(suppressed){
+      ensureTtsIdleStatus();
+      return { handled: true, stoppedManually };
+    }
+
+    return { handled: false, stoppedManually };
+  }
+
   function dispatchTtsEvent(target, type){
     if(!target || !type){ return; }
     try {
@@ -3495,29 +3526,9 @@
       }
     };
     utterance.onend = () => {
-      const pending = ttsPendingRestart;
-      const suppressed = ttsSuppressStopStatus;
-      const stoppedManually = ttsIsStopping;
-      ttsUtterance = null;
-      ttsIsPlaying = false;
-      ttsIsPaused = false;
-      ttsIsStopping = false;
-      ttsSuppressStopStatus = false;
-      ttsCurrentSourceText = '';
-      ttsLastBoundary = null;
-      ttsPendingRestart = null;
-      ttsPausedForRateChange = false;
-      if(pending && pending.text){
-        setTimeout(() => {
-          ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
-        }, 50);
-        return;
-      }
-      if(suppressed){
-        ensureTtsIdleStatus();
-        return;
-      }
-      if(stoppedManually){
+      const result = finalizeTtsPlayback();
+      if(result && result.handled){ return; }
+      if(result && result.stoppedManually){
         updateTtsStatus(ttsTexts.status_stopped || TTS_DEFAULT_TEXTS.status_stopped, 'stopped');
         if(ttsTexts.announce_stopped){ ttsAnnounce(ttsTexts.announce_stopped); }
       } else {
@@ -3526,14 +3537,14 @@
       }
     };
     utterance.onerror = event => {
-      if(ttsSuppressStopStatus || ttsIsStopping){ return; }
-      if(event && (event.error === 'canceled' || event.error === 'interrupted')){
+      const result = finalizeTtsPlayback();
+      if(result && result.handled){ return; }
+      const canceledByUs = event && (event.error === 'canceled' || event.error === 'interrupted');
+      if(canceledByUs && result && result.stoppedManually){
+        updateTtsStatus(ttsTexts.status_stopped || TTS_DEFAULT_TEXTS.status_stopped, 'stopped');
+        if(ttsTexts.announce_stopped){ ttsAnnounce(ttsTexts.announce_stopped); }
         return;
       }
-      ttsUtterance = null;
-      ttsIsPlaying = false;
-      ttsIsPaused = false;
-      ttsIsStopping = false;
       const message = ttsTexts.status_error || TTS_DEFAULT_TEXTS.status_error;
       updateTtsStatus(message, 'error');
       ttsAnnounce(message);
