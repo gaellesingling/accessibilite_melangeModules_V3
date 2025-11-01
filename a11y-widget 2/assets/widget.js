@@ -2847,6 +2847,16 @@
   const TTS_TEMPLATE_NAME = 'text-to-speech';
   const TTS_STORAGE_KEY = 'a11y-widget-tts-settings:v1';
   const TTS_DEFAULTS = { mode: 'selection', volume: 1, rate: 1, voice: '' };
+  const TTS_RATE_PRESETS = [
+    { value: 0.25, label: '0.25x' },
+    { value: 0.5, label: '0.5x' },
+    { value: 0.75, label: '0.75x' },
+    { value: 1, label: 'Normale (1x)' },
+    { value: 1.25, label: '1.25x' },
+    { value: 1.75, label: '1.75x' },
+    { value: 2, label: '2x' },
+  ];
+  const TTS_RATE_VALUES = TTS_RATE_PRESETS.map(preset => preset.value);
   const TTS_DEFAULT_TEXTS = {
     intro: '',
     mode_label: 'Mode de lecture',
@@ -2964,7 +2974,22 @@
   function clampRate(value){
     const num = typeof value === 'number' ? value : parseFloat(value);
     if(!isFinite(num)){ return 1; }
-    return Math.min(Math.max(num, 0.5), 2);
+    const match = TTS_RATE_VALUES.find(rate => Math.abs(rate - num) < 0.001);
+    return typeof match === 'number' ? match : 1;
+  }
+
+  function getTtsRatePresetByValue(value){
+    const normalized = clampRate(value);
+    return TTS_RATE_PRESETS.find(preset => Math.abs(preset.value - normalized) < 0.001) || null;
+  }
+
+  function formatTtsRate(value){
+    const preset = getTtsRatePresetByValue(value);
+    if(preset){
+      return preset.label;
+    }
+    const normalized = clampRate(value);
+    return `${Number(normalized.toFixed(2))}x`;
   }
 
   function updateTtsSettings(partial, options={}){
@@ -3247,18 +3272,22 @@
       instance.volumePlus.disabled = !controlsEnabled;
     }
     const rateValue = clampRate(ttsSettings.rate);
-    if(instance.rateSlider){
-      instance.rateSlider.value = rateValue.toFixed(1);
-      instance.rateSlider.disabled = !controlsEnabled;
-    }
-    if(instance.rateValue){
-      instance.rateValue.textContent = `${rateValue.toFixed(1)}x`;
-    }
-    if(instance.rateMinus){
-      instance.rateMinus.disabled = !controlsEnabled;
-    }
-    if(instance.ratePlus){
-      instance.ratePlus.disabled = !controlsEnabled;
+    if(instance.rateOptions && instance.rateOptions.length){
+      let activeDisplay = '';
+      instance.rateOptions.forEach(option => {
+        const isActive = Math.abs(option.value - rateValue) < 0.001;
+        option.button.classList.toggle('is-active', isActive);
+        option.button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        option.button.disabled = !controlsEnabled;
+        if(isActive){
+          activeDisplay = option.display;
+        }
+      });
+      if(instance.rateValue){
+        instance.rateValue.textContent = activeDisplay || formatTtsRate(rateValue);
+      }
+    } else if(instance.rateValue){
+      instance.rateValue.textContent = formatTtsRate(rateValue);
     }
     if(instance.voiceSelect){
       instance.voiceSelect.disabled = !controlsEnabled || !ttsVoices.length;
@@ -3896,40 +3925,40 @@
     rateValue.id = `${baseId}-rate-value`;
     rateLabel.appendChild(rateValue);
 
+    let rateHintId = '';
     if(instanceTexts.rate_hint){
       const rateHint = document.createElement('p');
       rateHint.className = 'a11y-tts__hint';
+      rateHint.id = `${baseId}-rate-hint`;
       rateHint.textContent = instanceTexts.rate_hint;
       rateGroup.appendChild(rateHint);
+      rateHintId = rateHint.id;
     }
 
-    const rateControls = document.createElement('div');
-    rateControls.className = 'a11y-tts__slider';
-    rateGroup.appendChild(rateControls);
+    const rateOptionsContainer = document.createElement('div');
+    rateOptionsContainer.className = 'a11y-tts__rate-options';
+    rateOptionsContainer.setAttribute('role', 'group');
+    rateOptionsContainer.setAttribute('aria-labelledby', rateLabelId);
+    if(rateHintId){
+      rateOptionsContainer.setAttribute('aria-describedby', rateHintId);
+    }
+    rateGroup.appendChild(rateOptionsContainer);
 
-    const rateMinus = document.createElement('button');
-    rateMinus.type = 'button';
-    rateMinus.className = 'a11y-tts__slider-btn';
-    rateMinus.textContent = '−';
-    rateMinus.setAttribute('aria-label', instanceTexts.rate_decrease || 'Diminuer la vitesse');
-    rateControls.appendChild(rateMinus);
-
-    const rateSlider = document.createElement('input');
-    rateSlider.type = 'range';
-    rateSlider.className = 'a11y-tts__range';
-    rateSlider.id = `${baseId}-rate`;
-    rateSlider.min = '0.5';
-    rateSlider.max = '2';
-    rateSlider.step = '0.1';
-    rateSlider.setAttribute('aria-labelledby', `${rateLabelId} ${rateValue.id}`);
-    rateControls.appendChild(rateSlider);
-
-    const ratePlus = document.createElement('button');
-    ratePlus.type = 'button';
-    ratePlus.className = 'a11y-tts__slider-btn';
-    ratePlus.textContent = '+';
-    ratePlus.setAttribute('aria-label', instanceTexts.rate_increase || 'Augmenter la vitesse');
-    rateControls.appendChild(ratePlus);
+    const rateOptionButtons = [];
+    TTS_RATE_PRESETS.forEach(preset => {
+      const optionBtn = document.createElement('button');
+      optionBtn.type = 'button';
+      optionBtn.className = 'a11y-tts__rate-option';
+      optionBtn.textContent = preset.label;
+      optionBtn.setAttribute('aria-pressed', 'false');
+      optionBtn.dataset.rate = `${preset.value}`;
+      rateOptionsContainer.appendChild(optionBtn);
+      rateOptionButtons.push({
+        button: optionBtn,
+        value: preset.value,
+        display: preset.label,
+      });
+    });
 
     const voiceGroup = document.createElement('div');
     voiceGroup.className = 'a11y-tts__group';
@@ -3985,10 +4014,8 @@
       volumeValue,
       volumeMinus,
       volumePlus,
-      rateSlider,
       rateValue,
-      rateMinus,
-      ratePlus,
+      rateOptions: rateOptionButtons,
       voiceSelect,
       voiceInfo,
       wasConnected: false,
@@ -4025,39 +4052,21 @@
       dispatchTtsEvent(volumeSlider, 'change');
     });
 
-    rateSlider.addEventListener('input', () => {
-      const value = clampRate(parseFloat(rateSlider.value));
-      updateTtsSettings({ rate: value }, { persist: false });
-      if(ttsUtterance){ ttsUtterance.rate = value; }
-      if(ttsIsPlaying && !ttsIsPaused){
-        ttsPausedForRateChange = true;
-        ttsPause();
-      }
-    });
-    rateSlider.addEventListener('change', () => {
-      const value = clampRate(parseFloat(rateSlider.value));
-      updateTtsSettings({ rate: value });
+    const selectRate = value => {
+      const rate = clampRate(value);
+      const current = clampRate(ttsSettings.rate);
+      if(Math.abs(current - rate) < 0.001){ return; }
+      updateTtsSettings({ rate });
       if(ttsUtterance){
-        ttsUtterance.rate = value;
-        if(ttsIsPlaying && !ttsIsPaused){
-          ttsPausedForRateChange = true;
-          ttsPause();
-        }
+        ttsUtterance.rate = rate;
       }
-    });
-    rateMinus.addEventListener('click', () => {
-      const current = parseFloat(rateSlider.value) || 1;
-      const next = clampRate(current - 0.1);
-      rateSlider.value = next.toFixed(1);
-      dispatchTtsEvent(rateSlider, 'input');
-      dispatchTtsEvent(rateSlider, 'change');
-    });
-    ratePlus.addEventListener('click', () => {
-      const current = parseFloat(rateSlider.value) || 1;
-      const next = clampRate(current + 0.1);
-      rateSlider.value = next.toFixed(1);
-      dispatchTtsEvent(rateSlider, 'input');
-      dispatchTtsEvent(rateSlider, 'change');
+      if(ttsIsPlaying && !ttsIsPaused){
+        restartTtsPlaybackWithCurrentText();
+      }
+    };
+
+    rateOptionButtons.forEach(option => {
+      option.button.addEventListener('click', () => selectRate(option.value));
     });
 
     voiceSelect.addEventListener('change', () => {
