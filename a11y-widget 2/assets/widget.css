@@ -862,16 +862,16 @@ html[data-a11y-luminosite-reglages="on"]::before {
 }
 
 @supports selector(:has(*)) {
-  [data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]):has(:is(img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player)) {
+  html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body > :not([data-a11y-filter-exempt]):has(:is(img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player)) {
     filter: none !important;
   }
 }
 
-html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) :is(img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player) {
+html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body > :not([data-a11y-filter-exempt]) :is(img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player) {
   filter: none !important;
 }
 
-html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] :is(img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player) {
+html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] [data-a11y-filter-exempt] :is(img, picture, video, audio, canvas, svg, iframe, embed, object, model-viewer, lottie-player) {
   filter: none !important;
 }
 .a11y-buttons__header {
