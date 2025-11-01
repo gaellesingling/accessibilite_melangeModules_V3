@@ -1361,8 +1361,10 @@
     const mediaElementsSelector = `:is(${NIGHT_MODE_MEDIA_SELECTOR})`;
     const rules = [
       `body { --a11y-visual-filter: ${filterValue}; }`,
-      `${filteredSelector} { filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
-      `${activeRootSelector} #a11y-overlay { --a11y-visual-filter: ${filterValue}; filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
+      `${filteredSelector} { filter: var(--a11y-visual-filter) !important; transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
+      `${mediaExemptSelector} { filter: none !important; }`,
+      `${mediaExemptSelector} ${mediaElementsSelector} { filter: none !important; }`,
+      `#a11y-overlay { --a11y-visual-filter: ${filterValue}; filter: var(--a11y-visual-filter) !important; transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
     ];
     if(shouldDarkenDocument){
       rules.push(
