@@ -656,6 +656,17 @@ function a11y_widget_render_admin_page() {
     $logo_scale_option_key  = a11y_widget_get_launcher_logo_scale_option_name();
     $logo_scale_value       = a11y_widget_get_launcher_logo_scale();
     $logo_scale_choices     = array( 1, 1.5, 2, 3, 5 );
+    $logo_preview_scale     = (float) $logo_scale_value;
+
+    if ( $logo_preview_scale <= 0 ) {
+        $logo_preview_scale = a11y_widget_get_launcher_logo_scale_default();
+    }
+
+    $logo_preview_scale_css = rtrim( rtrim( number_format( $logo_preview_scale, 2, '.', '' ), '0' ), '.' );
+    $logo_preview_style     = sprintf(
+        '--a11y-launcher-preview-scale: %s;',
+        $logo_preview_scale_css
+    );
     $background_mode_option = a11y_widget_get_background_mode_option_name();
     $background_mode_value  = a11y_widget_get_background_mode();
     $background_mode_choices = array(
