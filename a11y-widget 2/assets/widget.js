@@ -1156,7 +1156,7 @@
   const BRIGHTNESS_MODE_FILTERS = {
     normal: '',
     night: 'invert(1) hue-rotate(180deg)',
-    blue_light: 'sepia(90%) hue-rotate(-10deg)',
+    blue_light: 'sepia(35%) saturate(160%) hue-rotate(-15deg) brightness(105%) contrast(95%)',
     high_contrast: 'contrast(200%)',
     low_contrast: 'contrast(70%)',
     grayscale: 'grayscale(100%)',
