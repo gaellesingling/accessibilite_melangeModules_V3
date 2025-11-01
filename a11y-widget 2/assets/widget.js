@@ -2909,6 +2909,9 @@
     error: '❌',
   };
 
+  const TTS_MAX_CHUNK_SIZE = 1024;
+  const TTS_MIN_CHUNK_SIZE = 400;
+
   const ttsInstances = new Set();
   let ttsSettings = loadTtsSettings();
   let ttsActive = false;
@@ -2925,6 +2928,10 @@
   let ttsSelectionHandler = null;
   let ttsKeyboardHandler = null;
   let ttsCurrentSourceText = '';
+  let ttsFullSourceText = '';
+  let ttsChunkQueue = [];
+  let ttsChunkOffsets = [];
+  let ttsQueueIndex = -1;
   let ttsLastBoundary = null;
   let ttsPendingRestart = null;
   let ttsPausedForRateChange = false;
@@ -3051,6 +3058,86 @@
       current = current.parentNode;
     }
     return false;
+  }
+
+  function prepareTtsChunks(input){
+    const raw = typeof input === 'string' ? input : '';
+    if(!raw){
+      return { text: '', chunks: [], offsets: [] };
+    }
+    const normalized = raw.replace(/\s+/g, ' ').trim();
+    if(!normalized){
+      return { text: '', chunks: [], offsets: [] };
+    }
+    const limited = normalized.length > 60000 ? normalized.slice(0, 60000) : normalized;
+    const chunks = [];
+    const offsets = [];
+    const length = limited.length;
+    let start = 0;
+    while(start < length){
+      const remaining = length - start;
+      if(remaining <= TTS_MAX_CHUNK_SIZE){
+        offsets.push(start);
+        chunks.push(limited.slice(start));
+        break;
+      }
+      let breakIndex = findTtsChunkBreakIndex(limited, start);
+      if(breakIndex <= start){
+        breakIndex = Math.min(start + TTS_MAX_CHUNK_SIZE, length);
+      }
+      const chunk = limited.slice(start, breakIndex).trim();
+      if(chunk){
+        offsets.push(start);
+        chunks.push(chunk);
+      }
+      start = breakIndex;
+      while(start < length && limited.charAt(start) === ' '){
+        start += 1;
+      }
+    }
+    if(!chunks.length){
+      chunks.push(limited);
+      offsets.push(0);
+    }
+    return { text: limited, chunks, offsets };
+  }
+
+  function findTtsChunkBreakIndex(text, start){
+    const length = text.length;
+    const hardLimit = Math.min(start + TTS_MAX_CHUNK_SIZE, length);
+    const minIdeal = Math.min(start + TTS_MIN_CHUNK_SIZE, hardLimit);
+    const search = text.slice(start, hardLimit);
+    const patterns = ['. ', '! ', '? ', '; ', ': ', ', '];
+    for(const pattern of patterns){
+      const idx = search.lastIndexOf(pattern);
+      if(idx >= 0){
+        const absolute = start + idx + pattern.length;
+        if(absolute >= minIdeal){
+          return absolute;
+        }
+      }
+    }
+    const lastSpace = search.lastIndexOf(' ');
+    if(lastSpace >= 0 && (start + lastSpace) >= minIdeal){
+      return start + lastSpace;
+    }
+    return hardLimit;
+  }
+
+  function resetTtsPlaybackState(){
+    ttsUtterance = null;
+    ttsIsPlaying = false;
+    ttsIsPaused = false;
+    ttsIsStopping = false;
+    ttsSuppressStopStatus = false;
+    ttsCurrentSourceText = '';
+    ttsFullSourceText = '';
+    ttsChunkQueue = [];
+    ttsChunkOffsets = [];
+    ttsQueueIndex = -1;
+    ttsLastBoundary = null;
+    ttsPendingRestart = null;
+    ttsPausedForRateChange = false;
   }
 
   function ensureTtsSelectionTracking(){
@@ -3452,103 +3539,131 @@
       return;
     }
     cancelCurrentUtterance({ silent: true });
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.volume = clampVolume(ttsSettings.volume);
-    utterance.rate = clampRate(ttsSettings.rate);
-    utterance.pitch = 1;
+    const chunkData = prepareTtsChunks(text);
+    if(!chunkData.text || !chunkData.chunks.length){
+      const message = ttsTexts.error_no_text || TTS_DEFAULT_TEXTS.error_no_text;
+      updateTtsStatus(message, 'error');
+      ttsAnnounce(message);
+      return;
+    }
     const voice = getTtsVoiceByName(ttsSettings.voice);
-    if(voice){ utterance.voice = voice; }
-    ttsUtterance = utterance;
+    const volume = clampVolume(ttsSettings.volume);
+    const rate = clampRate(ttsSettings.rate);
+    ttsChunkQueue = chunkData.chunks.slice();
+    ttsChunkOffsets = chunkData.offsets.slice();
+    ttsFullSourceText = chunkData.text;
+    ttsCurrentSourceText = chunkData.text;
+    ttsQueueIndex = -1;
     ttsIsPlaying = true;
     ttsIsPaused = false;
     ttsIsStopping = false;
     ttsSuppressStopStatus = false;
-    ttsCurrentSourceText = text;
     ttsLastBoundary = { charIndex: 0 };
     ttsPendingRestart = null;
     ttsPausedForRateChange = false;
     syncTtsInstances();
-    utterance.onstart = () => {
-      ttsUtterance = utterance;
-      ttsIsPlaying = true;
-      ttsIsPaused = false;
-      ttsIsStopping = false;
-      ttsSuppressStopStatus = false;
-      ttsLastBoundary = { charIndex: 0 };
-      updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
-      if(ttsTexts.announce_started){ ttsAnnounce(ttsTexts.announce_started); }
-    };
-    utterance.onpause = () => {
-      ttsIsPaused = true;
-      updateTtsStatus(ttsTexts.status_paused || TTS_DEFAULT_TEXTS.status_paused, 'paused');
-      if(ttsTexts.announce_paused){ ttsAnnounce(ttsTexts.announce_paused); }
-    };
-    utterance.onresume = () => {
-      ttsIsPaused = false;
-      ttsPausedForRateChange = false;
-      updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
-      if(ttsTexts.announce_resumed){ ttsAnnounce(ttsTexts.announce_resumed); }
-    };
-    utterance.onboundary = event => {
-      if(event && typeof event.charIndex === 'number' && event.charIndex >= 0){
-        ttsLastBoundary = { charIndex: event.charIndex };
-      }
-    };
-    utterance.onend = () => {
-      const pending = ttsPendingRestart;
-      const suppressed = ttsSuppressStopStatus;
-      const stoppedManually = ttsIsStopping;
-      ttsUtterance = null;
-      ttsIsPlaying = false;
-      ttsIsPaused = false;
-      ttsIsStopping = false;
-      ttsSuppressStopStatus = false;
-      ttsCurrentSourceText = '';
-      ttsLastBoundary = null;
-      ttsPendingRestart = null;
-      ttsPausedForRateChange = false;
-      if(pending && pending.text){
-        setTimeout(() => {
-          ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
-        }, 50);
-        return;
-      }
-      if(suppressed){
-        ensureTtsIdleStatus();
-        return;
-      }
-      if(stoppedManually){
-        updateTtsStatus(ttsTexts.status_stopped || TTS_DEFAULT_TEXTS.status_stopped, 'stopped');
-        if(ttsTexts.announce_stopped){ ttsAnnounce(ttsTexts.announce_stopped); }
-      } else {
-        updateTtsStatus(ttsTexts.status_finished || TTS_DEFAULT_TEXTS.status_finished, 'success');
-        if(ttsTexts.announce_finished){ ttsAnnounce(ttsTexts.announce_finished); }
-      }
-    };
-    utterance.onerror = event => {
-      if(ttsSuppressStopStatus || ttsIsStopping){ return; }
-      if(event && (event.error === 'canceled' || event.error === 'interrupted')){
-        return;
-      }
-      ttsUtterance = null;
-      ttsIsPlaying = false;
-      ttsIsPaused = false;
-      ttsIsStopping = false;
-      const message = ttsTexts.status_error || TTS_DEFAULT_TEXTS.status_error;
-      updateTtsStatus(message, 'error');
-      ttsAnnounce(message);
-    };
+    const utterances = ttsChunkQueue.map((chunk, index) => {
+      const utterance = new SpeechSynthesisUtterance(chunk);
+      utterance.volume = volume;
+      utterance.rate = rate;
+      utterance.pitch = 1;
+      if(voice){ utterance.voice = voice; }
+      utterance.onstart = () => {
+        ttsUtterance = utterance;
+        ttsQueueIndex = index;
+        ttsIsPlaying = true;
+        ttsIsPaused = false;
+        ttsIsStopping = false;
+        ttsSuppressStopStatus = false;
+        ttsLastBoundary = { charIndex: 0 };
+        const offset = typeof ttsChunkOffsets[index] === 'number' ? ttsChunkOffsets[index] : 0;
+        ttsCurrentSourceText = ttsFullSourceText.slice(offset) || chunk;
+        updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
+        if(index === 0 && ttsTexts.announce_started){ ttsAnnounce(ttsTexts.announce_started); }
+      };
+      utterance.onpause = () => {
+        if(ttsUtterance !== utterance){ return; }
+        ttsIsPaused = true;
+        updateTtsStatus(ttsTexts.status_paused || TTS_DEFAULT_TEXTS.status_paused, 'paused');
+        if(ttsTexts.announce_paused){ ttsAnnounce(ttsTexts.announce_paused); }
+      };
+      utterance.onresume = () => {
+        if(ttsUtterance !== utterance){ return; }
+        ttsIsPaused = false;
+        ttsPausedForRateChange = false;
+        updateTtsStatus(ttsTexts.status_playing || TTS_DEFAULT_TEXTS.status_playing, 'playing');
+        if(ttsTexts.announce_resumed){ ttsAnnounce(ttsTexts.announce_resumed); }
+      };
+      utterance.onboundary = event => {
+        if(ttsUtterance !== utterance){ return; }
+        if(event && typeof event.charIndex === 'number' && event.charIndex >= 0){
+          ttsLastBoundary = { charIndex: event.charIndex };
+        }
+      };
+      utterance.onend = () => { handleTtsChunkEnd(utterance, index); };
+      utterance.onerror = event => { handleTtsChunkError(event); };
+      return utterance;
+    });
     try {
-      ttsSynth.speak(utterance);
+      utterances.forEach(utterance => { ttsSynth.speak(utterance); });
     } catch(err){
+      resetTtsPlaybackState();
       const message = ttsTexts.status_error || TTS_DEFAULT_TEXTS.status_error;
-      ttsUtterance = null;
-      ttsIsPlaying = false;
-      ttsIsPaused = false;
-      ttsIsStopping = false;
       updateTtsStatus(message, 'error');
       ttsAnnounce(message);
     }
+  }
+
+  function handleTtsChunkEnd(utterance, index){
+    if(ttsUtterance === utterance){
+      const nextIndex = index + 1;
+      if(nextIndex < ttsChunkOffsets.length){
+        const offset = typeof ttsChunkOffsets[nextIndex] === 'number' ? ttsChunkOffsets[nextIndex] : 0;
+        ttsCurrentSourceText = ttsFullSourceText.slice(offset) || '';
+      } else {
+        ttsCurrentSourceText = '';
+      }
+      ttsLastBoundary = null;
+    }
+    const pending = ttsPendingRestart;
+    const suppressed = ttsSuppressStopStatus;
+    const stoppedManually = ttsIsStopping;
+    const hasNextChunk = index < (ttsChunkQueue.length - 1) && !pending && !suppressed && !stoppedManually;
+    if(hasNextChunk){
+      if(ttsUtterance === utterance){
+        ttsUtterance = null;
+      }
+      return;
+    }
+    resetTtsPlaybackState();
+    if(pending && pending.text){
+      setTimeout(() => {
+        ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
+      }, 50);
+      return;
+    }
+    if(suppressed){
+      ensureTtsIdleStatus();
+      return;
+    }
+    if(stoppedManually){
+      updateTtsStatus(ttsTexts.status_stopped || TTS_DEFAULT_TEXTS.status_stopped, 'stopped');
+      if(ttsTexts.announce_stopped){ ttsAnnounce(ttsTexts.announce_stopped); }
+    } else {
+      updateTtsStatus(ttsTexts.status_finished || TTS_DEFAULT_TEXTS.status_finished, 'success');
+      if(ttsTexts.announce_finished){ ttsAnnounce(ttsTexts.announce_finished); }
+    }
+  }
+
+  function handleTtsChunkError(event){
+    if(ttsSuppressStopStatus || ttsIsStopping){ return; }
+    if(event && (event.error === 'canceled' || event.error === 'interrupted')){
+      return;
+    }
+    resetTtsPlaybackState();
+    const message = ttsTexts.status_error || TTS_DEFAULT_TEXTS.status_error;
+    updateTtsStatus(message, 'error');
+    ttsAnnounce(message);
   }
 
   function ttsPause(){
