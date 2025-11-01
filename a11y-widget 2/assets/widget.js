@@ -1302,6 +1302,14 @@
     }
     const styleEl = ensureVisualFilterStyleElement();
     const filterValue = combined || 'none';
+    const rootEl = document.documentElement;
+    const bodyEl = document.body;
+    if(rootEl){
+      rootEl.style.setProperty('--a11y-visual-filter', filterValue);
+    }
+    if(bodyEl){
+      bodyEl.style.setProperty('--a11y-visual-filter', filterValue);
+    }
     const normalizedMode = normalizeBrightnessMode(brightnessSettings.mode);
     const shouldDarkenDocument = brightnessActive && normalizedMode === 'night';
     updateNightModeMediaExemptions(shouldDarkenDocument);
@@ -5637,14 +5645,23 @@ ${interactiveSelectors} {
   }
 
   function clearBrightnessModeClasses(){
-    if(!overlay){ return; }
-    Object.values(BRIGHTNESS_MODE_CLASSES).forEach(className => {
-      if(className){ overlay.classList.remove(className); }
-    });
+    const classes = Object.values(BRIGHTNESS_MODE_CLASSES).filter(Boolean);
+    if(overlay && classes.length){
+      classes.forEach(className => overlay.classList.remove(className));
+    }
+    const docEl = document.documentElement;
+    const bodyEl = document.body;
+    if(docEl && classes.length){
+      classes.forEach(className => docEl.classList.remove(className));
+    }
+    if(bodyEl && classes.length){
+      classes.forEach(className => bodyEl.classList.remove(className));
+    }
   }
 
   function applyBrightnessMode(){
     const docEl = document.documentElement;
+    const bodyEl = document.body;
     const mode = normalizeBrightnessMode(brightnessSettings.mode);
     if(docEl){
       if(brightnessActive){
@@ -5653,11 +5670,14 @@ ${interactiveSelectors} {
         delete docEl.dataset.a11yLuminositeMode;
       }
     }
-    if(!overlay){ return; }
     clearBrightnessModeClasses();
     if(!brightnessActive){ return; }
     const className = BRIGHTNESS_MODE_CLASSES[mode];
-    if(className){ overlay.classList.add(className); }
+    if(className){
+      if(overlay){ overlay.classList.add(className); }
+      if(docEl){ docEl.classList.add(className); }
+      if(bodyEl){ bodyEl.classList.add(className); }
+    }
   }
 
   function buildBrightnessFilter(settings){
