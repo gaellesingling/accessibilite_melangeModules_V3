@@ -140,40 +140,82 @@ if (!defined('ABSPATH')) {
         </div>
         
         <div class="acc-control-group">
-            <label class="acc-control-label" for="acc-tts-rate">
+            <div class="acc-control-label" id="acc-tts-rate-label">
                 <span>Vitesse de lecture</span>
-                <span class="acc-control-value" id="acc-tts-rate-value">1.0x</span>
-            </label>
-            <div class="acc-slider-group">
-                <button 
-                    type="button" 
-                    class="acc-slider-btn" 
-                    id="acc-tts-rate-minus" 
-                    aria-label="Diminuer la vitesse de lecture"
+                <span class="acc-control-value" id="acc-tts-rate-value">Normale (1x)</span>
+            </div>
+            <div
+                class="acc-tts-rate-options"
+                id="acc-tts-rate-options"
+                role="group"
+                aria-labelledby="acc-tts-rate-label"
+            >
+                <button
+                    type="button"
+                    class="acc-tts-rate-option"
+                    data-rate="0.25"
+                    data-display="0.25x"
+                    aria-pressed="false"
                 >
-                    -
+                    0.25x
                 </button>
-                <input 
-                    type="range" 
-                    id="acc-tts-rate" 
-                    class="acc-slider"
-                    min="0.5" 
-                    max="2" 
-                    value="1"
-                    step="0.1"
-                    aria-label="Régler la vitesse de lecture"
-                />
-                <button 
-                    type="button" 
-                    class="acc-slider-btn" 
-                    id="acc-tts-rate-plus" 
-                    aria-label="Augmenter la vitesse de lecture"
+                <button
+                    type="button"
+                    class="acc-tts-rate-option"
+                    data-rate="0.5"
+                    data-display="0.5x"
+                    aria-pressed="false"
                 >
-                    +
+                    0.5x
+                </button>
+                <button
+                    type="button"
+                    class="acc-tts-rate-option"
+                    data-rate="0.75"
+                    data-display="0.75x"
+                    aria-pressed="false"
+                >
+                    0.75x
+                </button>
+                <button
+                    type="button"
+                    class="acc-tts-rate-option active"
+                    data-rate="1"
+                    data-display="Normale (1x)"
+                    aria-pressed="true"
+                >
+                    Normale (1x)
+                </button>
+                <button
+                    type="button"
+                    class="acc-tts-rate-option"
+                    data-rate="1.25"
+                    data-display="1.25x"
+                    aria-pressed="false"
+                >
+                    1.25x
+                </button>
+                <button
+                    type="button"
+                    class="acc-tts-rate-option"
+                    data-rate="1.75"
+                    data-display="1.75x"
+                    aria-pressed="false"
+                >
+                    1.75x
+                </button>
+                <button
+                    type="button"
+                    class="acc-tts-rate-option"
+                    data-rate="2"
+                    data-display="2x"
+                    aria-pressed="false"
+                >
+                    2x
                 </button>
             </div>
             <p class="acc-control-hint">
-                0.5x = Lent • 1.0x = Normal • 2.0x = Rapide
+                Choisissez une vitesse pré-définie pour adapter la lecture à votre rythme.
             </p>
         </div>
         
