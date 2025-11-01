@@ -3485,6 +3485,37 @@
     }
   }
 
+  function finalizeTtsPlayback(){
+    const pending = ttsPendingRestart;
+    const suppressed = ttsSuppressStopStatus === true;
+    const stoppedManually = ttsIsStopping === true;
+
+    ttsUtterance = null;
+    ttsIsPlaying = false;
+    ttsIsPaused = false;
+    ttsIsStopping = false;
+    ttsSuppressStopStatus = false;
+    ttsCurrentSourceText = '';
+    ttsLastBoundary = null;
+    ttsPendingRestart = null;
+    ttsPausedForRateChange = false;
+    syncTtsInstances();
+
+    if(pending && pending.text){
+      setTimeout(() => {
+        ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
+      }, 50);
+      return { handled: true, stoppedManually };
+    }
+
+    if(suppressed){
+      ensureTtsIdleStatus();
+      return { handled: true, stoppedManually };
+    }
+
+    return { handled: false, stoppedManually };
+  }
+
   function dispatchTtsEvent(target, type){
     if(!target || !type){ return; }
     try {
