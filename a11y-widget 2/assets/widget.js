@@ -1354,24 +1354,26 @@
       nightDocumentText = rgbToHex(blendedText[0], blendedText[1], blendedText[2]);
       nightOverlayBackground = `rgba(${blendedOverlay.join(', ')}, ${overlayOpacity.toFixed(3)})`;
     }
-    const filteredSelector = 'body > :not([data-a11y-filter-exempt]):not([data-a11y-night-media-exempt])';
-    const mediaExemptSelector = 'body > [data-a11y-night-media-exempt]';
+    const activeRootSelector = 'html[data-a11y-luminosite-reglages="on"]';
+    const nightRootSelector = `${activeRootSelector}[data-a11y-luminosite-mode="night"]`;
+    const filteredSelector = `${activeRootSelector} body > :not([data-a11y-filter-exempt]):not([data-a11y-night-media-exempt])`;
+    const mediaExemptSelector = `${nightRootSelector} body > [data-a11y-night-media-exempt]`;
     const mediaElementsSelector = `:is(${NIGHT_MODE_MEDIA_SELECTOR})`;
     const rules = [
       `body { --a11y-visual-filter: ${filterValue}; }`,
       `${filteredSelector} { filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
-      `${mediaExemptSelector} { filter: none !important; }`,
-      `${mediaExemptSelector} ${mediaElementsSelector} { filter: none !important; }`,
-      `#a11y-overlay { --a11y-visual-filter: ${filterValue}; filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
+      `${activeRootSelector} #a11y-overlay { --a11y-visual-filter: ${filterValue}; filter: var(--a11y-visual-filter); transition: filter 0.25s ease, background-color 0.25s ease, color 0.25s ease; }`,
     ];
     if(shouldDarkenDocument){
       rules.push(
-        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] { background-color: ${nightDocumentBackground}; color: ${nightDocumentText}; color-scheme: dark; }`,
-        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body { background-color: transparent; color: inherit; }`,
-        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"]::before { opacity: 1; background: ${nightOverlayBackground}; }`,
-        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body > :not([data-a11y-filter-exempt]) ${mediaElementsSelector} { filter: none !important; }`,
-        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] [data-a11y-filter-exempt] ${mediaElementsSelector} { filter: none !important; }`,
-        `@supports selector(:has(*)) { html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body > :not([data-a11y-filter-exempt]):has(${mediaElementsSelector}) { filter: none !important; } }`
+        `${nightRootSelector} { background-color: ${nightDocumentBackground}; color: ${nightDocumentText}; color-scheme: dark; }`,
+        `${nightRootSelector} body { background-color: transparent; color: inherit; }`,
+        `${nightRootSelector}::before { opacity: 1; background: ${nightOverlayBackground}; }`,
+        `${mediaExemptSelector} { filter: none !important; }`,
+        `${mediaExemptSelector} ${mediaElementsSelector} { filter: none !important; }`,
+        `${nightRootSelector} body > :not([data-a11y-filter-exempt]) ${mediaElementsSelector} { filter: none !important; }`,
+        `${nightRootSelector} [data-a11y-filter-exempt] ${mediaElementsSelector} { filter: none !important; }`,
+        `@supports selector(:has(*)) { ${nightRootSelector} body > :not([data-a11y-filter-exempt]):has(${mediaElementsSelector}) { filter: none !important; } }`
       );
     }
     styleEl.textContent = rules.join('\n');
