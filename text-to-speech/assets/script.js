@@ -34,17 +34,16 @@
             // Paramètres
             this.$volumeSlider = $('#acc-tts-volume');
             this.$volumeValue = $('#acc-tts-volume-value');
-            this.$rateSlider = $('#acc-tts-rate');
             this.$rateValue = $('#acc-tts-rate-value');
+            this.$rateGroup = $('#acc-tts-rate-options');
+            this.$rateOptions = this.$rateGroup.find('.acc-tts-rate-option');
             this.$voiceSelect = $('#acc-tts-voice');
             this.$voiceInfo = $('#acc-tts-voice-info');
-            
+
             // Boutons +/-
             this.$volumeMinus = $('#acc-tts-volume-minus');
             this.$volumePlus = $('#acc-tts-volume-plus');
-            this.$rateMinus = $('#acc-tts-rate-minus');
-            this.$ratePlus = $('#acc-tts-rate-plus');
-            
+
             // Mode
             this.$modeSelection = $('#acc-tts-mode-selection');
             this.$modePage = $('#acc-tts-mode-page');
@@ -63,7 +62,8 @@
             this.isStopping = false;
             this.currentMode = 'selection';
             this.selectedText = '';
-            
+            this.pendingRestartText = null;
+
             // Configuration
             this.config = {
                 volume: 1.0,
@@ -71,7 +71,21 @@
                 pitch: 1.0,
                 voice: null,
             };
-            
+
+            this.availableRates = [
+                { value: 0.25, display: '0.25x' },
+                { value: 0.5, display: '0.5x' },
+                { value: 0.75, display: '0.75x' },
+                { value: 1, display: 'Normale (1x)' },
+                { value: 1.25, display: '1.25x' },
+                { value: 1.75, display: '1.75x' },
+                { value: 2, display: '2x' }
+            ];
+
+            this.isRestarting = false;
+            this.isRateChangeRestart = false;
+            this.currentStartFromRateChange = false;
+
             this.init();
         }
 
@@ -115,15 +129,16 @@
             
             // Sliders
             this.$volumeSlider.on('input', (e) => this.updateVolume(parseFloat(e.target.value) / 100));
-            this.$rateSlider.on('input', (e) => this.updateRate(parseFloat(e.target.value)));
+            this.$rateGroup.on('click', '.acc-tts-rate-option', (e) => {
+                const rate = parseFloat($(e.currentTarget).data('rate'));
+                this.updateRate(rate);
+            });
             this.$voiceSelect.on('change', (e) => this.changeVoice(e.target.value));
-            
+
             // Boutons +/-
             this.$volumeMinus.on('click', () => this.adjustVolume(-5));
             this.$volumePlus.on('click', () => this.adjustVolume(5));
-            this.$rateMinus.on('click', () => this.adjustRate(-0.1));
-            this.$ratePlus.on('click', () => this.adjustRate(0.1));
-            
+
             // Sélection de texte
             $(document).on('mouseup keyup', () => {
                 if (this.currentMode === 'selection') {
@@ -220,39 +235,74 @@
             }
         }
 
-        startSpeaking(text) {
-            this.stop();
-            
+        startSpeaking(text, options = {}) {
+            const { skipStop = false, fromRateChange = false } = options;
+
+            if (!skipStop) {
+                this.stop();
+            } else {
+                this.isStopping = false;
+            }
+
+            if (this.utterance) {
+                this.utterance.onstart = null;
+                this.utterance.onpause = null;
+                this.utterance.onresume = null;
+                this.utterance.onend = null;
+                this.utterance.onerror = null;
+            }
+
+            this.selectedText = text;
+            this.currentStartFromRateChange = fromRateChange;
+
             this.utterance = new SpeechSynthesisUtterance(text);
             this.utterance.volume = this.config.volume;
             this.utterance.rate = this.config.rate;
             this.utterance.pitch = this.config.pitch;
-            
+
             if (this.config.voice) {
                 this.utterance.voice = this.config.voice;
             }
-            
+
             this.utterance.onstart = () => {
                 this.isPlaying = true;
                 this.isPaused = false;
                 this.updateButtons('playing');
                 this.updateStatus('Lecture en cours...', 'playing');
-                this.announce('Lecture démarrée');
+
+                if (!this.currentStartFromRateChange) {
+                    this.announce('Lecture démarrée');
+                } else {
+                    this.isRateChangeRestart = false;
+                }
+
+                this.currentStartFromRateChange = false;
             };
-            
+
             this.utterance.onpause = () => {
                 this.isPaused = true;
                 this.updateButtons('paused');
                 this.updateStatus('Lecture en pause', 'paused');
             };
-            
+
             this.utterance.onresume = () => {
                 this.isPaused = false;
                 this.updateButtons('playing');
                 this.updateStatus('Lecture en cours...', 'playing');
             };
-            
+
             this.utterance.onend = () => {
+                if (this.isRestarting && this.pendingRestartText) {
+                    const textToRestart = this.pendingRestartText;
+                    const restartFromRateChange = this.isRateChangeRestart;
+
+                    this.pendingRestartText = null;
+                    this.isRestarting = false;
+                    this.isStopping = false;
+                    this.startSpeaking(textToRestart, { skipStop: true, fromRateChange: restartFromRateChange });
+                    return;
+                }
+
                 if (!this.isStopping) {
                     this.isPlaying = false;
                     this.isPaused = false;
@@ -260,9 +310,12 @@
                     this.updateStatus('Lecture terminée', 'success');
                     this.announce('Lecture terminée');
                 }
+
                 this.isStopping = false;
+                this.isRateChangeRestart = false;
+                this.currentStartFromRateChange = false;
             };
-            
+
             this.utterance.onerror = (event) => {
                 // CORRECTION : Ne pas traiter un arrêt manuel comme une erreur
                 // Différents navigateurs utilisent différents codes d'erreur pour cancel
@@ -293,10 +346,14 @@
             if (!this.isPlaying) {
                 return;
             }
-            
+
             this.isStopping = true;
+            this.isRestarting = false;
+            this.isRateChangeRestart = false;
+            this.pendingRestartText = null;
+            this.currentStartFromRateChange = false;
             this.synthesis.cancel();
-            
+
             this.isPlaying = false;
             this.isPaused = false;
             this.updateButtons('stopped');
@@ -315,25 +372,64 @@
         }
 
         updateRate(rate) {
-            this.config.rate = Math.max(0.5, Math.min(2, rate));
-            this.$rateValue.text(this.config.rate.toFixed(1) + 'x');
+            const parsedRate = parseFloat(rate);
+            const selectedOption = this.availableRates.find((option) => option.value === parsedRate);
+
+            if (!selectedOption) {
+                return;
+            }
+
+            if (this.config.rate === selectedOption.value) {
+                this.updateRateUI();
+                return;
+            }
+
+            this.config.rate = selectedOption.value;
+            this.updateRateUI();
             this.savePreference('rate', this.config.rate);
-            
+
             if (this.utterance) {
                 this.utterance.rate = this.config.rate;
             }
+
+            if (this.isPlaying && !this.isPaused && this.synthesis && this.synthesis.speaking) {
+                const textToRestart = this.selectedText || this.getTextToRead();
+
+                if (textToRestart) {
+                    this.pendingRestartText = textToRestart;
+                    this.isRestarting = true;
+                    this.isRateChangeRestart = true;
+                    this.isStopping = true;
+                    this.synthesis.cancel();
+                }
+            }
+        }
+
+        updateRateUI() {
+            const selectedOption = this.availableRates.find((option) => option.value === this.config.rate) || this.availableRates.find(option => option.value === 1);
+
+            if (!selectedOption) {
+                return;
+            }
+
+            this.$rateValue.text(selectedOption.display);
+
+            this.$rateOptions = this.$rateGroup.find('.acc-tts-rate-option');
+
+            this.$rateOptions.each((_, element) => {
+                const $option = $(element);
+                const optionRate = parseFloat($option.data('rate'));
+                const isActive = optionRate === selectedOption.value;
+
+                $option.toggleClass('active', isActive);
+                $option.attr('aria-pressed', isActive);
+            });
         }
 
         adjustVolume(delta) {
             const currentVolume = parseFloat(this.$volumeSlider.val());
             const newVolume = Math.max(0, Math.min(100, currentVolume + delta));
             this.$volumeSlider.val(newVolume).trigger('input');
-        }
-
-        adjustRate(delta) {
-            const currentRate = parseFloat(this.$rateSlider.val());
-            const newRate = Math.max(0.5, Math.min(2, currentRate + delta));
-            this.$rateSlider.val(newRate.toFixed(1)).trigger('input');
         }
 
         changeVoice(voiceName) {
@@ -475,17 +571,19 @@
             const volume = this.getPreference('volume', 1.0);
             const rate = this.getPreference('rate', 1.0);
             const voice = this.getPreference('voice');
-            
+
             this.$toggle.prop('checked', enabled);
-            
+
             if (enabled) {
                 this.$content.show();
             }
-            
+
             this.currentMode = mode;
             this.config.volume = volume;
-            this.config.rate = rate;
-            
+            const parsedRate = parseFloat(rate);
+            const savedRate = this.availableRates.find(option => option.value === parsedRate);
+            this.config.rate = savedRate ? savedRate.value : 1;
+
             if (voice) {
                 const foundVoice = this.voices.find(v => v.name === voice);
                 if (foundVoice) {
@@ -497,13 +595,14 @@
         applyPreferences() {
             this.$volumeSlider.val(this.config.volume * 100);
             this.$volumeValue.text(Math.round(this.config.volume * 100) + '%');
-            
-            this.$rateSlider.val(this.config.rate);
-            this.$rateValue.text(this.config.rate.toFixed(1) + 'x');
-            
+
+            this.updateRateUI();
+
             this.$modeSelection.toggleClass('active', this.currentMode === 'selection');
             this.$modePage.toggleClass('active', this.currentMode === 'page');
-            
+            this.$modeSelection.attr('aria-pressed', this.currentMode === 'selection');
+            this.$modePage.attr('aria-pressed', this.currentMode === 'page');
+
             if (this.config.voice) {
                 this.$voiceSelect.val(this.config.voice.name);
             }
