@@ -830,13 +830,15 @@
   box-shadow: none;
 }
 
-html[data-a11y-luminosite-reglages="on"] {
+html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] {
   background-color: #181b22;
+  color: #e5e7eb;
   color-scheme: dark;
 }
 
-html[data-a11y-luminosite-reglages="on"] body {
+html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body {
   background-color: transparent;
+  color: inherit;
 }
 
 [data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]):not([data-a11y-night-media-exempt]) {
