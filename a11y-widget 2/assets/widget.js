@@ -1302,9 +1302,11 @@
     }
     const styleEl = ensureVisualFilterStyleElement();
     const filterValue = combined || 'none';
-    const shouldDarkenDocument = brightnessActive && normalizeBrightnessMode(brightnessSettings.mode) === 'night';
+    const normalizedMode = normalizeBrightnessMode(brightnessSettings.mode);
+    const shouldDarkenDocument = brightnessActive && normalizedMode === 'night';
     updateNightModeMediaExemptions(shouldDarkenDocument);
     let nightDocumentBackground = '#181b22';
+    let nightDocumentText = '#e5e7eb';
     let nightOverlayBackground = 'rgba(24, 27, 33, 0.72)';
     if(shouldDarkenDocument){
       const brightnessLevel = clampBrightnessLevel(brightnessSettings.brightness);
@@ -1316,12 +1318,18 @@
       const baseDocRgb = [24, 27, 34];
       const lighterDocRgb = [34, 38, 46];
       const darkerDocRgb = [14, 16, 22];
+      const baseTextRgb = [229, 231, 235];
+      const lighterTextRgb = [244, 245, 247];
+      const darkerTextRgb = [208, 213, 221];
       const baseOverlayRgb = [24, 27, 33];
       const lighterOverlayRgb = [32, 35, 41];
       const darkerOverlayRgb = [12, 15, 20];
       const blendedDoc = lightenAmount ? mixColor(baseDocRgb, lighterDocRgb, lightenAmount)
         : darkenAmount ? mixColor(baseDocRgb, darkerDocRgb, darkenAmount)
           : baseDocRgb;
+      const blendedText = lightenAmount ? mixColor(baseTextRgb, lighterTextRgb, lightenAmount)
+        : darkenAmount ? mixColor(baseTextRgb, darkerTextRgb, darkenAmount)
+          : baseTextRgb;
       const blendedOverlay = lightenAmount ? mixColor(baseOverlayRgb, lighterOverlayRgb, lightenAmount)
         : darkenAmount ? mixColor(baseOverlayRgb, darkerOverlayRgb, darkenAmount)
           : baseOverlayRgb;
@@ -1335,6 +1343,7 @@
         0.9
       );
       nightDocumentBackground = rgbToHex(blendedDoc[0], blendedDoc[1], blendedDoc[2]);
+      nightDocumentText = rgbToHex(blendedText[0], blendedText[1], blendedText[2]);
       nightOverlayBackground = `rgba(${blendedOverlay.join(', ')}, ${overlayOpacity.toFixed(3)})`;
     }
     const filteredSelector = 'body > :not([data-a11y-filter-exempt]):not([data-a11y-night-media-exempt])';
@@ -1349,12 +1358,12 @@
     ];
     if(shouldDarkenDocument){
       rules.push(
-        `html[data-a11y-luminosite-reglages="on"] { background-color: ${nightDocumentBackground}; color-scheme: dark; }`,
-        `html[data-a11y-luminosite-reglages="on"] body { background-color: transparent; }`,
-        `html[data-a11y-luminosite-reglages="on"]::before { opacity: 1; background: ${nightOverlayBackground}; }`,
-        `html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]) ${mediaElementsSelector} { filter: none !important; }`,
-        `html[data-a11y-luminosite-reglages="on"] [data-a11y-filter-exempt] ${mediaElementsSelector} { filter: none !important; }`,
-        `@supports selector(:has(*)) { html[data-a11y-luminosite-reglages="on"] body > :not([data-a11y-filter-exempt]):has(${mediaElementsSelector}) { filter: none !important; } }`
+        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] { background-color: ${nightDocumentBackground}; color: ${nightDocumentText}; color-scheme: dark; }`,
+        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body { background-color: transparent; color: inherit; }`,
+        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"]::before { opacity: 1; background: ${nightOverlayBackground}; }`,
+        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body > :not([data-a11y-filter-exempt]) ${mediaElementsSelector} { filter: none !important; }`,
+        `html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] [data-a11y-filter-exempt] ${mediaElementsSelector} { filter: none !important; }`,
+        `@supports selector(:has(*)) { html[data-a11y-luminosite-reglages="on"][data-a11y-luminosite-mode="night"] body > :not([data-a11y-filter-exempt]):has(${mediaElementsSelector}) { filter: none !important; } }`
       );
     }
     styleEl.textContent = rules.join('\n');
@@ -5635,10 +5644,19 @@ ${interactiveSelectors} {
   }
 
   function applyBrightnessMode(){
+    const docEl = document.documentElement;
+    const mode = normalizeBrightnessMode(brightnessSettings.mode);
+    if(docEl){
+      if(brightnessActive){
+        docEl.dataset.a11yLuminositeMode = mode;
+      } else {
+        delete docEl.dataset.a11yLuminositeMode;
+      }
+    }
     if(!overlay){ return; }
     clearBrightnessModeClasses();
     if(!brightnessActive){ return; }
-    const className = BRIGHTNESS_MODE_CLASSES[normalizeBrightnessMode(brightnessSettings.mode)];
+    const className = BRIGHTNESS_MODE_CLASSES[mode];
     if(className){ overlay.classList.add(className); }
   }
 
