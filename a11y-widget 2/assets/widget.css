@@ -1414,8 +1414,8 @@ html[data-a11y-luminosite-reglages="on"] #a11y-overlay {
 }
 
 #a11y-overlay.acc-mode-blue-light {
-  background-color: rgba(255, 215, 160, 0.6);
-  filter: sepia(90%) hue-rotate(-10deg);
+  background-color: rgba(255, 224, 186, 0.55);
+  filter: sepia(35%) saturate(160%) hue-rotate(-15deg) brightness(105%) contrast(95%);
 }
 
 #a11y-overlay.acc-mode-high-contrast {
