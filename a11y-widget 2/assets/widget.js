@@ -2917,6 +2917,7 @@
   let ttsActive = false;
   const ttsSupport = typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
   const ttsSynth = ttsSupport ? window.speechSynthesis : null;
+  const ttsActiveUtterances = new Set();
   let ttsVoices = [];
   let ttsVoiceSignature = '';
   let ttsUtterance = null;
@@ -3126,6 +3127,7 @@
   }
 
   function resetTtsPlaybackState(){
+    ttsActiveUtterances.clear();
     ttsUtterance = null;
     ttsIsPlaying = false;
     ttsIsPaused = false;
@@ -3598,8 +3600,10 @@
     ttsPausedForRateChange = false;
     ttsRateChangeResumeText = '';
     syncTtsInstances();
+    ttsActiveUtterances.clear();
     const utterances = ttsChunkQueue.map((chunk, index) => {
       const utterance = new SpeechSynthesisUtterance(chunk);
+      ttsActiveUtterances.add(utterance);
       utterance.volume = volume;
       utterance.rate = rate;
       utterance.pitch = 1;
@@ -3651,6 +3655,7 @@
   }
 
   function handleTtsChunkEnd(utterance, index){
+    ttsActiveUtterances.delete(utterance);
     if(ttsUtterance === utterance){
       const nextIndex = index + 1;
       if(nextIndex < ttsChunkOffsets.length){
@@ -4210,20 +4215,18 @@
       const current = clampRate(ttsSettings.rate);
       if(Math.abs(current - rate) < 0.001){ return; }
       updateTtsSettings({ rate });
-      const synthPaused = ttsSynth?.paused === true;
-      const shouldMarkRateChange = (ttsIsPlaying || ttsIsPaused) && (ttsIsPaused || synthPaused);
+      let updated = false;
+      ttsActiveUtterances.forEach(utterance => {
+        if(utterance){
+          utterance.rate = rate;
+          updated = true;
+        }
+      });
       if(ttsUtterance){
         ttsUtterance.rate = rate;
+        updated = true;
       }
-      if(shouldMarkRateChange){
-        ttsPausedForRateChange = true;
-        const resumeText = getTtsResumeText();
-        ttsRateChangeResumeText = resumeText || '';
-        return;
-      }
-      ttsPausedForRateChange = false;
-      ttsRateChangeResumeText = '';
-      if(ttsIsPlaying && !ttsIsPaused){
+      if(ttsIsPlaying && !ttsIsPaused && !updated){
         restartTtsPlaybackWithCurrentText();
       }
     };
