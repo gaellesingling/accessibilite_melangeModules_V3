@@ -2936,6 +2936,7 @@
   let ttsQueueIndex = -1;
   let ttsLastBoundary = null;
   let ttsPendingRestart = null;
+  let ttsPendingRateChangeRestart = false;
   let ttsPausedForRateChange = false;
   let ttsRateChangeResumeText = '';
   let ttsTexts = Object.assign({}, TTS_DEFAULT_TEXTS);
@@ -3149,12 +3150,16 @@
   function runTtsStopFallback(config={}){
     const silent = config && config.silent === true;
     const pending = ttsPendingRestart;
+    const pendingRateChange = ttsPendingRateChangeRestart === true;
     resetTtsPlaybackState();
     ensureTtsIdleStatus();
     syncTtsInstances();
     if(pending && pending.text){
       setTimeout(() => {
-        ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
+        const playOptions = pendingRateChange
+          ? { forceText: pending.text, skipSelectionRefresh: true }
+          : { forceText: pending.text };
+        ttsPlay(playOptions);
       }, 50);
       return;
     }
@@ -3180,6 +3185,7 @@
     ttsQueueIndex = -1;
     ttsLastBoundary = null;
     ttsPendingRestart = null;
+    ttsPendingRateChangeRestart = false;
     ttsPausedForRateChange = false;
     ttsRateChangeResumeText = '';
   }
@@ -3542,6 +3548,7 @@
     ttsCurrentSourceText = '';
     ttsLastBoundary = null;
     ttsPendingRestart = null;
+    ttsPendingRateChangeRestart = false;
     ttsPausedForRateChange = false;
     ttsRateChangeResumeText = '';
     syncTtsInstances();
@@ -3585,20 +3592,16 @@
         const resumeText = ttsRateChangeResumeText || getTtsResumeText();
         ttsPausedForRateChange = false;
         ttsRateChangeResumeText = '';
+        if(resumeText){
+          ttsPendingRestart = { text: resumeText };
+          ttsPendingRateChangeRestart = true;
+        } else {
+          ttsPendingRestart = null;
+          ttsPendingRateChangeRestart = false;
+        }
         cancelCurrentUtterance({ silent: true });
-        const attemptRestart = () => {
-          if(!ttsActive){ return; }
-          if(ttsIsPlaying || ttsIsPaused){
-            setTimeout(attemptRestart, 60);
-            return;
-          }
-          if(resumeText){
-            ttsPlay({ forceText: resumeText, skipSelectionRefresh: true });
-          } else {
-            ttsPlay({ skipSelectionRefresh: true });
-          }
-        };
-        setTimeout(attemptRestart, 60);
+        scheduleTtsStopFallback({ silent: true });
+        return;
       } else {
         try { ttsSynth.resume(); } catch(err){ /* ignore */ }
       }
@@ -3638,6 +3641,7 @@
     ttsSuppressStopStatus = false;
     ttsLastBoundary = { charIndex: 0 };
     ttsPendingRestart = null;
+    ttsPendingRateChangeRestart = false;
     ttsPausedForRateChange = false;
     ttsRateChangeResumeText = '';
     syncTtsInstances();
@@ -3763,6 +3767,7 @@
       // keep pending restart when stopping silently
     } else {
       ttsPendingRestart = null;
+      ttsPendingRateChangeRestart = false;
     }
     ttsPausedForRateChange = false;
     ttsRateChangeResumeText = '';
@@ -3810,6 +3815,7 @@
       ttsRateChangeResumeText = '';
     }
     ttsPendingRestart = { text: resumeText };
+    ttsPendingRateChangeRestart = preserveRateChange === true;
     if(preserveRateChange){ syncTtsInstances(); }
     if(ttsIsStopping){
       return;
