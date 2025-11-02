@@ -3751,13 +3751,21 @@
     return source;
   }
 
-  function restartTtsPlaybackWithCurrentText(){
+  function restartTtsPlaybackWithCurrentText(options={}){
     if(!ttsUtterance || !ttsIsPlaying || ttsIsPaused){ return; }
-    const resumeText = getTtsResumeText();
+    const override = options && typeof options.resumeText === 'string' ? options.resumeText : '';
+    const resumeText = override || ttsRateChangeResumeText || getTtsResumeText();
     if(!resumeText){ return; }
-    ttsPausedForRateChange = false;
-    ttsRateChangeResumeText = '';
+    const preserveRateChange = options && options.preserveRateChange === true;
+    if(preserveRateChange){
+      ttsPausedForRateChange = true;
+      ttsRateChangeResumeText = resumeText;
+    } else {
+      ttsPausedForRateChange = false;
+      ttsRateChangeResumeText = '';
+    }
     ttsPendingRestart = { text: resumeText };
+    if(preserveRateChange){ syncTtsInstances(); }
     if(ttsIsStopping){
       return;
     }
@@ -4215,19 +4223,32 @@
       const current = clampRate(ttsSettings.rate);
       if(Math.abs(current - rate) < 0.001){ return; }
       updateTtsSettings({ rate });
-      let updated = false;
       ttsActiveUtterances.forEach(utterance => {
         if(utterance){
           utterance.rate = rate;
-          updated = true;
         }
       });
       if(ttsUtterance){
         ttsUtterance.rate = rate;
-        updated = true;
       }
-      if(ttsIsPlaying && !ttsIsPaused && !updated){
-        restartTtsPlaybackWithCurrentText();
+
+      const synthPaused = !!(ttsSynth && ttsSynth.paused);
+      const resumeText = getTtsResumeText();
+      if(ttsIsPaused || synthPaused){
+        ttsRateChangeResumeText = resumeText || '';
+        ttsPausedForRateChange = true;
+        syncTtsInstances();
+      }
+
+      if(ttsIsPlaying && !ttsIsPaused){
+        const restartText = resumeText || ttsRateChangeResumeText || '';
+        ttsRateChangeResumeText = restartText;
+        ttsPausedForRateChange = true;
+        syncTtsInstances();
+        restartTtsPlaybackWithCurrentText({
+          resumeText: restartText,
+          preserveRateChange: true,
+        });
       }
     };
 
