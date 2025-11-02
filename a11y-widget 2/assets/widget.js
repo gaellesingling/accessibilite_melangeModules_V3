@@ -2866,6 +2866,7 @@
     controls_label: 'Contrôles',
     play_label: 'Lire',
     pause_label: 'Pause',
+    resume_label: 'Reprendre',
     stop_label: 'Stop',
     status_ready: 'Prêt à lire',
     status_selection: 'Sélectionnez du texte puis appuyez sur « Lire ».',
@@ -3377,6 +3378,7 @@
       instance.modePageBtn.classList.toggle('is-active', !isSelectionMode);
       instance.modePageBtn.setAttribute('aria-pressed', !isSelectionMode ? 'true' : 'false');
     }
+    const synthPaused = !!(ttsSynth && ttsSynth.paused);
     if(instance.playBtn){
       let disabled = !controlsEnabled;
       if(!disabled){
@@ -3389,7 +3391,21 @@
       instance.playBtn.disabled = disabled;
     }
     if(instance.pauseBtn){
-      instance.pauseBtn.disabled = !controlsEnabled || !ttsIsPlaying || ttsIsPaused;
+      const canPause = ttsIsPlaying && !ttsIsPaused;
+      const canResume = ttsIsPaused || synthPaused || ttsPausedForRateChange;
+      const showResume = !canPause && canResume;
+      const pauseLabelText = instance.texts.pause_label || TTS_DEFAULT_TEXTS.pause_label;
+      const resumeLabelText = instance.texts.resume_label || TTS_DEFAULT_TEXTS.resume_label;
+      const ariaLabel = showResume ? resumeLabelText : pauseLabelText;
+      instance.pauseBtn.disabled = !controlsEnabled || (!canPause && !canResume);
+      instance.pauseBtn.setAttribute('aria-label', ariaLabel);
+      instance.pauseBtn.classList.toggle('is-resume', showResume);
+      if(instance.pauseLabel){
+        instance.pauseLabel.textContent = ariaLabel;
+      }
+      if(instance.pauseIcon){
+        instance.pauseIcon.textContent = showResume ? '▶️' : '⏸️';
+      }
     }
     if(instance.stopBtn){
       instance.stopBtn.disabled = !controlsEnabled || (!ttsIsPlaying && !ttsIsPaused);
@@ -3592,18 +3608,14 @@
         const resumeText = ttsRateChangeResumeText || getTtsResumeText();
         ttsPausedForRateChange = false;
         ttsRateChangeResumeText = '';
-        if(resumeText){
-          ttsPendingRestart = { text: resumeText };
-          ttsPendingRateChangeRestart = true;
-        } else {
-          ttsPendingRestart = null;
-          ttsPendingRateChangeRestart = false;
-        }
+        syncTtsInstances();
         cancelCurrentUtterance({ silent: true });
         scheduleTtsStopFallback({ silent: true });
         return;
       } else {
         try { ttsSynth.resume(); } catch(err){ /* ignore */ }
+        ttsPausedForRateChange = false;
+        syncTtsInstances();
       }
       return;
     }
@@ -4224,6 +4236,8 @@
       playBtn,
       pauseBtn,
       stopBtn,
+      pauseIcon,
+      pauseLabel,
       statusEl: status,
       statusIcon,
       statusText,
@@ -4241,7 +4255,16 @@
     modeSelectionBtn.addEventListener('click', () => setTtsMode('selection'));
     modePageBtn.addEventListener('click', () => setTtsMode('page'));
     playBtn.addEventListener('click', () => ttsPlay());
-    pauseBtn.addEventListener('click', () => ttsPause());
+    pauseBtn.addEventListener('click', () => {
+      const synthPaused = !!(ttsSynth && ttsSynth.paused);
+      if(ttsIsPlaying && !ttsIsPaused){
+        ttsPause();
+        return;
+      }
+      if(ttsIsPaused || synthPaused || ttsPausedForRateChange){
+        ttsPlay();
+      }
+    });
     stopBtn.addEventListener('click', () => ttsStop());
 
     volumeSlider.addEventListener('input', () => {
