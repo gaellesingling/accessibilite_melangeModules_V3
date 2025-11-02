@@ -2911,6 +2911,7 @@
 
   const TTS_MAX_CHUNK_SIZE = 1024;
   const TTS_MIN_CHUNK_SIZE = 400;
+  const TTS_STOP_FALLBACK_DELAY = 120;
 
   const ttsInstances = new Set();
   let ttsSettings = loadTtsSettings();
@@ -2939,6 +2940,7 @@
   let ttsRateChangeResumeText = '';
   let ttsTexts = Object.assign({}, TTS_DEFAULT_TEXTS);
   let ttsStatus = { text: ttsTexts.status_ready, type: 'info' };
+  let ttsStopFallbackHandle = null;
 
   function loadTtsSettings(){
     const defaults = Object.assign({}, TTS_DEFAULTS);
@@ -3126,7 +3128,45 @@
     return hardLimit;
   }
 
+  function clearTtsStopFallback(){
+    if(ttsStopFallbackHandle){
+      clearTimeout(ttsStopFallbackHandle.id);
+      ttsStopFallbackHandle = null;
+    }
+  }
+
+  function scheduleTtsStopFallback(options={}){
+    if(!ttsSupport || !ttsSynth){ return; }
+    const silent = options && options.silent === true;
+    const timerId = setTimeout(() => {
+      if(!ttsStopFallbackHandle || ttsStopFallbackHandle.id !== timerId){ return; }
+      ttsStopFallbackHandle = null;
+      runTtsStopFallback({ silent });
+    }, TTS_STOP_FALLBACK_DELAY);
+    ttsStopFallbackHandle = { id: timerId, silent };
+  }
+
+  function runTtsStopFallback(config={}){
+    const silent = config && config.silent === true;
+    const pending = ttsPendingRestart;
+    resetTtsPlaybackState();
+    ensureTtsIdleStatus();
+    syncTtsInstances();
+    if(pending && pending.text){
+      setTimeout(() => {
+        ttsPlay({ forceText: pending.text, skipSelectionRefresh: true });
+      }, 50);
+      return;
+    }
+    if(!silent){
+      const message = ttsTexts.status_stopped || TTS_DEFAULT_TEXTS.status_stopped;
+      updateTtsStatus(message, 'stopped');
+      if(ttsTexts.announce_stopped){ ttsAnnounce(ttsTexts.announce_stopped); }
+    }
+  }
+
   function resetTtsPlaybackState(){
+    clearTtsStopFallback();
     ttsActiveUtterances.clear();
     ttsUtterance = null;
     ttsIsPlaying = false;
@@ -3537,6 +3577,7 @@
   }
 
   function ttsPlay(options={}){
+    clearTtsStopFallback();
     if(!ttsSupport || !ttsSynth || !ttsActive){ return; }
     if(ttsIsPlaying && !ttsIsPaused){ return; }
     if(ttsIsPaused){
@@ -3655,6 +3696,7 @@
   }
 
   function handleTtsChunkEnd(utterance, index){
+    clearTtsStopFallback();
     ttsActiveUtterances.delete(utterance);
     if(ttsUtterance === utterance){
       const nextIndex = index + 1;
@@ -3697,6 +3739,7 @@
   }
 
   function handleTtsChunkError(event){
+    clearTtsStopFallback();
     if(ttsSuppressStopStatus || ttsIsStopping){ return; }
     if(event && (event.error === 'canceled' || event.error === 'interrupted')){
       return;
@@ -3715,6 +3758,7 @@
 
   function ttsStop(options={}){
     if(!ttsSupport || !ttsSynth){ return; }
+    clearTtsStopFallback();
     if(options.silent === true){
       // keep pending restart when stopping silently
     } else {
@@ -3730,6 +3774,7 @@
     }
     ttsIsStopping = true;
     ttsSuppressStopStatus = options.silent === true;
+    scheduleTtsStopFallback(options);
     try { ttsSynth.cancel(); } catch(err){ /* ignore */ }
   }
 
