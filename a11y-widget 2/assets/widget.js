@@ -2936,6 +2936,7 @@
   let ttsLastBoundary = null;
   let ttsPendingRestart = null;
   let ttsPausedForRateChange = false;
+  let ttsRateChangeResumeText = '';
   let ttsTexts = Object.assign({}, TTS_DEFAULT_TEXTS);
   let ttsStatus = { text: ttsTexts.status_ready, type: 'info' };
 
@@ -3140,6 +3141,7 @@
     ttsLastBoundary = null;
     ttsPendingRestart = null;
     ttsPausedForRateChange = false;
+    ttsRateChangeResumeText = '';
   }
 
   function ensureTtsSelectionTracking(){
@@ -3501,6 +3503,7 @@
     ttsLastBoundary = null;
     ttsPendingRestart = null;
     ttsPausedForRateChange = false;
+    ttsRateChangeResumeText = '';
     syncTtsInstances();
 
     if(pending && pending.text){
@@ -3536,10 +3539,11 @@
   function ttsPlay(options={}){
     if(!ttsSupport || !ttsSynth || !ttsActive){ return; }
     if(ttsIsPlaying && !ttsIsPaused){ return; }
-    if(ttsIsPaused && ttsSynth.paused){
+    if(ttsIsPaused){
       if(ttsPausedForRateChange){
-        const resumeText = getTtsResumeText();
+        const resumeText = ttsRateChangeResumeText || getTtsResumeText();
         ttsPausedForRateChange = false;
+        ttsRateChangeResumeText = '';
         cancelCurrentUtterance({ silent: true });
         const attemptRestart = () => {
           if(!ttsActive){ return; }
@@ -3594,6 +3598,7 @@
     ttsLastBoundary = { charIndex: 0 };
     ttsPendingRestart = null;
     ttsPausedForRateChange = false;
+    ttsRateChangeResumeText = '';
     syncTtsInstances();
     ttsActiveUtterances.clear();
     const utterances = ttsChunkQueue.map((chunk, index) => {
@@ -3716,6 +3721,7 @@
       ttsPendingRestart = null;
     }
     ttsPausedForRateChange = false;
+    ttsRateChangeResumeText = '';
     if(!ttsIsPlaying && !ttsIsPaused){
       if(options.silent !== true){
         ensureTtsIdleStatus();
@@ -3750,6 +3756,7 @@
     const resumeText = getTtsResumeText();
     if(!resumeText){ return; }
     ttsPausedForRateChange = false;
+    ttsRateChangeResumeText = '';
     ttsPendingRestart = { text: resumeText };
     if(ttsIsStopping){
       return;
