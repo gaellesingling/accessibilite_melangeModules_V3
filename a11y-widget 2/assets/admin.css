@@ -466,15 +466,61 @@ fieldset.a11y-widget-admin-section {
   border-left: 2px solid var(--a11y-section-feature-border);
 }
 
+.a11y-widget-admin-subfeatures--drag-over {
+  border-left-color: var(--a11y-section-accent);
+}
+
 .a11y-widget-admin-subfeature {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
   background: var(--a11y-section-subfeature-bg);
   border: 1px solid var(--a11y-section-feature-border);
   border-radius: 8px;
   padding: 12px 14px;
+}
+
+.a11y-widget-admin-subfeature--dragging {
+  opacity: 0.65;
+  box-shadow: 0 8px 16px rgba(18, 110, 181, 0.18);
+}
+
+.a11y-widget-admin-subfeature__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--a11y-section-handle-bg);
+  color: var(--a11y-section-handle-color);
+  cursor: grab;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.a11y-widget-admin-subfeature__handle:focus-visible {
+  outline: none;
+  border-color: var(--a11y-section-accent);
+  box-shadow: 0 0 0 1px var(--a11y-section-accent);
+  background: #ffffff;
+  color: var(--a11y-section-accent-strong);
+}
+
+.a11y-widget-admin-subfeature__handle:active {
+  cursor: grabbing;
+}
+
+.a11y-widget-admin-subfeature--dragging .a11y-widget-admin-subfeature__handle {
+  cursor: grabbing;
+}
+
+.a11y-widget-admin-subfeature__handle .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
@@ -645,5 +691,13 @@ fieldset.a11y-widget-admin-section {
   .a11y-widget-admin-subfeatures {
     margin-left: 32px;
     padding-left: 14px;
+  }
+
+  .a11y-widget-admin-subfeature {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
+    grid-column: 1 / -1;
   }
 }

@@ -127,8 +127,8 @@
   position: fixed;
   bottom: 16px;
   right: 16px;
-  width: min(360px, calc(100vw - 32px));
-  max-width: min(92vw, 420px);
+  width: min(22.5rem, calc(100vw - 32px));
+  max-width: min(92vw, 26.25rem);
   max-height: calc(100vh - 32px);
   background: var(--a11y-surface); color: var(--a11y-text);
   border-radius: var(--a11y-radius); box-shadow: var(--a11y-shadow);
