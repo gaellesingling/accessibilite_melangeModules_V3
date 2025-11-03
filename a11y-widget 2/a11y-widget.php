@@ -1915,6 +1915,11 @@ function a11y_widget_apply_custom_feature_layout( $sections ) {
     }
 
     $layout = a11y_widget_get_feature_layout();
+    $subfeature_layout = array();
+
+    if ( function_exists( 'a11y_widget_get_subfeature_layout' ) ) {
+        $subfeature_layout = a11y_widget_get_subfeature_layout();
+    }
 
     if ( empty( $layout ) || ! is_array( $layout ) ) {
         return $sections;
@@ -2032,6 +2037,69 @@ function a11y_widget_apply_custom_feature_layout( $sections ) {
         }
 
         $section['children'] = $ordered_children;
+
+        if ( ! empty( $section['children'] ) && ! empty( $subfeature_layout ) ) {
+            foreach ( $section['children'] as &$feature ) {
+                if ( empty( $feature['slug'] ) || empty( $feature['children'] ) || ! is_array( $feature['children'] ) ) {
+                    continue;
+                }
+
+                $feature_slug = sanitize_key( $feature['slug'] );
+
+                if ( '' === $feature_slug || empty( $subfeature_layout[ $feature_slug ] ) || ! is_array( $subfeature_layout[ $feature_slug ] ) ) {
+                    continue;
+                }
+
+                $ordered_subfeatures  = array();
+                $assigned_subfeatures = array();
+
+                foreach ( $subfeature_layout[ $feature_slug ] as $sub_slug ) {
+                    $sub_slug = sanitize_key( $sub_slug );
+
+                    if ( '' === $sub_slug || isset( $assigned_subfeatures[ $sub_slug ] ) ) {
+                        continue;
+                    }
+
+                    foreach ( $feature['children'] as $child ) {
+                        if ( empty( $child['slug'] ) ) {
+                            continue;
+                        }
+
+                        $child_slug = sanitize_key( $child['slug'] );
+
+                        if ( '' === $child_slug || $child_slug !== $sub_slug || isset( $assigned_subfeatures[ $child_slug ] ) ) {
+                            continue;
+                        }
+
+                        $child['slug'] = $child_slug;
+                        $ordered_subfeatures[]      = $child;
+                        $assigned_subfeatures[ $child_slug ] = true;
+                        break;
+                    }
+                }
+
+                if ( count( $ordered_subfeatures ) !== count( $feature['children'] ) ) {
+                    foreach ( $feature['children'] as $child ) {
+                        if ( empty( $child['slug'] ) ) {
+                            continue;
+                        }
+
+                        $child_slug = sanitize_key( $child['slug'] );
+
+                        if ( '' === $child_slug || isset( $assigned_subfeatures[ $child_slug ] ) ) {
+                            continue;
+                        }
+
+                        $child['slug'] = $child_slug;
+                        $ordered_subfeatures[]      = $child;
+                        $assigned_subfeatures[ $child_slug ] = true;
+                    }
+                }
+
+                $feature['children'] = $ordered_subfeatures;
+            }
+            unset( $feature );
+        }
     }
     unset( $section );
 
