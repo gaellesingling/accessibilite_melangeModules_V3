@@ -475,57 +475,20 @@ fieldset.a11y-widget-admin-section {
 }
 
 .a11y-widget-admin-subfeature {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  row-gap: 12px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
   background: var(--a11y-section-subfeature-bg);
   border: 1px solid var(--a11y-section-feature-border);
   border-radius: 8px;
   padding: 12px 14px;
 }
 
-.a11y-widget-admin-subfeature--dragging {
-  opacity: 0.65;
-  box-shadow: 0 8px 16px rgba(18, 110, 181, 0.18);
-}
-
-.a11y-widget-admin-subfeature__handle {
-  grid-area: handle;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: var(--a11y-section-handle-bg);
-  color: var(--a11y-section-handle-color);
-  cursor: grab;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.a11y-widget-admin-subfeature__handle:focus-visible {
-  outline: none;
-  border-color: var(--a11y-section-accent);
-  box-shadow: 0 0 0 1px var(--a11y-section-accent);
-  background: #ffffff;
-  color: var(--a11y-section-accent-strong);
-}
-
-.a11y-widget-admin-subfeature__handle:active {
-  cursor: grabbing;
-}
-
-.a11y-widget-admin-subfeature--dragging .a11y-widget-admin-subfeature__handle {
-  cursor: grabbing;
-}
-
-.a11y-widget-admin-subfeature__handle .dashicons {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+.a11y-widget-admin-subfeature .a11y-widget-admin-toggle,
+.a11y-widget-admin-subfeature .a11y-widget-switch,
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  width: 100%;
 }
 
 .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
@@ -537,6 +500,10 @@ fieldset.a11y-widget-admin-section {
 
 .a11y-widget-admin-subfeature .a11y-widget-switch {
   width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  justify-content: space-between;
 }
 
 .a11y-widget-admin-subfeature .a11y-widget-switch__ui {
