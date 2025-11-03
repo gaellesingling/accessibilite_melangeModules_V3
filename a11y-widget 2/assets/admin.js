@@ -252,6 +252,7 @@
         var featureOrigin = null;
         var featureNextSibling = null;
         var featureDropOccurred = false;
+        var armedFeatureForDrag = null;
 
         function cleanupFeatureDrag() {
             containers.forEach(function (container) {
@@ -266,6 +267,94 @@
             featureOrigin = null;
             featureNextSibling = null;
             featureDropOccurred = false;
+            armedFeatureForDrag = null;
+        }
+
+        var draggedSubfeature = null;
+        var subfeatureOrigin = null;
+        var subfeatureNextSibling = null;
+        var subfeatureDropOccurred = false;
+        var armedSubfeatureForDrag = null;
+
+        function cleanupSubfeatureDrag() {
+            subfeatureContainers.forEach(function (container) {
+                container.classList.remove('a11y-widget-admin-subfeatures--drag-over');
+            });
+
+            if (draggedSubfeature) {
+                draggedSubfeature.classList.remove('a11y-widget-admin-subfeature--dragging');
+                draggedSubfeature = null;
+            }
+
+            subfeatureOrigin = null;
+            subfeatureNextSibling = null;
+            subfeatureDropOccurred = false;
+        }
+
+        function startFeatureDrag(feature, event) {
+            if (!feature) {
+                return;
+            }
+
+            var startedOnFeature = event && event.currentTarget === feature;
+            if (!startedOnFeature && feature !== armedFeatureForDrag) {
+                if (event) {
+                    event.preventDefault();
+                }
+                armedFeatureForDrag = null;
+                return;
+            }
+
+            armedFeatureForDrag = null;
+            draggedFeature = feature;
+            featureOrigin = feature.parentElement;
+            featureNextSibling = feature.nextElementSibling;
+            featureDropOccurred = false;
+
+            feature.classList.add('a11y-widget-admin-feature--dragging');
+
+            if (event && event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                try {
+                    event.dataTransfer.setData('text/plain', feature.getAttribute('data-feature-slug') || 'feature');
+
+                    if (event.dataTransfer.setDragImage) {
+                        var rect = feature.getBoundingClientRect();
+                        var offsetX = 0;
+                        var offsetY = 0;
+
+                        if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+                            offsetX = event.clientX - rect.left;
+                            offsetY = event.clientY - rect.top;
+                        } else if (typeof event.offsetX === 'number' && typeof event.offsetY === 'number') {
+                            offsetX = event.offsetX;
+                            offsetY = event.offsetY;
+                        }
+
+                        event.dataTransfer.setDragImage(feature, offsetX, offsetY);
+                    }
+                } catch (err) {
+                    // Ignore errors from browsers that disallow setting data.
+                }
+            }
+        }
+
+        function finishFeatureDrag(feature) {
+            if (!feature || draggedFeature !== feature) {
+                return;
+            }
+
+            if (!featureDropOccurred && featureOrigin) {
+                if (featureNextSibling && featureNextSibling.parentNode === featureOrigin) {
+                    featureOrigin.insertBefore(feature, featureNextSibling);
+                } else {
+                    featureOrigin.appendChild(feature);
+                }
+            }
+
+            refreshAll(containers);
+            refreshSubfeatureContainers(subfeatureContainers);
+            cleanupFeatureDrag();
         }
 
         var draggedSubfeature = null;
@@ -293,19 +382,61 @@
             feature.setAttribute('draggable', 'true');
 
             feature.addEventListener('dragstart', function (event) {
-                draggedFeature = feature;
-                featureOrigin = feature.parentElement;
-                featureNextSibling = feature.nextElementSibling;
-                featureDropOccurred = false;
+                if (event.target !== feature) {
+                    return;
+                }
 
-                feature.classList.add('a11y-widget-admin-feature--dragging');
+                startFeatureDrag(feature, event);
+            });
+
+            feature.addEventListener('dragend', function (event) {
+                if (event.target !== feature) {
+                    return;
+                }
+
+                finishFeatureDrag(feature);
+            });
+
+            var handle = feature.querySelector('.a11y-widget-admin-feature__handle');
+
+            if (handle) {
+                handle.setAttribute('draggable', 'true');
+
+                handle.addEventListener('dragstart', function (event) {
+                    startFeatureDrag(feature, event);
+                    event.stopPropagation();
+                });
+
+                handle.addEventListener('dragend', function (event) {
+                    finishFeatureDrag(feature);
+                    event.stopPropagation();
+                });
+            }
+        }
+
+        function enableSubfeatureDrag(subfeature) {
+            subfeature.setAttribute('draggable', 'true');
+
+            subfeature.addEventListener('dragstart', function (event) {
+                if (subfeature !== armedSubfeatureForDrag) {
+                    event.preventDefault();
+                    return;
+                }
+
+                armedSubfeatureForDrag = null;
+                draggedSubfeature = subfeature;
+                subfeatureOrigin = subfeature.parentElement;
+                subfeatureNextSibling = subfeature.nextElementSibling;
+                subfeatureDropOccurred = false;
+
+                subfeature.classList.add('a11y-widget-admin-subfeature--dragging');
 
                 if (event.dataTransfer) {
                     event.dataTransfer.effectAllowed = 'move';
                     try {
-                        event.dataTransfer.setData('text/plain', feature.getAttribute('data-feature-slug') || 'feature');
+                        event.dataTransfer.setData('text/plain', subfeature.getAttribute('data-subfeature-slug') || 'subfeature');
                         if (event.dataTransfer.setDragImage) {
-                            event.dataTransfer.setDragImage(feature, event.offsetX || 0, event.offsetY || 0);
+                            event.dataTransfer.setDragImage(subfeature, event.offsetX || 0, event.offsetY || 0);
                         }
                     } catch (err) {
                         // Ignore errors from browsers that disallow setting data.
@@ -313,18 +444,17 @@
                 }
             });
 
-            feature.addEventListener('dragend', function () {
-                if (!featureDropOccurred && featureOrigin) {
-                    if (featureNextSibling && featureNextSibling.parentNode === featureOrigin) {
-                        featureOrigin.insertBefore(feature, featureNextSibling);
+            subfeature.addEventListener('dragend', function () {
+                if (!subfeatureDropOccurred && subfeatureOrigin) {
+                    if (subfeatureNextSibling && subfeatureNextSibling.parentNode === subfeatureOrigin) {
+                        subfeatureOrigin.insertBefore(subfeature, subfeatureNextSibling);
                     } else {
-                        featureOrigin.appendChild(feature);
+                        subfeatureOrigin.appendChild(subfeature);
                     }
                 }
 
-                refreshAll(containers);
                 refreshSubfeatureContainers(subfeatureContainers);
-                cleanupFeatureDrag();
+                cleanupSubfeatureDrag();
             });
         }
 
@@ -418,6 +548,36 @@
                 featureDropOccurred = true;
                 container.classList.remove('a11y-widget-admin-section__content--drag-over');
             });
+        });
+
+        document.addEventListener('mousedown', function (event) {
+            var featureHandle = event.target.closest('.a11y-widget-admin-feature__handle');
+
+            if (featureHandle) {
+                armedFeatureForDrag = featureHandle.closest('.a11y-widget-admin-feature');
+            } else {
+                armedFeatureForDrag = null;
+            }
+        });
+
+        document.addEventListener('touchstart', function (event) {
+            var featureHandle = event.target.closest('.a11y-widget-admin-feature__handle');
+
+            if (featureHandle) {
+                armedFeatureForDrag = featureHandle.closest('.a11y-widget-admin-feature');
+            } else {
+                armedFeatureForDrag = null;
+            }
+        }, { passive: true });
+
+        document.addEventListener('mouseup', function () {
+            armedFeatureForDrag = null;
+            armedSubfeatureForDrag = null;
+        });
+
+        document.addEventListener('touchend', function () {
+            armedFeatureForDrag = null;
+            armedSubfeatureForDrag = null;
         });
 
         subfeatureContainers.forEach(function (container) {

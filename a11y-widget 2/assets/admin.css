@@ -368,6 +368,10 @@ fieldset.a11y-widget-admin-section {
   box-shadow: 0 10px 20px rgba(18, 110, 181, 0.18);
 }
 
+.a11y-widget-admin-feature--dragging .a11y-widget-admin-feature__handle {
+  cursor: grabbing;
+}
+
 .a11y-widget-admin-feature__handle {
   justify-self: center;
   display: inline-flex;
