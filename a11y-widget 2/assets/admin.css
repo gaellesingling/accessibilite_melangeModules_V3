@@ -467,19 +467,29 @@ fieldset.a11y-widget-admin-section {
 }
 
 .a11y-widget-admin-subfeature {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
   background: var(--a11y-section-subfeature-bg);
   border: 1px solid var(--a11y-section-feature-border);
   border-radius: 8px;
   padding: 12px 14px;
 }
 
+.a11y-widget-admin-subfeature .a11y-widget-admin-toggle,
+.a11y-widget-admin-subfeature .a11y-widget-switch,
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  width: 100%;
+}
+
 .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
   justify-content: flex-start;
   text-align: left;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  justify-content: space-between;
 }
 
 .a11y-widget-admin-subfeature__description {
