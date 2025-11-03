@@ -476,14 +476,10 @@ fieldset.a11y-widget-admin-section {
 
 .a11y-widget-admin-subfeature {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
-  grid-template-areas:
-    'handle description'
-    'handle toggle';
-  column-gap: 12px;
-  row-gap: 10px;
-  align-items: flex-start;
+  row-gap: 12px;
+  align-items: start;
   background: var(--a11y-section-subfeature-bg);
   border: 1px solid var(--a11y-section-feature-border);
   border-radius: 8px;
@@ -537,6 +533,14 @@ fieldset.a11y-widget-admin-section {
   justify-content: flex-start;
   text-align: left;
   width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch {
+  width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  justify-content: space-between;
 }
 
 .a11y-widget-admin-subfeature__description {
