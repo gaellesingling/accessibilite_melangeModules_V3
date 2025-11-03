@@ -1162,24 +1162,33 @@ function a11y_widget_render_admin_page() {
                                                 data-subfeatures-input="#<?php echo esc_attr( $subfeatures_input_id ); ?>"
                                             >
                                                 <?php foreach ( $feature_children as $sub_feature ) :
-                                                    $sub_slug        = $sub_feature['slug'];
-                                                    $sub_label       = $sub_feature['label'];
-                                                    $sub_hint        = $sub_feature['hint'];
-                                                    $sub_aria_label  = $sub_feature['aria_label'];
-                                                    $sub_is_disabled = isset( $disabled_lookup[ $sub_slug ] );
-                                                    $sub_input_id    = 'a11y-widget-toggle-' . $sub_slug;
-                                                    $sub_label_id    = $sub_input_id . '-label';
+                                                    $sub_slug         = $sub_feature['slug'];
+                                                    $sub_label        = $sub_feature['label'];
+                                                    $sub_hint         = $sub_feature['hint'];
+                                                    $sub_aria_label   = $sub_feature['aria_label'];
+                                                    $sub_is_disabled  = isset( $disabled_lookup[ $sub_slug ] );
+                                                    $sub_input_id     = 'a11y-widget-toggle-' . $sub_slug;
+                                                    $sub_label_id     = $sub_input_id . '-label';
+                                                    $sub_can_reorder  = ( 'vision-daltonisme' !== $feature_slug );
+                                                    $sub_classes      = array( 'a11y-widget-admin-subfeature' );
+
+                                                    if ( ! $sub_can_reorder ) {
+                                                        $sub_classes[] = 'a11y-widget-admin-subfeature--static';
+                                                    }
+
                                                     $sub_handle_label = sprintf(
                                                         /* translators: %s: sub-feature label */
                                                         esc_html__( 'Déplacer la sous-fonctionnalité « %s »', 'a11y-widget' ),
                                                         wp_strip_all_tags( $sub_label )
                                                     );
                                                     ?>
-                                                    <div class="a11y-widget-admin-subfeature" data-subfeature-slug="<?php echo esc_attr( $sub_slug ); ?>">
-                                                        <button type="button" class="a11y-widget-admin-subfeature__handle" aria-label="<?php echo esc_attr( $sub_handle_label ); ?>">
-                                                            <span class="dashicons dashicons-move" aria-hidden="true"></span>
-                                                            <span class="screen-reader-text"><?php echo esc_html( $sub_handle_label ); ?></span>
-                                                        </button>
+                                                    <div class="<?php echo esc_attr( implode( ' ', $sub_classes ) ); ?>" data-subfeature-slug="<?php echo esc_attr( $sub_slug ); ?>">
+                                                        <?php if ( $sub_can_reorder ) : ?>
+                                                            <button type="button" class="a11y-widget-admin-subfeature__handle" aria-label="<?php echo esc_attr( $sub_handle_label ); ?>">
+                                                                <span class="dashicons dashicons-move" aria-hidden="true"></span>
+                                                                <span class="screen-reader-text"><?php echo esc_html( $sub_handle_label ); ?></span>
+                                                            </button>
+                                                        <?php endif; ?>
                                                         <div class="a11y-widget-admin-subfeature__description">
                                                             <label for="<?php echo esc_attr( $sub_input_id ); ?>" id="<?php echo esc_attr( $sub_label_id ); ?>">
                                                                 <span class="a11y-widget-admin-subfeature__label"><?php echo esc_html( $sub_label ); ?></span>

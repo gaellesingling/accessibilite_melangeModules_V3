@@ -485,6 +485,13 @@ fieldset.a11y-widget-admin-section {
   padding: 12px 14px;
 }
 
+.a11y-widget-admin-subfeature--static::before {
+  content: "";
+  display: block;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
 .a11y-widget-admin-subfeature .a11y-widget-admin-toggle,
 .a11y-widget-admin-subfeature .a11y-widget-switch,
 .a11y-widget-admin-subfeature .a11y-widget-switch__ui {
