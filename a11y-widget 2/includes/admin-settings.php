@@ -357,7 +357,7 @@ function a11y_widget_get_disabled_features() {
  * @return bool
  */
 function a11y_widget_force_all_features_enabled() {
-    return (bool) get_option( a11y_widget_get_force_all_features_option_name(), true );
+    return (bool) get_option( a11y_widget_get_force_all_features_option_name(), false );
 }
 
 /**
@@ -1130,7 +1130,7 @@ function a11y_widget_render_admin_page() {
                                                             name="<?php echo esc_attr( a11y_widget_get_disabled_features_option_name() ); ?>[]"
                                                             value="<?php echo esc_attr( $feature_slug ); ?>"
                                                             <?php checked( $is_disabled ); ?>
-                                                            <?php disabled( $force_all_features ); ?>
+                                                            data-a11y-feature-toggle="true"
                                                         />
                                                         <span class="a11y-widget-switch__ui">
                                                             <span
@@ -1202,8 +1202,8 @@ function a11y_widget_render_admin_page() {
                                                                     name="<?php echo esc_attr( a11y_widget_get_disabled_features_option_name() ); ?>[]"
                                                                     value="<?php echo esc_attr( $sub_slug ); ?>"
                                                                     <?php checked( $sub_is_disabled ); ?>
-                                                                    <?php disabled( $force_all_features ); ?>
                                                                     aria-label="<?php echo esc_attr( $sub_aria_label ); ?>"
+                                                                    data-a11y-feature-toggle="true"
                                                                 />
                                                                 <span class="a11y-widget-switch__ui">
                                                                     <span
