@@ -68,6 +68,7 @@
   --a11y-z-overlay: 2147483645; /* backdrop */
   --a11y-z: 2147483646; /* launcher */
   --a11y-z-panel: 2147483647; /* top */
+  --a11y-z-info-dialog: calc(var(--a11y-z-panel) + 1);
   --a11y-widget-logo-scale: 1;
   --a11y-launcher-margin: 20px;
   --a11y-launcher-size: calc(56px * var(--a11y-widget-logo-scale));
@@ -161,9 +162,20 @@
   justify-content: center;
   width: var(--a11y-panel-logo-size);
   height: var(--a11y-panel-logo-size);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--a11y-primary);
+  cursor: pointer;
+  border-radius: 12px;
 }
 .a11y-icon svg,
 .a11y-icon img { width: 100%; height: 100%; display: block; }
+.a11y-icon:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+.a11y-info-trigger { transition: color .2s ease, transform .2s ease; }
+.a11y-info-trigger:hover { color: var(--a11y-text); transform: translateY(-1px); }
+.a11y-info-trigger.is-active { color: var(--a11y-text); }
+.a11y-info-trigger__icon { width: 100%; height: 100%; display: block; }
 .a11y-close { border: none; background: none; padding: 8px; cursor: pointer; border-radius: 10px; }
 .a11y-close:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
 .a11y-tutorial-toggle {
@@ -186,6 +198,69 @@
 
 
 .a11y-content { overflow: auto; padding: 12px 12px 0; }
+.a11y-info-dialog {
+  position: fixed;
+  top: 104px;
+  left: auto;
+  right: 24px;
+  transform: translate3d(0, 8px, 0);
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  background: var(--a11y-surface);
+  color: var(--a11y-text);
+  border-radius: var(--a11y-radius);
+  box-shadow: var(--a11y-shadow);
+  z-index: var(--a11y-z-info-dialog);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s ease, transform .2s ease;
+  display: flex;
+  flex-direction: column;
+}
+.a11y-info-dialog[hidden] { display: none; }
+.a11y-info-dialog.is-open {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+.a11y-info-dialog.is-dragging { transition: none; }
+.a11y-info-dialog__inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+.a11y-info-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--a11y-surface-elev);
+  border-bottom: 1px solid var(--a11y-border);
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+.a11y-info-dialog__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.a11y-info-dialog__close {
+  border: none;
+  background: none;
+  padding: 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: inherit;
+}
+.a11y-info-dialog__close:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+.a11y-info-dialog__content {
+  padding: 18px 20px;
+  overflow: auto;
+  flex: 1 1 auto;
+}
 .a11y-tutorial {
   margin: 0 0 18px;
   padding: 12px 14px;
