@@ -66,6 +66,15 @@ function a11y_widget_get_feature_layout_option_name() {
 }
 
 /**
+ * Option name helper for the custom sub-feature layout.
+ *
+ * @return string
+ */
+function a11y_widget_get_subfeature_layout_option_name() {
+    return 'a11y_widget_subfeature_layout';
+}
+
+/**
  * Option name helper for the custom section order.
  *
  * @return string
@@ -363,6 +372,17 @@ function a11y_widget_get_feature_layout() {
 }
 
 /**
+ * Retrieve the stored sub-feature layout with sanitized slugs.
+ *
+ * @return array<string, string[]>
+ */
+function a11y_widget_get_subfeature_layout() {
+    $layout = get_option( a11y_widget_get_subfeature_layout_option_name(), array() );
+
+    return a11y_widget_sanitize_subfeature_layout( $layout );
+}
+
+/**
  * Retrieve the stored section order.
  *
  * @return string[]
@@ -451,6 +471,57 @@ function a11y_widget_sanitize_feature_layout( $input ) {
 }
 
 /**
+ * Sanitize the custom sub-feature layout option.
+ *
+ * @param mixed $input Raw input.
+ *
+ * @return array<string, string[]>
+ */
+function a11y_widget_sanitize_subfeature_layout( $input ) {
+    if ( ! is_array( $input ) ) {
+        return array();
+    }
+
+    $layout = array();
+
+    foreach ( $input as $feature_slug => $children ) {
+        $feature_slug = sanitize_key( $feature_slug );
+
+        if ( '' === $feature_slug ) {
+            continue;
+        }
+
+        if ( is_string( $children ) ) {
+            $children = preg_split( '/,/', $children );
+        }
+
+        if ( ! is_array( $children ) ) {
+            continue;
+        }
+
+        $child_lookup = array();
+
+        foreach ( $children as $child_slug ) {
+            if ( is_array( $child_slug ) ) {
+                continue;
+            }
+
+            $child_slug = sanitize_key( $child_slug );
+
+            if ( '' === $child_slug ) {
+                continue;
+            }
+
+            $child_lookup[ $child_slug ] = true;
+        }
+
+        $layout[ $feature_slug ] = array_keys( $child_lookup );
+    }
+
+    return $layout;
+}
+
+/**
  * Sanitize the custom section order option.
  *
  * @param mixed $input Raw input.
@@ -519,6 +590,16 @@ function a11y_widget_register_settings() {
         array(
             'type'              => 'array',
             'sanitize_callback' => 'a11y_widget_sanitize_feature_layout',
+            'default'           => array(),
+        )
+    );
+
+    register_setting(
+        'a11y_widget_settings',
+        a11y_widget_get_subfeature_layout_option_name(),
+        array(
+            'type'              => 'array',
+            'sanitize_callback' => 'a11y_widget_sanitize_subfeature_layout',
             'default'           => array(),
         )
     );
@@ -642,6 +723,8 @@ function a11y_widget_render_admin_page() {
     $force_all_features     = a11y_widget_force_all_features_enabled();
     $force_all_option_key   = a11y_widget_get_force_all_features_option_name();
     $layout_option_key      = a11y_widget_get_feature_layout_option_name();
+    $subfeature_layout_key  = a11y_widget_get_subfeature_layout_option_name();
+    $stored_subfeature_layout = a11y_widget_get_subfeature_layout();
     $section_order_option   = a11y_widget_get_section_order_option_name();
     $section_order_slugs    = array_filter( array_map( 'sanitize_title', wp_list_pluck( $sections, 'slug' ) ) );
     $section_order_value    = implode( ',', $section_order_slugs );
@@ -928,11 +1011,11 @@ function a11y_widget_render_admin_page() {
                                 </p>
 
                                 <?php
-                                foreach ( $children as $feature ) :
-                                    $feature_slug  = isset( $feature['slug'] ) ? sanitize_key( $feature['slug'] ) : '';
-                                    $feature_label = isset( $feature['label'] ) ? $feature['label'] : '';
-                                    $feature_hint  = isset( $feature['hint'] ) ? $feature['hint'] : '';
-                                    $feature_children = array();
+                    foreach ( $children as $feature ) :
+                        $feature_slug  = isset( $feature['slug'] ) ? sanitize_key( $feature['slug'] ) : '';
+                        $feature_label = isset( $feature['label'] ) ? $feature['label'] : '';
+                        $feature_hint  = isset( $feature['hint'] ) ? $feature['hint'] : '';
+                        $feature_children = array();
 
                                     if ( isset( $feature['children'] ) && is_array( $feature['children'] ) ) {
                                         foreach ( $feature['children'] as $sub_feature ) {
@@ -958,6 +1041,46 @@ function a11y_widget_render_admin_page() {
 
                                     if ( '' === $feature_slug || '' === $feature_label ) {
                                         continue;
+                                    }
+
+                                    if ( ! empty( $feature_children ) && isset( $stored_subfeature_layout[ $feature_slug ] ) && is_array( $stored_subfeature_layout[ $feature_slug ] ) ) {
+                                        $ordered_children = array();
+                                        $assigned         = array();
+
+                                        foreach ( $stored_subfeature_layout[ $feature_slug ] as $stored_sub_slug ) {
+                                            $stored_sub_slug = sanitize_key( $stored_sub_slug );
+
+                                            if ( '' === $stored_sub_slug || isset( $assigned[ $stored_sub_slug ] ) ) {
+                                                continue;
+                                            }
+
+                                            foreach ( $feature_children as $child ) {
+                                                $child_slug = isset( $child['slug'] ) ? sanitize_key( $child['slug'] ) : '';
+
+                                                if ( '' === $child_slug || $child_slug !== $stored_sub_slug || isset( $assigned[ $child_slug ] ) ) {
+                                                    continue;
+                                                }
+
+                                                $ordered_children[]      = $child;
+                                                $assigned[ $child_slug ] = true;
+                                                break;
+                                            }
+                                        }
+
+                                        if ( count( $ordered_children ) !== count( $feature_children ) ) {
+                                            foreach ( $feature_children as $child ) {
+                                                $child_slug = isset( $child['slug'] ) ? sanitize_key( $child['slug'] ) : '';
+
+                                                if ( '' === $child_slug || isset( $assigned[ $child_slug ] ) ) {
+                                                    continue;
+                                                }
+
+                                                $ordered_children[]      = $child;
+                                                $assigned[ $child_slug ] = true;
+                                            }
+                                        }
+
+                                        $feature_children = $ordered_children;
                                     }
 
                                     $is_disabled   = isset( $disabled_lookup[ $feature_slug ] );
@@ -1021,8 +1144,23 @@ function a11y_widget_render_admin_page() {
                                             <?php endif; ?>
                                         </div>
 
-                                        <?php if ( $has_children ) : ?>
-                                            <div class="a11y-widget-admin-subfeatures" role="group" aria-labelledby="<?php echo esc_attr( $group_label_id ); ?>">
+                                        <?php if ( $has_children ) :
+                                            $subfeatures_input_id = 'a11y-widget-subfeatures-' . $feature_slug;
+                                            $subfeature_slugs     = implode( ',', wp_list_pluck( $feature_children, 'slug' ) );
+                                            ?>
+                                            <input
+                                                type="hidden"
+                                                id="<?php echo esc_attr( $subfeatures_input_id ); ?>"
+                                                class="a11y-widget-admin-subfeatures-layout"
+                                                name="<?php echo esc_attr( $subfeature_layout_key ); ?>[<?php echo esc_attr( $feature_slug ); ?>]"
+                                                value="<?php echo esc_attr( $subfeature_slugs ); ?>"
+                                            />
+                                            <div
+                                                class="a11y-widget-admin-subfeatures"
+                                                role="group"
+                                                aria-labelledby="<?php echo esc_attr( $group_label_id ); ?>"
+                                                data-subfeatures-input="#<?php echo esc_attr( $subfeatures_input_id ); ?>"
+                                            >
                                                 <?php foreach ( $feature_children as $sub_feature ) :
                                                     $sub_slug        = $sub_feature['slug'];
                                                     $sub_label       = $sub_feature['label'];
@@ -1031,8 +1169,17 @@ function a11y_widget_render_admin_page() {
                                                     $sub_is_disabled = isset( $disabled_lookup[ $sub_slug ] );
                                                     $sub_input_id    = 'a11y-widget-toggle-' . $sub_slug;
                                                     $sub_label_id    = $sub_input_id . '-label';
+                                                    $sub_handle_label = sprintf(
+                                                        /* translators: %s: sub-feature label */
+                                                        esc_html__( 'Déplacer la sous-fonctionnalité « %s »', 'a11y-widget' ),
+                                                        wp_strip_all_tags( $sub_label )
+                                                    );
                                                     ?>
-                                                    <div class="a11y-widget-admin-subfeature">
+                                                    <div class="a11y-widget-admin-subfeature" data-subfeature-slug="<?php echo esc_attr( $sub_slug ); ?>">
+                                                        <button type="button" class="a11y-widget-admin-subfeature__handle" aria-label="<?php echo esc_attr( $sub_handle_label ); ?>">
+                                                            <span class="dashicons dashicons-move" aria-hidden="true"></span>
+                                                            <span class="screen-reader-text"><?php echo esc_html( $sub_handle_label ); ?></span>
+                                                        </button>
                                                         <div class="a11y-widget-admin-subfeature__description">
                                                             <label for="<?php echo esc_attr( $sub_input_id ); ?>" id="<?php echo esc_attr( $sub_label_id ); ?>">
                                                                 <span class="a11y-widget-admin-subfeature__label"><?php echo esc_html( $sub_label ); ?></span>
