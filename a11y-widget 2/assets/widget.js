@@ -51,6 +51,9 @@
   const infoTriggerCloseLabel = infoTrigger
     ? (infoTrigger.dataset.closeLabel || '')
     : '';
+  const infoDisclosureToggles = infoDialog
+    ? Array.from(infoDialog.querySelectorAll('[data-role="info-menu-toggle"], [data-role="info-submenu-toggle"]'))
+    : [];
 
   const tablist = document.querySelector('[data-role="section-tablist"]');
   const tabs = tablist ? Array.from(tablist.querySelectorAll('[data-role="section-tab"]')) : [];
@@ -10256,6 +10259,24 @@ ${interactiveSelectors} {
     return clampInfoDialogPosition(left, top, width, height);
   }
 
+  function setInfoDisclosureState(button, explicitState){
+    if(!button){ return; }
+    const isExpanded = button.getAttribute('aria-expanded') === 'true';
+    const nextExpanded = typeof explicitState === 'boolean' ? explicitState : !isExpanded;
+    const panelId = button.getAttribute('aria-controls');
+    const panel = panelId ? document.getElementById(panelId) : null;
+    button.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+    if(panel){
+      panel.hidden = !nextExpanded;
+      panel.setAttribute('aria-hidden', nextExpanded ? 'false' : 'true');
+      panel.classList.toggle('is-open', nextExpanded);
+    }
+    const container = button.closest('.a11y-info-disclosure');
+    if(container){
+      container.classList.toggle('is-open', nextExpanded);
+    }
+  }
+
   let infoDialogPosition = loadInfoDialogPosition();
   let infoDialogHasCustomPosition = !!infoDialogPosition;
   let infoDialogIsOpen = false;
@@ -10263,6 +10284,27 @@ ${interactiveSelectors} {
   let infoDialogPointerId = null;
   let infoDialogDragState = null;
   let infoDialogMouseDragging = false;
+
+  if(infoDisclosureToggles.length){
+    infoDisclosureToggles.forEach(toggle => {
+      const panelId = toggle.getAttribute('aria-controls');
+      const panel = panelId ? document.getElementById(panelId) : null;
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      if(panel){
+        panel.hidden = !expanded;
+        panel.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+        panel.classList.toggle('is-open', expanded);
+      }
+      const container = toggle.closest('.a11y-info-disclosure');
+      if(container){
+        container.classList.toggle('is-open', expanded);
+      }
+      toggle.addEventListener('click', event => {
+        event.preventDefault();
+        setInfoDisclosureState(toggle);
+      });
+    });
+  }
 
   function ensureInfoDialogInViewport(){
     if(!infoDialog || infoDialog.hidden){ return; }

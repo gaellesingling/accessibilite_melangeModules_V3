@@ -368,6 +368,10 @@ fieldset.a11y-widget-admin-section {
   box-shadow: 0 10px 20px rgba(18, 110, 181, 0.18);
 }
 
+.a11y-widget-admin-feature--dragging .a11y-widget-admin-feature__handle {
+  cursor: grabbing;
+}
+
 .a11y-widget-admin-feature__handle {
   justify-self: center;
   display: inline-flex;
@@ -466,6 +470,10 @@ fieldset.a11y-widget-admin-section {
   border-left: 2px solid var(--a11y-section-feature-border);
 }
 
+.a11y-widget-admin-subfeatures--drag-over {
+  border-left-color: var(--a11y-section-accent);
+}
+
 .a11y-widget-admin-subfeature {
   display: flex;
   flex-direction: column;
@@ -484,8 +492,18 @@ fieldset.a11y-widget-admin-section {
 }
 
 .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
+  grid-area: toggle;
   justify-content: flex-start;
   text-align: left;
+  width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch {
+  width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  justify-content: space-between;
 }
 
 .a11y-widget-admin-subfeature .a11y-widget-switch__ui {
@@ -493,6 +511,7 @@ fieldset.a11y-widget-admin-section {
 }
 
 .a11y-widget-admin-subfeature__description {
+  grid-area: description;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -655,5 +674,13 @@ fieldset.a11y-widget-admin-section {
   .a11y-widget-admin-subfeatures {
     margin-left: 32px;
     padding-left: 14px;
+  }
+
+  .a11y-widget-admin-subfeature {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
+    grid-column: 1 / -1;
   }
 }
