@@ -44,6 +44,41 @@
         toArray(containers).forEach(updateSection);
     }
 
+    function getSubfeaturesInput(container) {
+        var selector = container.getAttribute('data-subfeatures-input');
+        if (selector) {
+            var target = document.querySelector(selector);
+            if (target) {
+                return target;
+            }
+        }
+
+        return container.querySelector('.a11y-widget-admin-subfeatures-layout');
+    }
+
+    function updateSubfeatureContainer(container) {
+        if (!container) {
+            return;
+        }
+
+        var slugs = [];
+        toArray(container.querySelectorAll('.a11y-widget-admin-subfeature')).forEach(function (subfeature) {
+            var slug = subfeature.getAttribute('data-subfeature-slug');
+            if (slug) {
+                slugs.push(slug);
+            }
+        });
+
+        var input = getSubfeaturesInput(container);
+        if (input) {
+            input.value = slugs.join(',');
+        }
+    }
+
+    function refreshSubfeatureContainers(containers) {
+        toArray(containers).forEach(updateSubfeatureContainer);
+    }
+
     function closestContainer(element) {
         while (element && element !== document) {
             if (element.classList && element.classList.contains('a11y-widget-admin-section__content')) {
@@ -106,6 +141,40 @@
         return closest.element;
     }
 
+    function closestSubfeatureContainer(element) {
+        while (element && element !== document) {
+            if (element.classList && element.classList.contains('a11y-widget-admin-subfeatures')) {
+                return element;
+            }
+
+            element = element.parentElement;
+        }
+
+        return null;
+    }
+
+    function getSubfeatureDragAfterElement(container, y) {
+        var siblings = toArray(container.querySelectorAll('.a11y-widget-admin-subfeature:not(.a11y-widget-admin-subfeature--dragging)'));
+        var closest = {
+            offset: Number.NEGATIVE_INFINITY,
+            element: null
+        };
+
+        siblings.forEach(function (child) {
+            var box = child.getBoundingClientRect();
+            var offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                closest = {
+                    offset: offset,
+                    element: child
+                };
+            }
+        });
+
+        return closest.element;
+    }
+
     function getDragAfterElement(container, y) {
         var siblings = toArray(container.querySelectorAll('.a11y-widget-admin-feature:not(.a11y-widget-admin-feature--dragging)'));
         var closest = {
@@ -130,6 +199,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         var containers = toArray(document.querySelectorAll('.a11y-widget-admin-section__content'));
+        var subfeatureContainers = toArray(document.querySelectorAll('.a11y-widget-admin-subfeatures'));
         var sectionGrid = document.querySelector('.a11y-widget-admin-grid');
         var sectionOrderInput = document.querySelector('[data-section-order-input]');
         var launcherGroups = toArray(document.querySelectorAll('[data-launcher-checkbox-group]'));
@@ -182,6 +252,7 @@
         var featureOrigin = null;
         var featureNextSibling = null;
         var featureDropOccurred = false;
+        var armedFeatureForDrag = null;
 
         function cleanupFeatureDrag() {
             containers.forEach(function (container) {
@@ -196,25 +267,155 @@
             featureOrigin = null;
             featureNextSibling = null;
             featureDropOccurred = false;
+            armedFeatureForDrag = null;
+        }
+
+        var draggedSubfeature = null;
+        var subfeatureOrigin = null;
+        var subfeatureNextSibling = null;
+        var subfeatureDropOccurred = false;
+        var armedSubfeatureForDrag = null;
+
+        function cleanupSubfeatureDrag() {
+            subfeatureContainers.forEach(function (container) {
+                container.classList.remove('a11y-widget-admin-subfeatures--drag-over');
+            });
+
+            if (draggedSubfeature) {
+                draggedSubfeature.classList.remove('a11y-widget-admin-subfeature--dragging');
+                draggedSubfeature = null;
+            }
+
+            subfeatureOrigin = null;
+            subfeatureNextSibling = null;
+            subfeatureDropOccurred = false;
+        }
+
+        function startFeatureDrag(feature, event) {
+            if (!feature) {
+                return;
+            }
+
+            var startedOnFeature = event && event.currentTarget === feature;
+            if (!startedOnFeature && feature !== armedFeatureForDrag) {
+                if (event) {
+                    event.preventDefault();
+                }
+                armedFeatureForDrag = null;
+                return;
+            }
+
+            armedFeatureForDrag = null;
+            draggedFeature = feature;
+            featureOrigin = feature.parentElement;
+            featureNextSibling = feature.nextElementSibling;
+            featureDropOccurred = false;
+
+            feature.classList.add('a11y-widget-admin-feature--dragging');
+
+            if (event && event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                try {
+                    event.dataTransfer.setData('text/plain', feature.getAttribute('data-feature-slug') || 'feature');
+
+                    if (event.dataTransfer.setDragImage) {
+                        var rect = feature.getBoundingClientRect();
+                        var offsetX = 0;
+                        var offsetY = 0;
+
+                        if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+                            offsetX = event.clientX - rect.left;
+                            offsetY = event.clientY - rect.top;
+                        } else if (typeof event.offsetX === 'number' && typeof event.offsetY === 'number') {
+                            offsetX = event.offsetX;
+                            offsetY = event.offsetY;
+                        }
+
+                        event.dataTransfer.setDragImage(feature, offsetX, offsetY);
+                    }
+                } catch (err) {
+                    // Ignore errors from browsers that disallow setting data.
+                }
+            }
+        }
+
+        function finishFeatureDrag(feature) {
+            if (!feature || draggedFeature !== feature) {
+                return;
+            }
+
+            if (!featureDropOccurred && featureOrigin) {
+                if (featureNextSibling && featureNextSibling.parentNode === featureOrigin) {
+                    featureOrigin.insertBefore(feature, featureNextSibling);
+                } else {
+                    featureOrigin.appendChild(feature);
+                }
+            }
+
+            refreshAll(containers);
+            refreshSubfeatureContainers(subfeatureContainers);
+            cleanupFeatureDrag();
         }
 
         function enableFeatureDrag(feature) {
             feature.setAttribute('draggable', 'true');
 
             feature.addEventListener('dragstart', function (event) {
-                draggedFeature = feature;
-                featureOrigin = feature.parentElement;
-                featureNextSibling = feature.nextElementSibling;
-                featureDropOccurred = false;
+                if (event.target !== feature) {
+                    return;
+                }
 
-                feature.classList.add('a11y-widget-admin-feature--dragging');
+                startFeatureDrag(feature, event);
+            });
+
+            feature.addEventListener('dragend', function (event) {
+                if (event.target !== feature) {
+                    return;
+                }
+
+                finishFeatureDrag(feature);
+            });
+
+            var handle = feature.querySelector('.a11y-widget-admin-feature__handle');
+
+            if (handle) {
+                handle.setAttribute('draggable', 'true');
+
+                handle.addEventListener('dragstart', function (event) {
+                    startFeatureDrag(feature, event);
+                    event.stopPropagation();
+                });
+
+                handle.addEventListener('dragend', function (event) {
+                    finishFeatureDrag(feature);
+                    event.stopPropagation();
+                });
+            }
+        }
+
+        function enableSubfeatureDrag(subfeature) {
+            subfeature.setAttribute('draggable', 'true');
+
+            subfeature.addEventListener('dragstart', function (event) {
+                if (subfeature !== armedSubfeatureForDrag) {
+                    event.preventDefault();
+                    return;
+                }
+
+                armedSubfeatureForDrag = null;
+                draggedSubfeature = subfeature;
+                subfeatureOrigin = subfeature.parentElement;
+                subfeatureNextSibling = subfeature.nextElementSibling;
+                subfeatureDropOccurred = false;
+
+                subfeature.classList.add('a11y-widget-admin-subfeature--dragging');
 
                 if (event.dataTransfer) {
                     event.dataTransfer.effectAllowed = 'move';
                     try {
-                        event.dataTransfer.setData('text/plain', feature.getAttribute('data-feature-slug') || 'feature');
+                        event.dataTransfer.setData('text/plain', subfeature.getAttribute('data-subfeature-slug') || 'subfeature');
                         if (event.dataTransfer.setDragImage) {
-                            event.dataTransfer.setDragImage(feature, event.offsetX || 0, event.offsetY || 0);
+                            event.dataTransfer.setDragImage(subfeature, event.offsetX || 0, event.offsetY || 0);
                         }
                     } catch (err) {
                         // Ignore errors from browsers that disallow setting data.
@@ -222,17 +423,17 @@
                 }
             });
 
-            feature.addEventListener('dragend', function () {
-                if (!featureDropOccurred && featureOrigin) {
-                    if (featureNextSibling && featureNextSibling.parentNode === featureOrigin) {
-                        featureOrigin.insertBefore(feature, featureNextSibling);
+            subfeature.addEventListener('dragend', function () {
+                if (!subfeatureDropOccurred && subfeatureOrigin) {
+                    if (subfeatureNextSibling && subfeatureNextSibling.parentNode === subfeatureOrigin) {
+                        subfeatureOrigin.insertBefore(subfeature, subfeatureNextSibling);
                     } else {
-                        featureOrigin.appendChild(feature);
+                        subfeatureOrigin.appendChild(subfeature);
                     }
                 }
 
-                refreshAll(containers);
-                cleanupFeatureDrag();
+                refreshSubfeatureContainers(subfeatureContainers);
+                cleanupSubfeatureDrag();
             });
         }
 
@@ -281,6 +482,103 @@
                 event.preventDefault();
                 featureDropOccurred = true;
                 container.classList.remove('a11y-widget-admin-section__content--drag-over');
+            });
+        });
+
+        document.addEventListener('mousedown', function (event) {
+            var featureHandle = event.target.closest('.a11y-widget-admin-feature__handle');
+
+            if (featureHandle) {
+                armedFeatureForDrag = featureHandle.closest('.a11y-widget-admin-feature');
+            } else {
+                armedFeatureForDrag = null;
+            }
+        });
+
+        document.addEventListener('touchstart', function (event) {
+            var featureHandle = event.target.closest('.a11y-widget-admin-feature__handle');
+
+            if (featureHandle) {
+                armedFeatureForDrag = featureHandle.closest('.a11y-widget-admin-feature');
+            } else {
+                armedFeatureForDrag = null;
+            }
+        }, { passive: true });
+
+        document.addEventListener('mouseup', function () {
+            armedFeatureForDrag = null;
+            armedSubfeatureForDrag = null;
+        });
+
+        document.addEventListener('touchend', function () {
+            armedFeatureForDrag = null;
+            armedSubfeatureForDrag = null;
+        });
+
+        subfeatureContainers.forEach(function (container) {
+            container.addEventListener('mousedown', function (event) {
+                var handle = event.target.closest('.a11y-widget-admin-subfeature__handle');
+                if (handle && container.contains(handle)) {
+                    armedSubfeatureForDrag = handle.closest('.a11y-widget-admin-subfeature');
+                } else {
+                    armedSubfeatureForDrag = null;
+                }
+            });
+
+            container.addEventListener('touchstart', function (event) {
+                var touchHandle = event.target.closest('.a11y-widget-admin-subfeature__handle');
+                if (touchHandle && container.contains(touchHandle)) {
+                    armedSubfeatureForDrag = touchHandle.closest('.a11y-widget-admin-subfeature');
+                } else {
+                    armedSubfeatureForDrag = null;
+                }
+            }, { passive: true });
+
+            toArray(container.querySelectorAll('.a11y-widget-admin-subfeature')).forEach(enableSubfeatureDrag);
+
+            container.addEventListener('dragenter', function (event) {
+                if (!draggedSubfeature || draggedFeature) {
+                    return;
+                }
+
+                event.preventDefault();
+                container.classList.add('a11y-widget-admin-subfeatures--drag-over');
+            });
+
+            container.addEventListener('dragover', function (event) {
+                if (!draggedSubfeature || draggedFeature) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                var afterElement = getSubfeatureDragAfterElement(container, event.clientY);
+
+                if (!afterElement) {
+                    container.appendChild(draggedSubfeature);
+                } else if (afterElement !== draggedSubfeature) {
+                    container.insertBefore(draggedSubfeature, afterElement);
+                }
+            });
+
+            container.addEventListener('dragleave', function (event) {
+                if (!draggedSubfeature || draggedFeature) {
+                    return;
+                }
+
+                if (!container.contains(event.relatedTarget)) {
+                    container.classList.remove('a11y-widget-admin-subfeatures--drag-over');
+                }
+            });
+
+            container.addEventListener('drop', function (event) {
+                if (!draggedSubfeature || draggedFeature) {
+                    return;
+                }
+
+                event.preventDefault();
+                subfeatureDropOccurred = true;
+                container.classList.remove('a11y-widget-admin-subfeatures--drag-over');
             });
         });
 
@@ -405,6 +703,10 @@
                 featureDropOccurred = true;
             }
 
+            if (draggedSubfeature && closestSubfeatureContainer(event.target)) {
+                subfeatureDropOccurred = true;
+            }
+
             if (draggedSection) {
                 if (closestSection(event.target) || (sectionGrid && sectionGrid.contains(event.target))) {
                     sectionDropOccurred = true;
@@ -413,6 +715,7 @@
         }, true);
 
         refreshAll(containers);
+        refreshSubfeatureContainers(subfeatureContainers);
         if (sectionGrid && sectionOrderInput) {
             updateSectionOrder(sectionGrid, sectionOrderInput);
         }
@@ -421,6 +724,7 @@
         if (form) {
             form.addEventListener('submit', function () {
                 refreshAll(containers);
+                refreshSubfeatureContainers(subfeatureContainers);
                 if (sectionGrid && sectionOrderInput) {
                     updateSectionOrder(sectionGrid, sectionOrderInput);
                 }
