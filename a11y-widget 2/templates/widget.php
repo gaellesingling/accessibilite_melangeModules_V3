@@ -121,7 +121,57 @@ $root_classes = implode( ' ', array_filter( array_unique( $root_class_names ) ) 
           <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
         </svg>
       </button>
-      <span class="a11y-icon" aria-hidden="true"><?php echo $panel_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+      <button
+        type="button"
+        class="a11y-icon a11y-info-trigger"
+        id="a11y-info-trigger"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="a11y-info-dialog"
+        aria-label="<?php echo esc_attr__( 'Ouvrir la fenêtre didactique', 'a11y-widget' ); ?>"
+        data-open-label="<?php echo esc_attr__( 'Ouvrir la fenêtre didactique', 'a11y-widget' ); ?>"
+        data-close-label="<?php echo esc_attr__( 'Fermer la fenêtre didactique', 'a11y-widget' ); ?>"
+      >
+        <svg
+          class="a11y-info-trigger__icon"
+          id="Calque_2"
+          data-name="Calque 2"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 286.84 286.84"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <defs>
+            <style>
+              .cls-1 {
+                fill: #fff;
+              }
+            </style>
+          </defs>
+          <g id="Calque_1-2" data-name="Calque 1">
+            <g>
+              <path
+                class="cls-1"
+                d="M286.84,0v286.84H0V0h286.84ZM253.1,22.5c-28.15-12.98-92.14,22.62-108.73,21.22-12.27-1.04-42.41-16.99-64.36-19.65-13.62-1.65-26.98-2.32-40.63-1.57v196.85c29.77-9.33,87.59,23.93,109.23,22.48,25.26-1.7,72.03-30.76,104.5-22.48V22.5ZM28.12,50.62h-11.25v191.23c37.57-9.71,101.95,23.59,131.7,22.23,32.64-1.49,87.64-30.87,127.02-22.23V50.62h-11.25v179.98c-34.88-10.97-92.46,22.32-120.02,20.91-31.12-1.6-79.09-30.66-116.2-20.91V50.62Z"
+              />
+              <path
+                d="M253.1,22.5v196.85c-32.46-8.29-79.24,20.78-104.5,22.48-21.64,1.46-79.46-31.8-109.23-22.48V22.5c13.66-.75,27.01-.08,40.63,1.57,21.96,2.66,52.09,18.61,64.36,19.65,16.59,1.41,80.58-34.19,108.73-21.22ZM140.61,224.97V59.06c-25.5-19.01-59.91-19.74-89.99-25.31v174.36l89.99,16.87ZM241.85,33.75c-30.08,5.57-64.49,6.3-89.99,25.31v165.92l89.99-16.87V33.75Z"
+              />
+              <path
+                d="M28.12,50.62v179.98c37.1-9.75,85.07,19.31,116.2,20.91,27.57,1.41,85.15-31.88,120.02-20.91V50.62h11.25v191.23c-39.38-8.64-94.38,20.74-127.02,22.23-29.75,1.36-94.13-31.94-131.7-22.23V50.62h11.25Z"
+              />
+              <path
+                class="cls-1"
+                d="M140.61,224.97l-89.99-16.87V33.75c30.08,5.57,64.49,6.3,89.99,25.31v165.92Z"
+              />
+              <path
+                class="cls-1"
+                d="M241.85,33.75v174.36l-89.99,16.87V59.06c25.5-19.01,59.91-19.74,89.99-25.31Z"
+              />
+            </g>
+          </g>
+        </svg>
+      </button>
       <h2 id="a11y-title" class="a11y-title"><?php echo esc_html__('Accessibilité du site', 'a11y-widget'); ?></h2>
       <button
         type="button"
@@ -135,6 +185,316 @@ $root_classes = implode( ' ', array_filter( array_unique( $root_class_names ) ) 
       <div class="a11y-spacer" aria-hidden="true"></div>
       <button class="a11y-close" id="a11y-close" aria-label="<?php echo esc_attr__('Fermer le module', 'a11y-widget'); ?>">✕</button>
     </header>
+
+    <aside
+      id="a11y-info-dialog"
+      class="a11y-info-dialog"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="a11y-info-title"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="a11y-info-dialog__inner">
+        <div class="a11y-info-dialog__header" id="a11y-info-handle">
+          <h3 class="a11y-info-dialog__title" id="a11y-info-title"><?php echo esc_html__( 'Fenêtre didactique', 'a11y-widget' ); ?></h3>
+          <button
+            type="button"
+            class="a11y-info-dialog__close"
+            id="a11y-info-close"
+            aria-label="<?php echo esc_attr__( 'Fermer la fenêtre didactique', 'a11y-widget' ); ?>"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        <div class="a11y-info-dialog__content" id="a11y-info-content">
+          <nav
+            class="a11y-info-menu"
+            data-role="info-menu"
+            aria-label="<?php echo esc_attr__( 'Contenu didactique', 'a11y-widget' ); ?>"
+          >
+            <ul class="a11y-info-menu__list">
+              <li class="a11y-info-menu__item a11y-info-disclosure">
+                <button
+                  type="button"
+                  class="a11y-info-menu__toggle a11y-info-disclosure__toggle"
+                  id="a11y-info-menu-toggle-luminosite"
+                  aria-expanded="false"
+                  aria-controls="a11y-info-menu-panel-luminosite"
+                  data-role="info-menu-toggle"
+                >
+                  <span class="a11y-info-menu__label"><?php echo esc_html__( 'Luminosité', 'a11y-widget' ); ?></span>
+                </button>
+                <div
+                  class="a11y-info-menu__panel a11y-info-disclosure__panel"
+                  id="a11y-info-menu-panel-luminosite"
+                  role="region"
+                  aria-labelledby="a11y-info-menu-toggle-luminosite"
+                  aria-hidden="true"
+                  hidden
+                  data-role="info-menu-panel"
+                >
+                  <div class="a11y-info-panel__body">
+                    <p class="a11y-info-panel__intro"><?php echo esc_html__( 'Module luminosité', 'a11y-widget' ); ?></p>
+                    <h4 class="a11y-info-heading"><?php echo esc_html__( 'Module Luminosité - Accessibilité Modulaire', 'a11y-widget' ); ?></h4>
+                    <div class="a11y-info-submenus">
+                      <div class="a11y-info-submenu a11y-info-disclosure a11y-info-disclosure--nested">
+                        <button
+                          type="button"
+                          class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                          id="a11y-info-submenu-toggle-luminosite-description"
+                          aria-expanded="false"
+                          aria-controls="a11y-info-submenu-panel-luminosite-description"
+                          data-role="info-submenu-toggle"
+                        >
+                          <span><?php echo esc_html__( '💡 Description', 'a11y-widget' ); ?></span>
+                        </button>
+                        <div
+                          class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                          id="a11y-info-submenu-panel-luminosite-description"
+                          role="region"
+                          aria-labelledby="a11y-info-submenu-toggle-luminosite-description"
+                          aria-hidden="true"
+                          hidden
+                          data-role="info-submenu-panel"
+                        >
+                          <p class="a11y-info-panel__text"><?php echo esc_html__( 'Module de gestion de la luminosité et des modes d’affichage permettant aux utilisateurs d’ajuster :', 'a11y-widget' ); ?></p>
+                          <ul class="a11y-info-list">
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Mode Normal', 'a11y-widget' ); ?></strong> — <?php echo esc_html__( 'Affichage par défaut du site', 'a11y-widget' ); ?></p>
+                            </li>
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Mode nuit', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( 'Fond sombre avec texte clair pour réduire la fatigue oculaire', 'a11y-widget' ); ?></p>
+                              <p class="a11y-info-list__detail"><?php echo esc_html__( 'Fond noir (#1a1a1a) avec texte blanc', 'a11y-widget' ); ?></p>
+                            </li>
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Mode lumière bleue', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( 'Filtre chaud pour protéger les yeux en soirée', 'a11y-widget' ); ?></p>
+                              <p class="a11y-info-list__detail"><?php echo esc_html__( 'Filtre orange chaud (sepia 90 % + hue-rotate -10deg)', 'a11y-widget' ); ?></p>
+                            </li>
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Mode contraste élevé', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( 'Contraste AAA pour une meilleure lisibilité', 'a11y-widget' ); ?></p>
+                              <p class="a11y-info-list__detail"><?php echo esc_html__( 'Contraste maximum (noir sur blanc ou blanc sur noir)', 'a11y-widget' ); ?></p>
+                            </li>
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Mode contraste faible', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( 'Contraste réduit pour les sensibilités visuelles', 'a11y-widget' ); ?></p>
+                              <p class="a11y-info-list__detail"><?php echo esc_html__( 'Réduction du contraste pour limiter les sensibilités visuelles', 'a11y-widget' ); ?></p>
+                            </li>
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Mode niveaux de gris', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( 'Suppression des couleurs', 'a11y-widget' ); ?></p>
+                              <p class="a11y-info-list__detail"><?php echo esc_html__( 'Suppression des couleurs (grayscale 100 %)', 'a11y-widget' ); ?></p>
+                            </li>
+                            <li class="a11y-info-list__item">
+                              <p class="a11y-info-list__label"><strong><?php echo esc_html__( 'Réglages avancés', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( 'Contraste, luminosité et saturation personnalisés', 'a11y-widget' ); ?></p>
+                              <ul class="a11y-info-list a11y-info-list--sub">
+                                <li class="a11y-info-list__item"><p class="a11y-info-list__detail"><strong><?php echo esc_html__( 'Contraste', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( '50 % - 200 % (défaut : 100 %)', 'a11y-widget' ); ?></p></li>
+                                <li class="a11y-info-list__item"><p class="a11y-info-list__detail"><strong><?php echo esc_html__( 'Luminosité', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( '50 % - 150 % (défaut : 100 %)', 'a11y-widget' ); ?></p></li>
+                                <li class="a11y-info-list__item"><p class="a11y-info-list__detail"><strong><?php echo esc_html__( 'Saturation', 'a11y-widget' ); ?></strong> : <?php echo esc_html__( '0 % - 200 % (défaut : 100 %)', 'a11y-widget' ); ?></p></li>
+                              </ul>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                      <div class="a11y-info-submenu a11y-info-disclosure a11y-info-disclosure--nested">
+                        <button
+                          type="button"
+                          class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                          id="a11y-info-submenu-toggle-luminosite-storage"
+                          aria-expanded="false"
+                          aria-controls="a11y-info-submenu-panel-luminosite-storage"
+                          data-role="info-submenu-toggle"
+                        >
+                          <span><?php echo esc_html__( '💾 Persistance des données', 'a11y-widget' ); ?></span>
+                        </button>
+                        <div
+                          class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                          id="a11y-info-submenu-panel-luminosite-storage"
+                          role="region"
+                          aria-labelledby="a11y-info-submenu-toggle-luminosite-storage"
+                          aria-hidden="true"
+                          hidden
+                          data-role="info-submenu-panel"
+                        >
+                          <p class="a11y-info-panel__text"><?php echo esc_html__( 'Les préférences sont sauvegardées dans des cookies (durée : 365 jours).', 'a11y-widget' ); ?></p>
+                          <p class="a11y-info-panel__note">
+                            <strong><?php echo esc_html__( 'IMPORTANT', 'a11y-widget' ); ?></strong>
+                            <?php
+                            echo wp_kses_post(
+                              sprintf(
+                                /* translators: 1: <code>localStorage</code>, 2: <code>sessionStorage</code> */
+                                __( 'Ce module utilise uniquement des cookies, jamais %1$s ou %2$s.', 'a11y-widget' ),
+                                '<code>localStorage</code>',
+                                '<code>sessionStorage</code>'
+                              )
+                            );
+                            ?>
+                          </p>
+                        </div>
+                      </div>
+                      <div class="a11y-info-submenu a11y-info-disclosure a11y-info-disclosure--nested">
+                        <button
+                          type="button"
+                          class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                          id="a11y-info-submenu-toggle-luminosite-css"
+                          aria-expanded="false"
+                          aria-controls="a11y-info-submenu-panel-luminosite-css"
+                          data-role="info-submenu-toggle"
+                        >
+                          <span><?php echo esc_html__( '🎨 Implémentation CSS', 'a11y-widget' ); ?></span>
+                        </button>
+                        <div
+                          class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                          id="a11y-info-submenu-panel-luminosite-css"
+                          role="region"
+                          aria-labelledby="a11y-info-submenu-toggle-luminosite-css"
+                          aria-hidden="true"
+                          hidden
+                          data-role="info-submenu-panel"
+                        >
+                          <p class="a11y-info-panel__text"><?php echo esc_html__( 'Le module applique la propriété CSS filter sur l’élément body.', 'a11y-widget' ); ?></p>
+                          <pre class="a11y-info-code"><code><?php echo esc_html( "body {\n    filter: contrast(120%) brightness(110%) saturate(90%);\n}" ); ?></code></pre>
+                          <h5 class="a11y-info-subheading"><?php echo esc_html__( 'Mode nuit', 'a11y-widget' ); ?></h5>
+                          <pre class="a11y-info-code"><code><?php echo esc_html( "body {\n    background-color: #1a1a1a !important;\n    color: #f5f5f5 !important;\n    filter: invert(1) hue-rotate(180deg);\n}\n\nimg, video, [style*=\"background-image\"] {\n    filter: invert(1) hue-rotate(180deg);\n}" ); ?></code></pre>
+                          <h5 class="a11y-info-subheading"><?php echo esc_html__( 'Mode contraste élevé', 'a11y-widget' ); ?></h5>
+                          <pre class="a11y-info-code"><code><?php echo esc_html( "body {\n    filter: contrast(200%);\n}\n\n* {\n    border-color: currentColor !important;\n}" ); ?></code></pre>
+                        </div>
+                      </div>
+                      <div class="a11y-info-submenu a11y-info-disclosure a11y-info-disclosure--nested">
+                        <button
+                          type="button"
+                          class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                          id="a11y-info-submenu-toggle-luminosite-usecases"
+                          aria-expanded="false"
+                          aria-controls="a11y-info-submenu-panel-luminosite-usecases"
+                          data-role="info-submenu-toggle"
+                        >
+                          <span><?php echo esc_html__( '🔍 Cas d’usage', 'a11y-widget' ); ?></span>
+                        </button>
+                        <div
+                          class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                          id="a11y-info-submenu-panel-luminosite-usecases"
+                          role="region"
+                          aria-labelledby="a11y-info-submenu-toggle-luminosite-usecases"
+                          aria-hidden="true"
+                          hidden
+                          data-role="info-submenu-panel"
+                        >
+                          <ul class="a11y-info-submenu-list">
+                            <li class="a11y-info-submenu-item a11y-info-disclosure a11y-info-disclosure--level-2">
+                              <button
+                                type="button"
+                                class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                                id="a11y-info-submenu-toggle-luminosite-usecases-malvoyants"
+                                aria-expanded="false"
+                                aria-controls="a11y-info-submenu-panel-luminosite-usecases-malvoyants"
+                                data-role="info-submenu-toggle"
+                              >
+                                <span><?php echo esc_html__( 'Pour les malvoyants', 'a11y-widget' ); ?></span>
+                              </button>
+                              <div
+                                class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                                id="a11y-info-submenu-panel-luminosite-usecases-malvoyants"
+                                role="region"
+                                aria-labelledby="a11y-info-submenu-toggle-luminosite-usecases-malvoyants"
+                                aria-hidden="true"
+                                hidden
+                                data-role="info-submenu-panel"
+                              >
+                                <ul class="a11y-info-list">
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Mode contraste élevé pour améliorer la lisibilité', 'a11y-widget' ); ?></p></li>
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Ajustement de la luminosité', 'a11y-widget' ); ?></p></li>
+                                </ul>
+                              </div>
+                            </li>
+                            <li class="a11y-info-submenu-item a11y-info-disclosure a11y-info-disclosure--level-2">
+                              <button
+                                type="button"
+                                class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                                id="a11y-info-submenu-toggle-luminosite-usecases-photosensibilite"
+                                aria-expanded="false"
+                                aria-controls="a11y-info-submenu-panel-luminosite-usecases-photosensibilite"
+                                data-role="info-submenu-toggle"
+                              >
+                                <span><?php echo esc_html__( 'Pour la photosensibilité', 'a11y-widget' ); ?></span>
+                              </button>
+                              <div
+                                class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                                id="a11y-info-submenu-panel-luminosite-usecases-photosensibilite"
+                                role="region"
+                                aria-labelledby="a11y-info-submenu-toggle-luminosite-usecases-photosensibilite"
+                                aria-hidden="true"
+                                hidden
+                                data-role="info-submenu-panel"
+                              >
+                                <ul class="a11y-info-list">
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Mode nuit pour réduire l’éblouissement', 'a11y-widget' ); ?></p></li>
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Réduction du contraste pour les sensibilités visuelles', 'a11y-widget' ); ?></p></li>
+                                </ul>
+                              </div>
+                            </li>
+                            <li class="a11y-info-submenu-item a11y-info-disclosure a11y-info-disclosure--level-2">
+                              <button
+                                type="button"
+                                class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                                id="a11y-info-submenu-toggle-luminosite-usecases-fatigue"
+                                aria-expanded="false"
+                                aria-controls="a11y-info-submenu-panel-luminosite-usecases-fatigue"
+                                data-role="info-submenu-toggle"
+                              >
+                                <span><?php echo esc_html__( 'Pour la fatigue oculaire', 'a11y-widget' ); ?></span>
+                              </button>
+                              <div
+                                class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                                id="a11y-info-submenu-panel-luminosite-usecases-fatigue"
+                                role="region"
+                                aria-labelledby="a11y-info-submenu-toggle-luminosite-usecases-fatigue"
+                                aria-hidden="true"
+                                hidden
+                                data-role="info-submenu-panel"
+                              >
+                                <ul class="a11y-info-list">
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Mode lumière bleue en fin de journée', 'a11y-widget' ); ?></p></li>
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Mode nuit pour une utilisation prolongée', 'a11y-widget' ); ?></p></li>
+                                </ul>
+                              </div>
+                            </li>
+                            <li class="a11y-info-submenu-item a11y-info-disclosure a11y-info-disclosure--level-2">
+                              <button
+                                type="button"
+                                class="a11y-info-submenu__toggle a11y-info-disclosure__toggle"
+                                id="a11y-info-submenu-toggle-luminosite-usecases-daltonisme"
+                                aria-expanded="false"
+                                aria-controls="a11y-info-submenu-panel-luminosite-usecases-daltonisme"
+                                data-role="info-submenu-toggle"
+                              >
+                                <span><?php echo esc_html__( 'Pour le daltonisme', 'a11y-widget' ); ?></span>
+                              </button>
+                              <div
+                                class="a11y-info-submenu__panel a11y-info-disclosure__panel"
+                                id="a11y-info-submenu-panel-luminosite-usecases-daltonisme"
+                                role="region"
+                                aria-labelledby="a11y-info-submenu-toggle-luminosite-usecases-daltonisme"
+                                aria-hidden="true"
+                                hidden
+                                data-role="info-submenu-panel"
+                              >
+                                <ul class="a11y-info-list">
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Mode niveaux de gris pour éliminer la confusion des couleurs', 'a11y-widget' ); ?></p></li>
+                                  <li class="a11y-info-list__item"><p class="a11y-info-list__label"><?php echo esc_html__( 'Ajustement de la saturation', 'a11y-widget' ); ?></p></li>
+                                </ul>
+                              </div>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </aside>
 
     <div class="a11y-content" id="a11y-content">
       <?php

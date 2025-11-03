@@ -6,6 +6,7 @@
   const STORAGE_KEY = 'a11y-widget-prefs:v1';
   const LAUNCHER_POS_KEY = 'a11y-widget-launcher-pos:v1';
   const PANEL_SIDE_KEY = 'a11y-widget-panel-side:v1';
+  const INFO_DIALOG_POS_KEY = 'a11y-widget-info-dialog-pos:v1';
 
   // -------- API publique --------
   const listeners = new Map(); // key -> Set<fct>
@@ -40,6 +41,19 @@
     left: sideToggleBtn.dataset.labelLeft || '',
     right: sideToggleBtn.dataset.labelRight || ''
   } : null;
+  const infoTrigger = document.getElementById('a11y-info-trigger');
+  const infoDialog = document.getElementById('a11y-info-dialog');
+  const infoHandle = document.getElementById('a11y-info-handle');
+  const infoCloseBtn = document.getElementById('a11y-info-close');
+  const infoTriggerOpenLabel = infoTrigger
+    ? (infoTrigger.dataset.openLabel || infoTrigger.getAttribute('aria-label') || '')
+    : '';
+  const infoTriggerCloseLabel = infoTrigger
+    ? (infoTrigger.dataset.closeLabel || '')
+    : '';
+  const infoDisclosureToggles = infoDialog
+    ? Array.from(infoDialog.querySelectorAll('[data-role="info-menu-toggle"], [data-role="info-submenu-toggle"]'))
+    : [];
 
   const tablist = document.querySelector('[data-role="section-tablist"]');
   const tabs = tablist ? Array.from(tablist.querySelectorAll('[data-role="section-tab"]')) : [];
@@ -4636,6 +4650,20 @@
       panel.classList.toggle('is-right', resolved === 'right');
     }
     updateSideToggleUI(resolved);
+    if(infoDialog){
+      if(!infoDialogHasCustomPosition){
+        infoDialogPosition = null;
+        if(infoDialogIsOpen){
+          const rect = getInfoDialogRect();
+          const pos = computeDefaultInfoDialogPosition(rect);
+          infoDialogPosition = pos;
+          applyInfoDialogPosition(pos);
+          ensureInfoDialogInViewport();
+        }
+      } else if(infoDialogIsOpen){
+        ensureInfoDialogInViewport();
+      }
+    }
     if(readingGuideSummaryEl && !readingGuideSummaryHasCustomPosition){
       restoreReadingGuideSummaryPosition();
     }
@@ -10137,6 +10165,387 @@ ${interactiveSelectors} {
     }
   }
 
+  // ---------- Info dialog ----------
+  function loadInfoDialogPosition(){
+    try {
+      const raw = localStorage.getItem(INFO_DIALOG_POS_KEY);
+      if(!raw){ return null; }
+      const parsed = JSON.parse(raw);
+      if(!parsed || typeof parsed !== 'object'){ return null; }
+      const left = Number(parsed.left);
+      const top = Number(parsed.top);
+      if(Number.isFinite(left) && Number.isFinite(top)){
+        return { left, top };
+      }
+    } catch(err){ /* ignore */ }
+    return null;
+  }
+
+  function persistInfoDialogPosition(position){
+    if(!position || typeof position.left !== 'number' || typeof position.top !== 'number'){
+      try { localStorage.removeItem(INFO_DIALOG_POS_KEY); } catch(err){ /* ignore */ }
+      return;
+    }
+    const payload = {
+      left: Math.round(position.left * 100) / 100,
+      top: Math.round(position.top * 100) / 100,
+    };
+    try { localStorage.setItem(INFO_DIALOG_POS_KEY, JSON.stringify(payload)); } catch(err){ /* ignore */ }
+  }
+
+  function applyInfoDialogPosition(position){
+    if(!infoDialog){ return; }
+    if(position && typeof position.left === 'number' && typeof position.top === 'number'){
+      infoDialog.style.left = `${position.left}px`;
+      infoDialog.style.top = `${position.top}px`;
+      infoDialog.style.right = 'auto';
+      infoDialog.style.bottom = 'auto';
+    } else {
+      infoDialog.style.left = '';
+      infoDialog.style.top = '';
+      infoDialog.style.right = '';
+      infoDialog.style.bottom = '';
+    }
+  }
+
+  function clampInfoDialogPosition(left, top, width, height){
+    const margin = 16;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const safeWidth = Math.min(width || 0, viewportWidth || width || 0);
+    const safeHeight = Math.min(height || 0, viewportHeight || height || 0);
+    const maxLeft = Math.max(margin, (viewportWidth || 0) - safeWidth - margin);
+    const maxTop = Math.max(margin, (viewportHeight || 0) - safeHeight - margin);
+    const clampedLeft = Math.min(Math.max(left, margin), maxLeft);
+    const clampedTop = Math.min(Math.max(top, margin), maxTop);
+    return {
+      left: Math.round(clampedLeft * 100) / 100,
+      top: Math.round(clampedTop * 100) / 100,
+    };
+  }
+
+  function getInfoDialogRect(){
+    if(!infoDialog){ return { width: 0, height: 0, left: 0, top: 0 }; }
+    const rect = infoDialog.getBoundingClientRect();
+    const width = rect.width || infoDialog.offsetWidth || 0;
+    const height = rect.height || infoDialog.offsetHeight || 0;
+    return {
+      width,
+      height,
+      left: rect.left,
+      top: rect.top,
+    };
+  }
+
+  function computeDefaultInfoDialogPosition(rect){
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const width = rect && rect.width ? rect.width : Math.min(420, viewportWidth ? viewportWidth - 32 : 420);
+    const height = rect && rect.height ? rect.height : Math.min(320, viewportHeight ? viewportHeight - 48 : 320);
+    let left = (viewportWidth - width) / 2;
+    if(!Number.isFinite(left)){ left = 16; }
+    let top = Math.max(24, (viewportHeight - height) / 3);
+    if(!Number.isFinite(top)){ top = 24; }
+    if(panel && panel.offsetParent !== null){
+      const panelRect = panel.getBoundingClientRect();
+      left = panelRect.left + (panelRect.width - width) / 2;
+      top = panelRect.top - height - 16;
+      if(top < 16){
+        const fallbackTop = Math.min(panelRect.bottom + 16, viewportHeight ? viewportHeight - height - 16 : top);
+        top = Number.isFinite(fallbackTop) ? fallbackTop : 16;
+        if(top < 16){ top = 16; }
+      }
+    }
+    return clampInfoDialogPosition(left, top, width, height);
+  }
+
+  function setInfoDisclosureState(button, explicitState){
+    if(!button){ return; }
+    const isExpanded = button.getAttribute('aria-expanded') === 'true';
+    const nextExpanded = typeof explicitState === 'boolean' ? explicitState : !isExpanded;
+    const panelId = button.getAttribute('aria-controls');
+    const panel = panelId ? document.getElementById(panelId) : null;
+    button.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+    if(panel){
+      panel.hidden = !nextExpanded;
+      panel.setAttribute('aria-hidden', nextExpanded ? 'false' : 'true');
+      panel.classList.toggle('is-open', nextExpanded);
+    }
+    const container = button.closest('.a11y-info-disclosure');
+    if(container){
+      container.classList.toggle('is-open', nextExpanded);
+    }
+  }
+
+  let infoDialogPosition = loadInfoDialogPosition();
+  let infoDialogHasCustomPosition = !!infoDialogPosition;
+  let infoDialogIsOpen = false;
+  let infoDialogHideTimer = null;
+  let infoDialogPointerId = null;
+  let infoDialogDragState = null;
+  let infoDialogMouseDragging = false;
+
+  if(infoDisclosureToggles.length){
+    infoDisclosureToggles.forEach(toggle => {
+      const panelId = toggle.getAttribute('aria-controls');
+      const panel = panelId ? document.getElementById(panelId) : null;
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      if(panel){
+        panel.hidden = !expanded;
+        panel.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+        panel.classList.toggle('is-open', expanded);
+      }
+      const container = toggle.closest('.a11y-info-disclosure');
+      if(container){
+        container.classList.toggle('is-open', expanded);
+      }
+      toggle.addEventListener('click', event => {
+        event.preventDefault();
+        setInfoDisclosureState(toggle);
+      });
+    });
+  }
+
+  function ensureInfoDialogInViewport(){
+    if(!infoDialog || infoDialog.hidden){ return; }
+    const rect = getInfoDialogRect();
+    if(!rect.width || !rect.height){ return; }
+    const clamped = clampInfoDialogPosition(rect.left, rect.top, rect.width, rect.height);
+    if(Math.abs(clamped.left - rect.left) > 0.5 || Math.abs(clamped.top - rect.top) > 0.5){
+      applyInfoDialogPosition(clamped);
+      infoDialogPosition = clamped;
+      if(infoDialogHasCustomPosition){
+        persistInfoDialogPosition(clamped);
+      }
+    }
+  }
+
+  function resetInfoDialogPosition(options = {}){
+    const { persist: shouldPersist = true } = options;
+    infoDialogPosition = null;
+    infoDialogHasCustomPosition = false;
+    if(infoDialog){
+      infoDialog.style.left = '';
+      infoDialog.style.top = '';
+      infoDialog.style.right = '';
+      infoDialog.style.bottom = '';
+    }
+    if(shouldPersist){
+      persistInfoDialogPosition(null);
+    }
+  }
+
+  function startInfoDialogDrag(clientX, clientY){
+    if(!infoDialog){ return; }
+    const rect = getInfoDialogRect();
+    infoDialogDragState = {
+      startX: clientX,
+      startY: clientY,
+      originLeft: rect.left,
+      originTop: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+    infoDialog.classList.add('is-dragging');
+  }
+
+  function updateInfoDialogDrag(clientX, clientY){
+    if(!infoDialogDragState){ return; }
+    const deltaX = clientX - infoDialogDragState.startX;
+    const deltaY = clientY - infoDialogDragState.startY;
+    const nextLeft = infoDialogDragState.originLeft + deltaX;
+    const nextTop = infoDialogDragState.originTop + deltaY;
+    const clamped = clampInfoDialogPosition(nextLeft, nextTop, infoDialogDragState.width, infoDialogDragState.height);
+    applyInfoDialogPosition(clamped);
+  }
+
+  function finishInfoDialogDrag(options = {}){
+    const { persist: shouldPersist = true } = options;
+    if(infoDialogDragState){
+      const rect = getInfoDialogRect();
+      const clamped = clampInfoDialogPosition(rect.left, rect.top, rect.width, rect.height);
+      applyInfoDialogPosition(clamped);
+      infoDialogPosition = clamped;
+      infoDialogHasCustomPosition = true;
+      if(shouldPersist){
+        persistInfoDialogPosition(clamped);
+      }
+      infoDialogDragState = null;
+    }
+    if(infoDialog){ infoDialog.classList.remove('is-dragging'); }
+  }
+
+  function cancelInfoDialogDrag(options = {}){
+    const { persist: shouldPersist = false } = options;
+    if(infoDialogPointerId !== null && infoHandle && infoHandle.releasePointerCapture){
+      try { infoHandle.releasePointerCapture(infoDialogPointerId); } catch(err){ /* ignore */ }
+    }
+    infoDialogPointerId = null;
+    if(infoDialogMouseDragging){
+      window.removeEventListener('mousemove', onInfoMouseMove);
+      window.removeEventListener('mouseup', onInfoMouseUp);
+      infoDialogMouseDragging = false;
+    }
+    window.removeEventListener('touchmove', onInfoTouchMove);
+    window.removeEventListener('touchend', onInfoTouchEnd);
+    window.removeEventListener('touchcancel', onInfoTouchEnd);
+    finishInfoDialogDrag({ persist: shouldPersist });
+  }
+
+  function openInfoDialog(){
+    if(!infoDialog || infoDialogIsOpen){ return; }
+    if(infoDialogHideTimer !== null){
+      clearTimeout(infoDialogHideTimer);
+      infoDialogHideTimer = null;
+    }
+    infoDialog.hidden = false;
+    infoDialog.setAttribute('aria-hidden', 'false');
+    const rect = getInfoDialogRect();
+    let position = infoDialogPosition;
+    if(position && typeof position.left === 'number' && typeof position.top === 'number'){
+      position = clampInfoDialogPosition(position.left, position.top, rect.width, rect.height);
+    } else {
+      position = computeDefaultInfoDialogPosition(rect);
+    }
+    infoDialogPosition = position;
+    applyInfoDialogPosition(position);
+    infoDialogIsOpen = true;
+    requestAnimationFrame(() => {
+      if(infoDialog){
+        infoDialog.classList.add('is-open');
+        ensureInfoDialogInViewport();
+      }
+    });
+    if(infoTrigger){
+      infoTrigger.setAttribute('aria-expanded', 'true');
+      if(infoTriggerCloseLabel){ infoTrigger.setAttribute('aria-label', infoTriggerCloseLabel); }
+      infoTrigger.classList.add('is-active');
+    }
+    const focusTarget = infoCloseBtn || (infoDialog.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+    if(focusTarget && typeof focusTarget.focus === 'function'){
+      try { focusTarget.focus({ preventScroll: true }); } catch(err){ focusTarget.focus(); }
+    }
+  }
+
+  function closeInfoDialog(options = {}){
+    const { restoreFocus = true, immediate = false } = options;
+    if(!infoDialog || !infoDialogIsOpen){ return false; }
+    if(infoDialogHideTimer !== null){
+      clearTimeout(infoDialogHideTimer);
+      infoDialogHideTimer = null;
+    }
+    cancelInfoDialogDrag({ persist: true });
+    infoDialogIsOpen = false;
+    infoDialog.setAttribute('aria-hidden', 'true');
+    infoDialog.classList.remove('is-open');
+    if(immediate){
+      infoDialog.hidden = true;
+    } else {
+      infoDialogHideTimer = window.setTimeout(() => {
+        if(infoDialog){ infoDialog.hidden = true; }
+        infoDialogHideTimer = null;
+      }, 220);
+      infoDialog.addEventListener('transitionend', function handleInfoTransitionEnd(){
+        if(infoDialog){ infoDialog.hidden = true; }
+        infoDialog.removeEventListener('transitionend', handleInfoTransitionEnd);
+        if(infoDialogHideTimer !== null){
+          clearTimeout(infoDialogHideTimer);
+          infoDialogHideTimer = null;
+        }
+      }, { once: true });
+    }
+    if(infoTrigger){
+      infoTrigger.setAttribute('aria-expanded', 'false');
+      if(infoTriggerOpenLabel){ infoTrigger.setAttribute('aria-label', infoTriggerOpenLabel); }
+      infoTrigger.classList.remove('is-active');
+    }
+    if(restoreFocus && infoTrigger && typeof infoTrigger.focus === 'function'){
+      try { infoTrigger.focus({ preventScroll: true }); } catch(err){ infoTrigger.focus(); }
+    }
+    return true;
+  }
+
+  function onInfoPointerDown(event){
+    if(event.button !== undefined && event.button !== 0){ return; }
+    if(!infoDialog || infoDialog.hidden){ return; }
+    event.preventDefault();
+    infoDialogPointerId = event.pointerId;
+    startInfoDialogDrag(event.clientX, event.clientY);
+    if(infoHandle && infoHandle.setPointerCapture){
+      try { infoHandle.setPointerCapture(infoDialogPointerId); } catch(err){ /* ignore */ }
+    }
+  }
+
+  function onInfoPointerMove(event){
+    if(infoDialogPointerId === null || event.pointerId !== infoDialogPointerId){ return; }
+    event.preventDefault();
+    updateInfoDialogDrag(event.clientX, event.clientY);
+  }
+
+  function onInfoPointerUp(event){
+    if(infoDialogPointerId === null || event.pointerId !== infoDialogPointerId){ return; }
+    if(infoHandle && infoHandle.releasePointerCapture){
+      try { infoHandle.releasePointerCapture(infoDialogPointerId); } catch(err){ /* ignore */ }
+    }
+    infoDialogPointerId = null;
+    finishInfoDialogDrag({ persist: true });
+  }
+
+  function onInfoMouseDown(event){
+    if(event.button !== 0){ return; }
+    if(!infoDialog || infoDialog.hidden){ return; }
+    event.preventDefault();
+    startInfoDialogDrag(event.clientX, event.clientY);
+    infoDialogMouseDragging = true;
+    window.addEventListener('mousemove', onInfoMouseMove);
+    window.addEventListener('mouseup', onInfoMouseUp);
+  }
+
+  function onInfoMouseMove(event){
+    if(!infoDialogMouseDragging){ return; }
+    event.preventDefault();
+    updateInfoDialogDrag(event.clientX, event.clientY);
+  }
+
+  function onInfoMouseUp(){
+    if(!infoDialogMouseDragging){ return; }
+    window.removeEventListener('mousemove', onInfoMouseMove);
+    window.removeEventListener('mouseup', onInfoMouseUp);
+    infoDialogMouseDragging = false;
+    finishInfoDialogDrag({ persist: true });
+  }
+
+  function onInfoTouchStart(event){
+    if(!infoDialog || infoDialog.hidden){ return; }
+    if(!event.touches || !event.touches.length){ return; }
+    const touch = event.touches[0];
+    if(!touch){ return; }
+    event.preventDefault();
+    startInfoDialogDrag(touch.clientX, touch.clientY);
+    infoDialogMouseDragging = true;
+    window.addEventListener('touchmove', onInfoTouchMove, { passive: false });
+    window.addEventListener('touchend', onInfoTouchEnd);
+    window.addEventListener('touchcancel', onInfoTouchEnd);
+  }
+
+  function onInfoTouchMove(event){
+    if(!infoDialogMouseDragging){ return; }
+    if(!event.touches || !event.touches.length){ return; }
+    const touch = event.touches[0];
+    if(!touch){ return; }
+    event.preventDefault();
+    updateInfoDialogDrag(touch.clientX, touch.clientY);
+  }
+
+  function onInfoTouchEnd(){
+    if(!infoDialogMouseDragging){ return; }
+    window.removeEventListener('touchmove', onInfoTouchMove);
+    window.removeEventListener('touchend', onInfoTouchEnd);
+    window.removeEventListener('touchcancel', onInfoTouchEnd);
+    infoDialogMouseDragging = false;
+    finishInfoDialogDrag({ persist: true });
+  }
+
   // ---------- Focus trap ----------
   let lastFocused = null;
   function openPanel(){
@@ -10155,6 +10564,7 @@ ${interactiveSelectors} {
   }
   function closePanel(){
     disableSearchMode();
+    closeInfoDialog({ restoreFocus: false, immediate: true });
     if(isModalBackground && overlay){ overlay.setAttribute('aria-hidden','true'); }
     if(panel){
       panel.setAttribute('aria-hidden', 'true');
@@ -10167,7 +10577,13 @@ ${interactiveSelectors} {
     if(lastFocused && lastFocused.focus) lastFocused.focus();
   }
   function trap(e){
-    if(e.key === 'Escape'){ e.preventDefault(); closePanel(); return; }
+    if(e.key === 'Escape'){
+      const didCloseInfo = closeInfoDialog({ restoreFocus: true });
+      if(didCloseInfo){ e.preventDefault(); return; }
+      e.preventDefault();
+      closePanel();
+      return;
+    }
     if(!isModalBackground){ return; }
     if(e.key !== 'Tab') return;
     if(!panel){ return; }
@@ -10322,6 +10738,46 @@ ${interactiveSelectors} {
     });
   }
 
+  if(infoTrigger && infoDialog){
+    infoTrigger.addEventListener('click', () => {
+      if(infoDialogIsOpen){
+        closeInfoDialog();
+      } else {
+        openInfoDialog();
+      }
+    });
+  }
+  if(infoCloseBtn){
+    infoCloseBtn.addEventListener('click', () => { closeInfoDialog(); });
+  }
+  if(infoDialog){
+    infoDialog.addEventListener('keydown', event => {
+      if(event.key === 'Escape'){
+        const closed = closeInfoDialog({ restoreFocus: true });
+        if(closed){
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }
+    });
+  }
+  if(infoHandle){
+    if(supportsPointer){
+      infoHandle.addEventListener('pointerdown', onInfoPointerDown);
+      infoHandle.addEventListener('pointermove', onInfoPointerMove);
+      infoHandle.addEventListener('pointerup', onInfoPointerUp);
+      infoHandle.addEventListener('pointercancel', onInfoPointerUp);
+    } else {
+      infoHandle.addEventListener('mousedown', onInfoMouseDown);
+      infoHandle.addEventListener('touchstart', onInfoTouchStart, { passive: false });
+    }
+  }
+  window.addEventListener('resize', () => {
+    if(infoDialogIsOpen){
+      ensureInfoDialogInViewport();
+    }
+  });
+
   if(btn){
     btn.addEventListener('click', (e)=>{
       if(skipNextClick){
@@ -10372,10 +10828,13 @@ ${interactiveSelectors} {
       try { localStorage.removeItem(READING_GUIDE_SETTINGS_KEY); } catch(err){}
       try { localStorage.removeItem(READING_GUIDE_SUMMARY_POS_KEY); } catch(err){}
       try { localStorage.removeItem(COLORBLIND_SETTINGS_STORAGE_KEY); } catch(err){}
+      try { localStorage.removeItem(INFO_DIALOG_POS_KEY); } catch(err){}
       document.documentElement.style.removeProperty('--a11y-launcher-x');
       document.documentElement.style.removeProperty('--a11y-launcher-y');
       launcherLastPos = null;
       hasCustomLauncherPosition = false;
+      resetInfoDialogPosition({ persist: false });
+      closeInfoDialog({ restoreFocus: false, immediate: true });
       applyPanelSide('right');
       resetColorblindSettings({ persist: false });
       resetBrightnessSettings({ persist: false });
@@ -10427,6 +10886,19 @@ document.addEventListener('click', function(e){
       panelEl.setAttribute('aria-hidden', 'true');
     }
     rootEl.classList.remove('is-open');
+    const infoDialogEl = document.getElementById('a11y-info-dialog');
+    const infoTriggerEl = document.getElementById('a11y-info-trigger');
+    if(infoDialogEl){
+      infoDialogEl.classList.remove('is-open');
+      infoDialogEl.setAttribute('aria-hidden', 'true');
+      infoDialogEl.hidden = true;
+    }
+    if(infoTriggerEl){
+      infoTriggerEl.setAttribute('aria-expanded', 'false');
+      const openLabel = infoTriggerEl.getAttribute('data-open-label');
+      if(openLabel){ infoTriggerEl.setAttribute('aria-label', openLabel); }
+      infoTriggerEl.classList.remove('is-active');
+    }
     const tablistEl = panelEl ? panelEl.querySelector('[data-role="section-tablist"]') : null;
     if(tablistEl){
       tablistEl.removeAttribute('hidden');
