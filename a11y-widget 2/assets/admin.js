@@ -203,6 +203,25 @@
         var sectionGrid = document.querySelector('.a11y-widget-admin-grid');
         var sectionOrderInput = document.querySelector('[data-section-order-input]');
         var launcherGroups = toArray(document.querySelectorAll('[data-launcher-checkbox-group]'));
+        var forceAllToggle = document.getElementById('a11y-widget-force-all');
+        var featureToggles = toArray(document.querySelectorAll('[data-a11y-feature-toggle]'));
+
+        function syncFeatureToggles() {
+            var shouldDisable = forceAllToggle && forceAllToggle.checked;
+
+            featureToggles.forEach(function (input) {
+                if (shouldDisable) {
+                    input.setAttribute('disabled', 'disabled');
+                } else {
+                    input.removeAttribute('disabled');
+                }
+            });
+        }
+
+        if (forceAllToggle) {
+            forceAllToggle.addEventListener('change', syncFeatureToggles);
+            syncFeatureToggles();
+        }
 
         launcherGroups.forEach(function (group) {
             group.addEventListener('change', function (event) {
