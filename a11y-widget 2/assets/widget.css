@@ -206,6 +206,7 @@
   transform: translate3d(0, 8px, 0);
   width: min(420px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
+  height: min(640px, calc(100vh - 48px));
   background: var(--a11y-surface);
   color: var(--a11y-text);
   border-radius: var(--a11y-radius);
@@ -216,6 +217,7 @@
   transition: opacity .2s ease, transform .2s ease;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .a11y-info-dialog[hidden] { display: none; }
 .a11y-info-dialog.is-open {
@@ -229,6 +231,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 .a11y-info-dialog__header {
   display: flex;
@@ -259,6 +262,7 @@
 .a11y-info-dialog__content {
   padding: 18px 20px;
   overflow: auto;
+  overscroll-behavior: contain;
   flex: 1 1 auto;
 }
 .a11y-info-menu {
