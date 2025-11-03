@@ -1366,7 +1366,7 @@
       nightDocumentText = rgbToHex(blendedText[0], blendedText[1], blendedText[2]);
       nightOverlayBackground = `rgba(${blendedOverlay.join(', ')}, ${overlayOpacity.toFixed(3)})`;
     }
-    const activeRootSelector = 'html[data-a11y-luminosite-reglages="on"]';
+    const activeRootSelector = 'html:is(.a11y-visual-filter-active, [data-a11y-luminosite-reglages="on"])';
     const nightRootSelector = `${activeRootSelector}[data-a11y-luminosite-mode="night"]`;
     const filteredSelector = `${activeRootSelector} body > :not([data-a11y-filter-exempt]):not([data-a11y-night-media-exempt])`;
     const mediaExemptSelector = `${nightRootSelector} body > [data-a11y-night-media-exempt]`;
