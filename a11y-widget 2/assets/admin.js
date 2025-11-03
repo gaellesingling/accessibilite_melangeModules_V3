@@ -622,10 +622,12 @@
 
             document.addEventListener('mouseup', function () {
                 armedSectionForDrag = null;
+                armedSubfeatureForDrag = null;
             });
 
             document.addEventListener('touchend', function () {
                 armedSectionForDrag = null;
+                armedSubfeatureForDrag = null;
             });
 
             sections.forEach(function (section) {
