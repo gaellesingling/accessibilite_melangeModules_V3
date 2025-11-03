@@ -121,7 +121,53 @@ $root_classes = implode( ' ', array_filter( array_unique( $root_class_names ) ) 
           <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></line>
         </svg>
       </button>
-      <span class="a11y-icon" aria-hidden="true"><?php echo $panel_logo_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+      <button
+        type="button"
+        class="a11y-icon a11y-info-trigger"
+        id="a11y-info-trigger"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-controls="a11y-info-dialog"
+        aria-label="<?php echo esc_attr__( 'Ouvrir la fenêtre didactique', 'a11y-widget' ); ?>"
+        data-open-label="<?php echo esc_attr__( 'Ouvrir la fenêtre didactique', 'a11y-widget' ); ?>"
+        data-close-label="<?php echo esc_attr__( 'Fermer la fenêtre didactique', 'a11y-widget' ); ?>"
+      >
+        <svg
+          class="a11y-info-trigger__icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3h5.75A2.75 2.75 0 0 1 15 5.75V20a2.5 2.5 0 0 0-2.5-2.5H6.5A2.5 2.5 0 0 0 4 20Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          ></path>
+          <path
+            d="M15 3h2.5A2.5 2.5 0 0 1 20 5.5v14.75a.75.75 0 0 1-1.17.62l-2.16-1.48A2.5 2.5 0 0 0 15 18Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          ></path>
+          <path
+            d="M8.5 8h3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          ></path>
+          <path
+            d="M8.5 11.5h3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          ></path>
+        </svg>
+      </button>
       <h2 id="a11y-title" class="a11y-title"><?php echo esc_html__('Accessibilité du site', 'a11y-widget'); ?></h2>
       <button
         type="button"
@@ -135,6 +181,31 @@ $root_classes = implode( ' ', array_filter( array_unique( $root_class_names ) ) 
       <div class="a11y-spacer" aria-hidden="true"></div>
       <button class="a11y-close" id="a11y-close" aria-label="<?php echo esc_attr__('Fermer le module', 'a11y-widget'); ?>">✕</button>
     </header>
+
+    <aside
+      id="a11y-info-dialog"
+      class="a11y-info-dialog"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="a11y-info-title"
+      aria-hidden="true"
+      hidden
+    >
+      <div class="a11y-info-dialog__inner">
+        <div class="a11y-info-dialog__header" id="a11y-info-handle">
+          <h3 class="a11y-info-dialog__title" id="a11y-info-title"><?php echo esc_html__( 'Fenêtre didactique', 'a11y-widget' ); ?></h3>
+          <button
+            type="button"
+            class="a11y-info-dialog__close"
+            id="a11y-info-close"
+            aria-label="<?php echo esc_attr__( 'Fermer la fenêtre didactique', 'a11y-widget' ); ?>"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
+        <div class="a11y-info-dialog__content" id="a11y-info-content" tabindex="0"></div>
+      </div>
+    </aside>
 
     <div class="a11y-content" id="a11y-content">
       <?php
