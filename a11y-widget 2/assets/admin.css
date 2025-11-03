@@ -469,7 +469,8 @@ fieldset.a11y-widget-admin-section {
 .a11y-widget-admin-subfeature {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  grid-template-rows: auto auto;
+  row-gap: 12px;
   align-items: start;
   background: var(--a11y-section-subfeature-bg);
   border: 1px solid var(--a11y-section-feature-border);
@@ -480,6 +481,15 @@ fieldset.a11y-widget-admin-section {
 .a11y-widget-admin-subfeature .a11y-widget-admin-toggle {
   justify-content: flex-start;
   text-align: left;
+  width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch {
+  width: 100%;
+}
+
+.a11y-widget-admin-subfeature .a11y-widget-switch__ui {
+  justify-content: space-between;
 }
 
 .a11y-widget-admin-subfeature__description {
