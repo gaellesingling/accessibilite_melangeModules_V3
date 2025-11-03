@@ -357,27 +357,6 @@
             cleanupFeatureDrag();
         }
 
-        var draggedSubfeature = null;
-        var subfeatureOrigin = null;
-        var subfeatureNextSibling = null;
-        var subfeatureDropOccurred = false;
-        var armedSubfeatureForDrag = null;
-
-        function cleanupSubfeatureDrag() {
-            subfeatureContainers.forEach(function (container) {
-                container.classList.remove('a11y-widget-admin-subfeatures--drag-over');
-            });
-
-            if (draggedSubfeature) {
-                draggedSubfeature.classList.remove('a11y-widget-admin-subfeature--dragging');
-                draggedSubfeature = null;
-            }
-
-            subfeatureOrigin = null;
-            subfeatureNextSibling = null;
-            subfeatureDropOccurred = false;
-        }
-
         function enableFeatureDrag(feature) {
             feature.setAttribute('draggable', 'true');
 
@@ -412,50 +391,6 @@
                     event.stopPropagation();
                 });
             }
-        }
-
-        function enableSubfeatureDrag(subfeature) {
-            subfeature.setAttribute('draggable', 'true');
-
-            subfeature.addEventListener('dragstart', function (event) {
-                if (subfeature !== armedSubfeatureForDrag) {
-                    event.preventDefault();
-                    return;
-                }
-
-                armedSubfeatureForDrag = null;
-                draggedSubfeature = subfeature;
-                subfeatureOrigin = subfeature.parentElement;
-                subfeatureNextSibling = subfeature.nextElementSibling;
-                subfeatureDropOccurred = false;
-
-                subfeature.classList.add('a11y-widget-admin-subfeature--dragging');
-
-                if (event.dataTransfer) {
-                    event.dataTransfer.effectAllowed = 'move';
-                    try {
-                        event.dataTransfer.setData('text/plain', subfeature.getAttribute('data-subfeature-slug') || 'subfeature');
-                        if (event.dataTransfer.setDragImage) {
-                            event.dataTransfer.setDragImage(subfeature, event.offsetX || 0, event.offsetY || 0);
-                        }
-                    } catch (err) {
-                        // Ignore errors from browsers that disallow setting data.
-                    }
-                }
-            });
-
-            subfeature.addEventListener('dragend', function () {
-                if (!subfeatureDropOccurred && subfeatureOrigin) {
-                    if (subfeatureNextSibling && subfeatureNextSibling.parentNode === subfeatureOrigin) {
-                        subfeatureOrigin.insertBefore(subfeature, subfeatureNextSibling);
-                    } else {
-                        subfeatureOrigin.appendChild(subfeature);
-                    }
-                }
-
-                refreshSubfeatureContainers(subfeatureContainers);
-                cleanupSubfeatureDrag();
-            });
         }
 
         function enableSubfeatureDrag(subfeature) {
