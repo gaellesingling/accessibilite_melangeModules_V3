@@ -10467,9 +10467,20 @@ ${interactiveSelectors} {
     return true;
   }
 
+  function isEventOnInfoDialogClose(event){
+    if(!event || !infoCloseBtn){ return false; }
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : null;
+    if(path && Array.isArray(path) && path.length){
+      return path.includes(infoCloseBtn);
+    }
+    const target = event.target || null;
+    return !!(target && (target === infoCloseBtn || infoCloseBtn.contains(target)));
+  }
+
   function onInfoPointerDown(event){
     if(event.button !== undefined && event.button !== 0){ return; }
     if(!infoDialog || infoDialog.hidden){ return; }
+    if(isEventOnInfoDialogClose(event)){ return; }
     event.preventDefault();
     infoDialogPointerId = event.pointerId;
     startInfoDialogDrag(event.clientX, event.clientY);
@@ -10496,6 +10507,7 @@ ${interactiveSelectors} {
   function onInfoMouseDown(event){
     if(event.button !== 0){ return; }
     if(!infoDialog || infoDialog.hidden){ return; }
+    if(isEventOnInfoDialogClose(event)){ return; }
     event.preventDefault();
     startInfoDialogDrag(event.clientX, event.clientY);
     infoDialogMouseDragging = true;
@@ -10519,6 +10531,7 @@ ${interactiveSelectors} {
 
   function onInfoTouchStart(event){
     if(!infoDialog || infoDialog.hidden){ return; }
+    if(isEventOnInfoDialogClose(event)){ return; }
     if(!event.touches || !event.touches.length){ return; }
     const touch = event.touches[0];
     if(!touch){ return; }
