@@ -9367,7 +9367,9 @@ ${interactiveSelectors} {
     sizeSlider.addEventListener('input', () => setCursorSize(sizeSlider.value, { persist: false }));
     sizeSlider.addEventListener('change', () => setCursorSize(sizeSlider.value, { force: true }));
     colorInputs.forEach(input => {
-      input.addEventListener('change', () => { if(input.checked){ setCursorColor(input.value); } });
+      const applyColor = () => { if(input.checked){ setCursorColor(input.value); } };
+      input.addEventListener('change', applyColor);
+      input.addEventListener('input', applyColor);
     });
 
     const markConnection = () => {
